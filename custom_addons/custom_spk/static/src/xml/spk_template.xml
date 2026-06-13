@@ -1,0 +1,876 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_spk.SpkApp">
+    <div class="cspk-wrapper">
+
+        <!-- HEADER -->
+        <div class="cspk-header">
+            <div class="cspk-header-lingkaran cspk-ling-1"/>
+            <div class="cspk-header-lingkaran cspk-ling-2"/>
+            <div class="cspk-header-konten">
+                <div class="cspk-header-judul">
+                    <div class="cspk-header-ikon">📋</div>
+                    <div>
+                        <h1>Surat Perintah Kerja</h1>
+                        <p>Kelola SPK produksi dengan mudah dan cepat</p>
+                    </div>
+                </div>
+                <t t-if="state.halaman === 'daftar'">
+                    <button class="cspk-btn-tambah" t-on-click="bukaFormTambah">
+                        + Tambah SPK
+                    </button>
+                </t>
+                <t t-if="state.halaman === 'detail'">
+                    <button class="cspk-btn-kembali" t-on-click="kembaliKeDaftar">
+                        ← Kembali
+                    </button>
+                </t>
+            </div>
+        </div>
+
+        <!-- ══════════ HALAMAN DAFTAR SPK ══════════ -->
+        <t t-if="state.halaman === 'daftar'">
+
+        <!-- FILTER BAR -->
+        <div class="cspk-filterbar">
+            <div class="cspk-filter-grup">
+                <input
+                    type="text"
+                    class="cspk-filter-input cspk-filter-cari"
+                    placeholder="Cari No. SPK atau Nomor Custom..."
+                    t-att-value="state.filter.cari"
+                    t-on-input="(ev) => { state.filter.cari = ev.target.value; }"
+                    t-on-keydown="handleKeydown"/>
+                <button class="cspk-btn-cari" t-on-click="cariData">Cari</button>
+            </div>
+            <div class="cspk-filter-cabang-blok">
+                <select class="cspk-filter-input"
+                    t-on-change="(ev) => this.ubahFilter('branch_id', ev.target.value)">
+                    <option value="">Semua Cabang</option>
+                    <t t-foreach="state.daftarCabang" t-as="cab" t-key="cab.id">
+                        <option t-att-value="cab.id"
+                            t-att-selected="cab.id == state.filter.branch_id">
+                            <t t-esc="cab.name"/>
+                        </option>
+                    </t>
+                </select>
+                <button class="cspk-btn-kelola-cabang" title="Kelola Cabang"
+                    t-on-click="bukaPopupCabang">⚙</button>
+            </div>
+            <input type="date" class="cspk-filter-input"
+                t-att-value="state.filter.tanggalMulai"
+                title="Tanggal Mulai"
+                t-on-change="(ev) => this.ubahFilter('tanggalMulai', ev.target.value)"/>
+            <span class="cspk-filter-sampai">s/d</span>
+            <input type="date" class="cspk-filter-input"
+                t-att-value="state.filter.tanggalAkhir"
+                title="Tanggal Akhir"
+                t-on-change="(ev) => this.ubahFilter('tanggalAkhir', ev.target.value)"/>
+            <button class="cspk-btn-reset" t-on-click="resetFilter">Reset</button>
+        </div>
+
+        <!-- LOADING -->
+        <t t-if="state.memuat">
+            <div class="cspk-loading">
+                <div class="cspk-spinner"/>
+                <p>Memuat data SPK...</p>
+            </div>
+        </t>
+
+        <t t-else="">
+
+            <!-- EMPTY STATE -->
+            <t t-if="state.spkList.length === 0">
+                <div class="cspk-kosong">
+                    <div class="cspk-kosong-ikon">📭</div>
+                    <h3>Belum ada SPK</h3>
+                    <p>Klik tombol di bawah untuk membuat SPK pertama</p>
+                    <button class="cspk-btn-tambah cspk-btn-tambah-kosong"
+                        t-on-click="bukaFormTambah">
+                        + Tambah SPK Pertama
+                    </button>
+                </div>
+            </t>
+
+            <t t-else="">
+                <!-- TABEL SPK -->
+                <div class="cspk-tabel-wrapper">
+                    <table class="cspk-tabel">
+                        <thead>
+                            <tr>
+                                <th>No. SPK</th>
+                                <th>Nama Pekerjaan</th>
+                                <th>Tanggal</th>
+                                <th>Cabang</th>
+                                <th>PIC</th>
+                                <th>Produk</th>
+                                <th class="cspk-tengah">Qty</th>
+                                <th class="cspk-tengah">Satuan</th>
+                                <th class="cspk-kanan">Harga Standar</th>
+                                <th class="cspk-tengah">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="state.spkList" t-as="spk" t-key="spk.id">
+                                <tr class="cspk-baris-klik" t-on-click="() => this.bukaDetail(spk)">
+                                    <td>
+                                        <div class="cspk-cell-spkno">
+                                            <span class="cspk-badge-no"><t t-esc="spk.name"/></span>
+                                            <t t-if="spk.custom_number">
+                                                <span class="cspk-custom-no"><t t-esc="spk.custom_number"/></span>
+                                            </t>
+                                        </div>
+                                    </td>
+                                    <td><t t-esc="spk.nama_pekerjaan || '-'"/></td>
+                                    <td><t t-esc="formatTanggal(spk.spk_date)"/></td>
+                                    <td><t t-esc="spk.branch_id ? spk.branch_id[1] : '-'"/></td>
+                                    <td><t t-esc="spk.pic_id ? spk.pic_id[1] : '-'"/></td>
+                                    <td><t t-esc="spk.product_id ? spk.product_id[1] : '-'"/></td>
+                                    <td class="cspk-tengah cspk-angka"><t t-esc="spk.qty"/></td>
+                                    <td class="cspk-tengah">
+                                        <span class="cspk-badge-unit">
+                                            <t t-esc="labelUnit(spk.unit)"/>
+                                        </span>
+                                    </td>
+                                    <td class="cspk-kanan cspk-angka">
+                                        <t t-esc="formatRupiah(spk.standard_price)"/>
+                                    </td>
+                                    <td class="cspk-tengah" t-on-click.stop="">
+                                        <div class="cspk-aksi-grup">
+                                            <button class="cspk-btn-edit"
+                                                t-on-click="() => this.bukaFormEdit(spk)">
+                                                Edit
+                                            </button>
+                                            <button class="cspk-btn-hapus"
+                                                t-on-click="() => this.konfirmasiHapus(spk)">
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PAGINATION -->
+                <div class="cspk-pagination">
+                    <span class="cspk-pagination-info"><t t-esc="infoHalaman"/></span>
+                    <div class="cspk-pagination-tombol">
+                        <button class="cspk-btn-halaman"
+                            t-att-disabled="state.halamanAktif &lt;= 1"
+                            t-on-click="halamanSebelumnya">
+                            ← Sebelumnya
+                        </button>
+                        <span class="cspk-halaman-no">
+                            Hal. <t t-esc="state.halamanAktif"/> / <t t-esc="totalHalaman"/>
+                        </span>
+                        <button class="cspk-btn-halaman"
+                            t-att-disabled="state.halamanAktif >= totalHalaman"
+                            t-on-click="halamanBerikutnya">
+                            Berikutnya →
+                        </button>
+                    </div>
+                </div>
+            </t>
+
+        </t>
+
+        </t>
+        <!-- ══════════ AKHIR HALAMAN DAFTAR ══════════ -->
+
+        <!-- ══════════ HALAMAN DETAIL SPK ══════════ -->
+        <t t-if="state.halaman === 'detail' &amp;&amp; state.spkDipilih">
+            <div class="cspk-detail-wrapper">
+
+                <!-- KARTU INFO SPK -->
+                <div class="cspk-detail-header-card">
+                    <div class="cspk-detail-meta-baris">
+                        <span class="cspk-detail-badge-no">
+                            <t t-esc="state.spkDipilih.name"/>
+                        </span>
+                        <t t-if="state.spkDipilih.custom_number">
+                            <span class="cspk-detail-badge-custom">
+                                <t t-esc="state.spkDipilih.custom_number"/>
+                            </span>
+                        </t>
+                        <span class="cspk-detail-tanggal">
+                            <t t-esc="formatTanggal(state.spkDipilih.spk_date)"/>
+                        </span>
+                    </div>
+
+                    <h2 class="cspk-detail-nama-pekerjaan">
+                        <t t-esc="state.spkDipilih.nama_pekerjaan || '(Tanpa Nama)'"/>
+                    </h2>
+
+                    <div class="cspk-detail-info-grid">
+                        <div class="cspk-detail-info-blok">
+                            <span class="cspk-detail-info-label">👤 PIC</span>
+                            <span class="cspk-detail-info-nilai">
+                                <t t-esc="state.spkDipilih.pic_id ? state.spkDipilih.pic_id[1] : '-'"/>
+                            </span>
+                        </div>
+                        <div class="cspk-detail-info-blok">
+                            <span class="cspk-detail-info-label">🏢 Cabang</span>
+                            <span class="cspk-detail-info-nilai">
+                                <t t-esc="state.spkDipilih.branch_id ? state.spkDipilih.branch_id[1] : '-'"/>
+                            </span>
+                        </div>
+                        <div class="cspk-detail-info-blok">
+                            <span class="cspk-detail-info-label">📦 Produk</span>
+                            <span class="cspk-detail-info-nilai">
+                                <t t-esc="state.spkDipilih.product_id ? state.spkDipilih.product_id[1] : '-'"/>
+                            </span>
+                        </div>
+                        <div class="cspk-detail-info-blok">
+                            <span class="cspk-detail-info-label">🎯 Target</span>
+                            <span class="cspk-detail-info-nilai cspk-detail-target">
+                                <t t-esc="state.spkDipilih.qty"/>
+                                <t t-esc="' ' + labelUnit(state.spkDipilih.unit)"/>
+                            </span>
+                        </div>
+                        <div class="cspk-detail-info-blok">
+                            <span class="cspk-detail-info-label">💰 Harga Standar</span>
+                            <span class="cspk-detail-info-nilai">
+                                <t t-esc="formatRupiah(state.spkDipilih.standard_price)"/>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEKSI BAHAN BAKU -->
+                <div class="cspk-detail-bahan-seksi">
+                    <div class="cspk-detail-bahan-kepala">
+                        <div>
+                            <h3 class="cspk-detail-bahan-judul">Daftar Bahan Baku</h3>
+                            <span class="cspk-detail-bahan-total">
+                                Total estimasi: <b><t t-esc="formatRupiah(totalHargaBahan)"/></b>
+                            </span>
+                        </div>
+                        <button class="cspk-btn-tambah-bahan" t-on-click="bukaFormBahan">
+                            + Tambah Bahan
+                        </button>
+                    </div>
+
+                    <!-- Loading bahan -->
+                    <t t-if="state.memuatBahan">
+                        <div class="cspk-loading-kecil">
+                            <div class="cspk-spinner"/>
+                            <span>Memuat bahan baku...</span>
+                        </div>
+                    </t>
+
+                    <!-- Kosong -->
+                    <t t-elif="state.daftarBahan.length === 0">
+                        <div class="cspk-bahan-kosong">
+                            <div class="cspk-bahan-kosong-ikon">🧱</div>
+                            <p>Belum ada bahan baku. Klik <b>+ Tambah Bahan</b> untuk memulai.</p>
+                        </div>
+                    </t>
+
+                    <!-- Tabel bahan baku -->
+                    <t t-else="">
+                        <div class="cspk-tabel-wrapper">
+                            <table class="cspk-tabel cspk-tabel-bahan">
+                                <thead>
+                                    <tr>
+                                        <th>Kode Barang</th>
+                                        <th>Nama Bahan Baku</th>
+                                        <th class="cspk-tengah">Qty</th>
+                                        <th class="cspk-kanan">Harga/Rp</th>
+                                        <th class="cspk-kanan">Subtotal</th>
+                                        <th>PIC Bahan</th>
+                                        <th class="cspk-tengah">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.daftarBahan" t-as="bahan" t-key="bahan.id">
+                                        <tr>
+                                            <td>
+                                                <span class="cspk-kode-barang">
+                                                    <t t-esc="bahan.kode_barang || '-'"/>
+                                                </span>
+                                            </td>
+                                            <td class="cspk-nama-bahan"><t t-esc="bahan.nama_bahan"/></td>
+                                            <td class="cspk-tengah cspk-angka"><t t-esc="bahan.qty"/></td>
+                                            <td class="cspk-kanan cspk-angka">
+                                                <t t-esc="formatRupiah(bahan.harga)"/>
+                                            </td>
+                                            <td class="cspk-kanan cspk-angka">
+                                                <t t-esc="formatRupiah(bahan.qty * bahan.harga)"/>
+                                            </td>
+                                            <td><t t-esc="bahan.pic_id ? bahan.pic_id[1] : '-'"/></td>
+                                            <td class="cspk-tengah">
+                                                <div class="cspk-aksi-grup">
+                                                    <button class="cspk-btn-edit"
+                                                        t-on-click="() => this.bukaFormEditBahan(bahan)">
+                                                        Edit
+                                                    </button>
+                                                    <button class="cspk-btn-hapus"
+                                                        t-on-click="() => this.konfirmasiHapusBahan(bahan)">
+                                                        Hapus
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </t>
+        <!-- ══════════ AKHIR HALAMAN DETAIL ══════════ -->
+
+        <!-- MODAL FORM BAHAN BAKU -->
+        <t t-if="state.formBahan.buka">
+            <div class="cspk-overlay" t-on-click="tutupFormBahan">
+                <div class="cspk-modal cspk-modal-bahan" t-on-click.stop="">
+
+                    <div t-attf-class="cspk-modal-kepala #{state.formBahan.mode === 'tambah' ? 'cspk-kepala-tambah' : 'cspk-kepala-edit'}">
+                        <div class="cspk-modal-judul">
+                            <h2>
+                                <t t-if="state.formBahan.mode === 'tambah'">Tambah Bahan Baku</t>
+                                <t t-else="">Edit Bahan Baku</t>
+                            </h2>
+                        </div>
+                        <button class="cspk-tombol-tutup" t-on-click="tutupFormBahan">✕</button>
+                    </div>
+
+                    <div class="cspk-modal-isi">
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Kode Barang</label>
+                                <input type="text" class="cspk-form-input"
+                                    placeholder="Opsional"
+                                    t-att-value="state.formBahan.kode_barang"
+                                    t-on-input="(ev) => state.formBahan.kode_barang = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Nama Bahan Baku <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="text" class="cspk-form-input"
+                                    placeholder="Nama bahan baku"
+                                    t-att-value="state.formBahan.nama_bahan"
+                                    t-on-input="(ev) => state.formBahan.nama_bahan = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <div class="cspk-form-baris-3">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Qty <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="number" min="0.01" step="0.01" class="cspk-form-input"
+                                    t-att-value="state.formBahan.qty"
+                                    t-on-change="(ev) => state.formBahan.qty = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Harga (Rp)</label>
+                                <input type="number" min="0" step="1" class="cspk-form-input"
+                                    t-att-value="state.formBahan.harga"
+                                    t-on-change="(ev) => state.formBahan.harga = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">PIC Bahan</label>
+                                <select class="cspk-form-input"
+                                    t-on-change="(ev) => state.formBahan.pic_id = ev.target.value">
+                                    <option value="">-- Pilih PIC --</option>
+                                    <t t-foreach="state.daftarPic" t-as="pic" t-key="pic.id">
+                                        <option t-att-value="pic.id"
+                                            t-att-selected="pic.id == state.formBahan.pic_id">
+                                            <t t-esc="pic.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cspk-modal-footer">
+                            <button class="cspk-tombol-sekunder"
+                                t-att-disabled="state.formBahan.menyimpan"
+                                t-on-click="tutupFormBahan">Batal</button>
+                            <button class="cspk-tombol-utama"
+                                t-att-disabled="state.formBahan.menyimpan"
+                                t-on-click="simpanBahan">
+                                <t t-if="state.formBahan.menyimpan">
+                                    <span class="cspk-spinner-tombol"/>Menyimpan...
+                                </t>
+                                <t t-else="">Simpan</t>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════
+             FORM TAMBAH SPK
+        ════════════════════════════════════════════════ -->
+        <t t-if="state.formTambah.buka">
+            <div class="cspk-overlay" t-on-click="tutupFormTambah">
+                <div class="cspk-modal" t-on-click.stop="">
+
+                    <div class="cspk-modal-kepala cspk-kepala-tambah">
+                        <div class="cspk-modal-judul">
+                            <h2>Tambah SPK Baru</h2>
+                            <p class="cspk-subkepala">Isi data Surat Perintah Kerja di bawah ini</p>
+                        </div>
+                        <button class="cspk-tombol-tutup" t-on-click="tutupFormTambah">✕</button>
+                    </div>
+
+                    <div class="cspk-modal-isi">
+
+                        <div class="cspk-form-grup">
+                            <label class="cspk-form-label">
+                                Nama Pekerjaan <span class="cspk-wajib">*</span>
+                            </label>
+                            <input type="text" class="cspk-form-input"
+                                placeholder="Contoh: Produksi Karton Box Bulan Juni"
+                                t-att-value="state.formTambah.nama_pekerjaan"
+                                t-on-input="(ev) => state.formTambah.nama_pekerjaan = ev.target.value"/>
+                        </div>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Tanggal SPK <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="date" class="cspk-form-input"
+                                    t-att-value="state.formTambah.spk_date"
+                                    t-on-change="(ev) => state.formTambah.spk_date = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Nomor Custom</label>
+                                <input type="text" class="cspk-form-input"
+                                    placeholder="Opsional — diisi jika ada nomor lain"
+                                    t-att-value="state.formTambah.custom_number"
+                                    t-on-input="(ev) => state.formTambah.custom_number = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Cabang</label>
+                                <div class="cspk-cabang-wrap">
+                                    <select class="cspk-form-input"
+                                        t-on-change="(ev) => state.formTambah.branch_id = ev.target.value">
+                                        <option value="">-- Pilih Cabang --</option>
+                                        <t t-foreach="state.daftarCabang" t-as="cab" t-key="cab.id">
+                                            <option t-att-value="cab.id">
+                                                <t t-esc="cab.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                    <t t-if="state.cabangBaru.aktif &amp;&amp; state.cabangBaru.targetForm === 'formTambah'">
+                                        <div class="cspk-cabang-input-row">
+                                            <input type="text" class="cspk-cabang-input"
+                                                placeholder="Nama cabang baru..."
+                                                t-att-value="state.cabangBaru.nama"
+                                                t-on-input="(ev) => state.cabangBaru.nama = ev.target.value"/>
+                                            <button class="cspk-btn-ok-cabang"
+                                                t-att-disabled="state.cabangBaru.menyimpan"
+                                                t-on-click="tambahCabangBaru">
+                                                <t t-if="state.cabangBaru.menyimpan">•••</t>
+                                                <t t-else="">+ Tambah</t>
+                                            </button>
+                                            <button class="cspk-btn-x-cabang"
+                                                t-att-disabled="state.cabangBaru.menyimpan"
+                                                t-on-click="tutupInputCabang">Batal</button>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <button class="cspk-btn-link-cabang"
+                                            t-on-click="() => this.bukaInputCabang('formTambah')">
+                                            + Tambah Cabang Baru
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Diperintahkan Kepada (PIC) <span class="cspk-wajib">*</span>
+                                </label>
+                                <select class="cspk-form-input"
+                                    t-on-change="(ev) => state.formTambah.pic_id = ev.target.value">
+                                    <option value="">-- Pilih PIC --</option>
+                                    <t t-foreach="state.daftarPic" t-as="pic" t-key="pic.id">
+                                        <option t-att-value="pic.id">
+                                            <t t-esc="pic.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cspk-form-grup">
+                            <label class="cspk-form-label">
+                                Produksi <span class="cspk-wajib">*</span>
+                            </label>
+                            <select class="cspk-form-input"
+                                t-on-change="(ev) => state.formTambah.product_id = ev.target.value">
+                                <option value="">-- Pilih Produk --</option>
+                                <t t-foreach="state.daftarProduk" t-as="prod" t-key="prod.id">
+                                    <option t-att-value="prod.id">
+                                        <t t-esc="prod.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="cspk-form-baris-3">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Jumlah (Qty) <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="number" min="0.01" step="0.01"
+                                    class="cspk-form-input"
+                                    t-att-value="state.formTambah.qty"
+                                    t-on-change="(ev) => state.formTambah.qty = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Satuan <span class="cspk-wajib">*</span>
+                                </label>
+                                <select class="cspk-form-input"
+                                    t-on-change="(ev) => state.formTambah.unit = ev.target.value">
+                                    <option value="">-- Pilih Satuan --</option>
+                                    <t t-foreach="unitPilihan" t-as="u" t-key="u.value">
+                                        <option t-att-value="u.value">
+                                            <t t-esc="u.label"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Harga Standar (Rp) <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="number" min="0" step="1"
+                                    class="cspk-form-input"
+                                    t-att-value="state.formTambah.standard_price"
+                                    t-on-change="(ev) => state.formTambah.standard_price = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <div class="cspk-modal-footer">
+                            <button class="cspk-tombol-sekunder"
+                                t-att-disabled="state.formTambah.menyimpan"
+                                t-on-click="tutupFormTambah">
+                                Batal
+                            </button>
+                            <button class="cspk-tombol-utama"
+                                t-att-disabled="state.formTambah.menyimpan"
+                                t-on-click="simpanSpk">
+                                <t t-if="state.formTambah.menyimpan">
+                                    <span class="cspk-spinner-tombol"/>Menyimpan...
+                                </t>
+                                <t t-else="">Simpan SPK</t>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════
+             FORM EDIT SPK
+        ════════════════════════════════════════════════ -->
+        <t t-if="state.formEdit.buka">
+            <div class="cspk-overlay" t-on-click="tutupFormEdit">
+                <div class="cspk-modal" t-on-click.stop="">
+
+                    <div class="cspk-modal-kepala cspk-kepala-edit">
+                        <div class="cspk-modal-judul">
+                            <h2>Edit SPK</h2>
+                            <p class="cspk-subkepala"><t t-esc="state.formEdit.spkName"/></p>
+                        </div>
+                        <button class="cspk-tombol-tutup" t-on-click="tutupFormEdit">✕</button>
+                    </div>
+
+                    <div class="cspk-modal-isi">
+
+                        <div class="cspk-form-grup">
+                            <label class="cspk-form-label">
+                                Nama Pekerjaan <span class="cspk-wajib">*</span>
+                            </label>
+                            <input type="text" class="cspk-form-input"
+                                placeholder="Nama pekerjaan SPK"
+                                t-att-value="state.formEdit.nama_pekerjaan"
+                                t-on-input="(ev) => state.formEdit.nama_pekerjaan = ev.target.value"/>
+                        </div>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Tanggal SPK <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="date" class="cspk-form-input"
+                                    t-att-value="state.formEdit.spk_date"
+                                    t-on-change="(ev) => state.formEdit.spk_date = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Nomor Custom</label>
+                                <input type="text" class="cspk-form-input"
+                                    placeholder="Opsional"
+                                    t-att-value="state.formEdit.custom_number"
+                                    t-on-input="(ev) => state.formEdit.custom_number = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Cabang</label>
+                                <div class="cspk-cabang-wrap">
+                                    <select class="cspk-form-input"
+                                        t-on-change="(ev) => state.formEdit.branch_id = ev.target.value">
+                                        <option value="">-- Pilih Cabang --</option>
+                                        <t t-foreach="state.daftarCabang" t-as="cab" t-key="cab.id">
+                                            <option t-att-value="cab.id"
+                                                t-att-selected="cab.id == state.formEdit.branch_id">
+                                                <t t-esc="cab.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                    <t t-if="state.cabangBaru.aktif &amp;&amp; state.cabangBaru.targetForm === 'formEdit'">
+                                        <div class="cspk-cabang-input-row">
+                                            <input type="text" class="cspk-cabang-input"
+                                                placeholder="Nama cabang baru..."
+                                                t-att-value="state.cabangBaru.nama"
+                                                t-on-input="(ev) => state.cabangBaru.nama = ev.target.value"/>
+                                            <button class="cspk-btn-ok-cabang"
+                                                t-att-disabled="state.cabangBaru.menyimpan"
+                                                t-on-click="tambahCabangBaru">
+                                                <t t-if="state.cabangBaru.menyimpan">•••</t>
+                                                <t t-else="">+ Tambah</t>
+                                            </button>
+                                            <button class="cspk-btn-x-cabang"
+                                                t-att-disabled="state.cabangBaru.menyimpan"
+                                                t-on-click="tutupInputCabang">Batal</button>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <button class="cspk-btn-link-cabang"
+                                            t-on-click="() => this.bukaInputCabang('formEdit')">
+                                            + Tambah Cabang Baru
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Diperintahkan Kepada (PIC) <span class="cspk-wajib">*</span>
+                                </label>
+                                <select class="cspk-form-input"
+                                    t-on-change="(ev) => state.formEdit.pic_id = ev.target.value">
+                                    <option value="">-- Pilih PIC --</option>
+                                    <t t-foreach="state.daftarPic" t-as="pic" t-key="pic.id">
+                                        <option t-att-value="pic.id"
+                                            t-att-selected="pic.id == state.formEdit.pic_id">
+                                            <t t-esc="pic.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="cspk-form-grup">
+                            <label class="cspk-form-label">
+                                Produksi <span class="cspk-wajib">*</span>
+                            </label>
+                            <select class="cspk-form-input"
+                                t-on-change="(ev) => state.formEdit.product_id = ev.target.value">
+                                <option value="">-- Pilih Produk --</option>
+                                <t t-foreach="state.daftarProduk" t-as="prod" t-key="prod.id">
+                                    <option t-att-value="prod.id"
+                                        t-att-selected="prod.id == state.formEdit.product_id">
+                                        <t t-esc="prod.name"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <div class="cspk-form-baris-3">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Jumlah (Qty) <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="number" min="0.01" step="0.01"
+                                    class="cspk-form-input"
+                                    t-att-value="state.formEdit.qty"
+                                    t-on-change="(ev) => state.formEdit.qty = ev.target.value"/>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Satuan <span class="cspk-wajib">*</span>
+                                </label>
+                                <select class="cspk-form-input"
+                                    t-on-change="(ev) => state.formEdit.unit = ev.target.value">
+                                    <option value="">-- Pilih Satuan --</option>
+                                    <t t-foreach="unitPilihan" t-as="u" t-key="u.value">
+                                        <option t-att-value="u.value"
+                                            t-att-selected="u.value === state.formEdit.unit">
+                                            <t t-esc="u.label"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">
+                                    Harga Standar (Rp) <span class="cspk-wajib">*</span>
+                                </label>
+                                <input type="number" min="0" step="1"
+                                    class="cspk-form-input"
+                                    t-att-value="state.formEdit.standard_price"
+                                    t-on-change="(ev) => state.formEdit.standard_price = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <div class="cspk-modal-footer">
+                            <button class="cspk-tombol-sekunder"
+                                t-att-disabled="state.formEdit.menyimpan"
+                                t-on-click="tutupFormEdit">
+                                Batal
+                            </button>
+                            <button class="cspk-tombol-utama cspk-tombol-biru"
+                                t-att-disabled="state.formEdit.menyimpan"
+                                t-on-click="simpanEdit">
+                                <t t-if="state.formEdit.menyimpan">
+                                    <span class="cspk-spinner-tombol"/>Menyimpan...
+                                </t>
+                                <t t-else="">Simpan Perubahan</t>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════
+             POPUP KELOLA CABANG
+        ════════════════════════════════════════════════ -->
+        <t t-if="state.popupCabang.buka">
+            <div class="cspk-overlay cspk-overlay-popup" t-on-click="tutupPopupCabang">
+                <div class="cspk-popup-cabang" t-on-click.stop="">
+
+                    <div class="cspk-popup-cabang-kepala">
+                        <span class="cspk-popup-cabang-judul">⚙ Kelola Cabang</span>
+                        <button class="cspk-tombol-tutup" t-on-click="tutupPopupCabang">✕</button>
+                    </div>
+
+                    <div class="cspk-popup-cabang-isi">
+                        <t t-if="state.daftarCabang.length === 0">
+                            <p class="cspk-popup-kosong">Belum ada cabang.</p>
+                        </t>
+                        <t t-foreach="state.daftarCabang" t-as="cab" t-key="cab.id">
+                            <t t-if="state.popupCabang.editId === cab.id">
+                                <!-- Baris mode edit -->
+                                <div class="cspk-popup-cabang-baris cspk-baris-edit">
+                                    <input type="text" class="cspk-popup-cabang-input"
+                                        t-att-value="state.popupCabang.editNama"
+                                        t-on-input="(ev) => state.popupCabang.editNama = ev.target.value"/>
+                                    <button class="cspk-popup-btn-ok"
+                                        t-att-disabled="state.popupCabang.menyimpan"
+                                        t-on-click="simpanEditCabang">
+                                        <t t-if="state.popupCabang.menyimpan">•••</t>
+                                        <t t-else="">✓</t>
+                                    </button>
+                                    <button class="cspk-popup-btn-x"
+                                        t-att-disabled="state.popupCabang.menyimpan"
+                                        t-on-click="batalEditCabang">✕</button>
+                                </div>
+                            </t>
+                            <t t-else="">
+                                <!-- Baris mode tampil -->
+                                <div class="cspk-popup-cabang-baris">
+                                    <span class="cspk-popup-cabang-nama"><t t-esc="cab.name"/></span>
+                                    <div class="cspk-popup-cabang-aksi">
+                                        <button class="cspk-popup-btn-edit" title="Edit nama"
+                                            t-on-click="() => this.mulaiEditCabang(cab)">✏</button>
+                                        <button class="cspk-popup-btn-hapus" title="Hapus cabang"
+                                            t-on-click="() => this.hapusCabang(cab)">🗑</button>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+
+                    <!-- Footer: input tambah cabang atau tombol tambah -->
+                    <div class="cspk-popup-cabang-footer">
+                        <t t-if="state.popupCabang.tambahAktif">
+                            <div class="cspk-popup-tambah-row">
+                                <input type="text" class="cspk-popup-cabang-input"
+                                    placeholder="Nama cabang baru..."
+                                    t-att-value="state.popupCabang.tambahNama"
+                                    t-on-input="(ev) => state.popupCabang.tambahNama = ev.target.value"/>
+                                <button class="cspk-popup-btn-ok"
+                                    t-att-disabled="state.popupCabang.tambahMenyimpan"
+                                    t-on-click="tambahCabangDariPopup">
+                                    <t t-if="state.popupCabang.tambahMenyimpan">•••</t>
+                                    <t t-else="">✓</t>
+                                </button>
+                                <button class="cspk-popup-btn-x"
+                                    t-att-disabled="state.popupCabang.tambahMenyimpan"
+                                    t-on-click="() => state.popupCabang.tambahAktif = false">✕</button>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <button class="cspk-popup-btn-tambah"
+                                t-on-click="() => { state.popupCabang.tambahAktif = true; state.popupCabang.tambahNama = ''; }">
+                                + Tambah Cabang
+                            </button>
+                        </t>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════
+             DIALOG KONFIRMASI HAPUS / SIMPAN
+        ════════════════════════════════════════════════ -->
+        <t t-if="state.konfirmasi.buka">
+            <div class="cspk-overlay cspk-overlay-konfirmasi">
+                <div class="cspk-modal-konfirmasi">
+
+                    <div t-attf-class="cspk-konfirmasi-kepala #{state.konfirmasi.warnaYa === 'merah' ? 'cspk-kepala-hapus' : 'cspk-kepala-simpan'}">
+                        <span class="cspk-konfirmasi-judul">
+                            <t t-esc="state.konfirmasi.judul"/>
+                        </span>
+                        <button class="cspk-tombol-tutup" t-on-click="tutupKonfirmasi">✕</button>
+                    </div>
+
+                    <div class="cspk-konfirmasi-isi">
+                        <div class="cspk-konfirmasi-ikon">
+                            <t t-if="state.konfirmasi.warnaYa === 'merah'">⚠️</t>
+                            <t t-else="">💬</t>
+                        </div>
+                        <p class="cspk-konfirmasi-pesan" t-out="konfirmasiPesan"/>
+                    </div>
+
+                    <div class="cspk-konfirmasi-footer">
+                        <button class="cspk-tombol-sekunder" t-on-click="tutupKonfirmasi">
+                            Tidak, Batal
+                        </button>
+                        <button
+                            t-attf-class="cspk-tombol-konfirmasi-ya #{state.konfirmasi.warnaYa === 'merah' ? 'cspk-ya-merah' : 'cspk-ya-biru'}"
+                            t-on-click="jalankanKonfirmasi">
+                            <t t-esc="state.konfirmasi.labelYa"/>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+</templates>

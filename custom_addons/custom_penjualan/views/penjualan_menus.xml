@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_penjualan_dashboard" model="ir.actions.client">
+        <field name="name">Penjualan Indonesia</field>
+        <field name="tag">penjualan_dashboard</field>
+    </record>
+
+    <menuitem id="menu_penjualan_root"
+        name="Penjualan"
+        sequence="5"/>
+
+    <menuitem id="menu_penjualan_dashboard"
+        name="Dashboard Pesanan"
+        parent="menu_penjualan_root"
+        action="action_penjualan_dashboard"
+        sequence="1"/>
+
+</odoo>

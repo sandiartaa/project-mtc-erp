@@ -1,0 +1,1123 @@
+/* =============================================
+   SPK — Surat Perintah Kerja
+   Tema: Merah & Biru Modern
+   Prefix class: cspk-
+   ============================================= */
+
+/* ---- WRAPPER ---- */
+.cspk-wrapper {
+    min-height: 100vh;
+    background: #f0f4f8;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding-bottom: 40px;
+}
+
+/* ---- HEADER ---- */
+.cspk-header {
+    background: linear-gradient(135deg, #dc2626 0%, #7c3aed 50%, #2563eb 100%);
+    padding: 28px 32px 40px;
+    position: relative;
+    overflow: hidden;
+}
+.cspk-header-lingkaran {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+}
+.cspk-ling-1 { width: 240px; height: 240px; top: -80px; right: -40px; }
+.cspk-ling-2 { width: 120px; height: 120px; bottom: -50px; left: 35%; }
+.cspk-header-konten {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.cspk-header-judul {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.cspk-header-ikon {
+    font-size: 36px;
+    background: rgba(255,255,255,0.15);
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.cspk-header-konten h1 {
+    color: white;
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 4px;
+    letter-spacing: -0.4px;
+}
+.cspk-header-konten p {
+    color: rgba(255,255,255,0.80);
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ---- TOMBOL TAMBAH ---- */
+.cspk-btn-tambah {
+    padding: 11px 24px;
+    border-radius: 10px;
+    border: none;
+    background: white;
+    color: #dc2626;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
+}
+.cspk-btn-tambah:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+/* ---- FILTER BAR ---- */
+.cspk-filterbar {
+    background: white;
+    margin: -18px 24px 20px;
+    border-radius: 14px;
+    padding: 16px 20px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.cspk-filter-grup {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    min-width: 200px;
+}
+.cspk-filter-cari {
+    border-radius: 8px 0 0 8px !important;
+    border-right: none !important;
+    flex: 1;
+}
+.cspk-btn-cari {
+    padding: 9px 16px;
+    border-radius: 0 8px 8px 0;
+    border: 1.5px solid #2563eb;
+    background: #2563eb;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+.cspk-btn-cari:hover { background: #1d4ed8; }
+
+.cspk-filter-input {
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #374151;
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 0;
+}
+.cspk-filter-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.10);
+}
+.cspk-filter-sampai {
+    font-size: 13px;
+    color: #94a3b8;
+    padding: 0 4px;
+    white-space: nowrap;
+}
+.cspk-btn-reset {
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.cspk-btn-reset:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* ---- LOADING ---- */
+.cspk-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    color: #64748b;
+    font-size: 15px;
+    gap: 16px;
+}
+.cspk-spinner {
+    width: 44px;
+    height: 44px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: cspk-putar 0.8s linear infinite;
+}
+@keyframes cspk-putar { to { transform: rotate(360deg); } }
+
+/* ---- EMPTY STATE ---- */
+.cspk-kosong {
+    text-align: center;
+    padding: 80px 20px;
+    color: #94a3b8;
+    margin: 0 24px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.cspk-kosong-ikon { font-size: 64px; margin-bottom: 16px; }
+.cspk-kosong h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0 0 8px;
+}
+.cspk-kosong p {
+    font-size: 14px;
+    margin: 0 0 24px;
+}
+.cspk-btn-tambah-kosong {
+    background: linear-gradient(135deg, #dc2626, #2563eb) !important;
+    color: white !important;
+    margin: 0 auto;
+    display: inline-block;
+}
+
+/* ---- TABEL SPK ---- */
+.cspk-tabel-wrapper {
+    margin: 0 24px 0;
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.cspk-tabel {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.cspk-tabel thead tr {
+    background: linear-gradient(135deg, #dc2626, #2563eb);
+    color: white;
+}
+.cspk-tabel thead th {
+    padding: 13px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+.cspk-tabel thead th.cspk-tengah { text-align: center; }
+.cspk-tabel thead th.cspk-kanan  { text-align: right; }
+
+.cspk-tabel tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+.cspk-tabel tbody tr:last-child { border-bottom: none; }
+.cspk-tabel tbody tr:hover { background: #fafbff; }
+.cspk-tabel tbody tr:nth-child(even) { background: #f8fafc; }
+.cspk-tabel tbody tr:nth-child(even):hover { background: #f0f4ff; }
+
+.cspk-tabel td {
+    padding: 12px 14px;
+    color: #374151;
+    vertical-align: middle;
+}
+.cspk-tabel td.cspk-tengah { text-align: center; }
+.cspk-tabel td.cspk-kanan  { text-align: right; }
+.cspk-angka { font-weight: 500; }
+
+/* Cell: No. SPK */
+.cspk-cell-spkno {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.cspk-badge-no {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 13px;
+}
+.cspk-custom-no {
+    font-size: 11px;
+    color: #94a3b8;
+}
+.cspk-badge-unit {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #2563eb;
+    white-space: nowrap;
+}
+
+/* ---- TOMBOL AKSI DI TABEL ---- */
+.cspk-aksi-grup {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+.cspk-btn-edit {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1.5px solid #93c5fd;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.cspk-btn-edit:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+}
+.cspk-btn-hapus {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1.5px solid #fca5a5;
+    background: #fff5f5;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.cspk-btn-hapus:hover {
+    background: #fee2e2;
+    border-color: #ef4444;
+}
+
+/* ---- PAGINATION ---- */
+.cspk-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 24px;
+    padding: 14px 20px;
+    background: white;
+    border-top: 1px solid #f1f5f9;
+    border-radius: 0 0 14px 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.cspk-pagination-info {
+    font-size: 13px;
+    color: #64748b;
+}
+.cspk-pagination-tombol {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.cspk-btn-halaman {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.cspk-btn-halaman:hover:not(:disabled) {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+.cspk-btn-halaman:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.cspk-halaman-no {
+    font-size: 13px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+/* ---- OVERLAY & MODAL ---- */
+.cspk-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(6px);
+    animation: cspk-fade 0.2s ease;
+}
+@keyframes cspk-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.cspk-modal {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.35);
+    animation: cspk-naik 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes cspk-naik {
+    from { transform: translateY(40px) scale(0.93); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Header modal */
+.cspk-modal-kepala {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 24px 20px;
+    border-radius: 20px 20px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+.cspk-modal-kepala::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+}
+.cspk-kepala-tambah {
+    background: linear-gradient(135deg, #dc2626 0%, #7c3aed 50%, #2563eb 100%);
+}
+.cspk-kepala-edit {
+    background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
+}
+.cspk-modal-judul {
+    position: relative;
+    z-index: 1;
+}
+.cspk-modal-judul h2 {
+    color: white;
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 4px;
+    letter-spacing: -0.3px;
+}
+.cspk-subkepala {
+    color: rgba(255,255,255,0.78);
+    font-size: 13px;
+    margin: 0;
+}
+.cspk-tombol-tutup {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+    position: relative; z-index: 1;
+}
+.cspk-tombol-tutup:hover { background: rgba(255,255,255,0.38); }
+
+/* Isi modal */
+.cspk-modal-isi { padding: 24px; }
+
+/* ---- FORM INPUT ---- */
+.cspk-form-baris-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.cspk-form-baris-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.5fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.cspk-form-grup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+.cspk-form-baris-2 .cspk-form-grup,
+.cspk-form-baris-3 .cspk-form-grup {
+    margin-bottom: 0;
+}
+.cspk-form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+.cspk-wajib { color: #dc2626; }
+.cspk-form-input {
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1e293b;
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+    appearance: auto;
+}
+.cspk-form-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.cspk-form-input:hover { border-color: #cbd5e1; }
+
+/* ---- FILTER CABANG BLOK ---- */
+.cspk-filter-cabang-blok {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.cspk-filter-cabang-blok .cspk-filter-input {
+    min-width: 140px;
+}
+/* Tombol gear kelola cabang — sejajar dengan select, style sama dengan btn-reset */
+.cspk-btn-kelola-cabang {
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.cspk-btn-kelola-cabang:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+/* ---- TAMBAH CABANG BARU (inline) ---- */
+.cspk-cabang-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.cspk-cabang-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.cspk-cabang-input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1.5px solid #2563eb;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #1e293b;
+    background: #eff6ff;
+    min-width: 0;
+}
+.cspk-cabang-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.cspk-btn-ok-cabang {
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.cspk-btn-ok-cabang:hover:not(:disabled) { background: #1d4ed8; }
+.cspk-btn-ok-cabang:disabled { opacity: 0.5; cursor: not-allowed; }
+.cspk-btn-x-cabang {
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.cspk-btn-x-cabang:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
+.cspk-btn-x-cabang:disabled { opacity: 0.5; cursor: not-allowed; }
+.cspk-btn-link-cabang {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 0;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.2s;
+}
+.cspk-btn-link-cabang:hover { color: #1d4ed8; }
+
+/* Footer modal */
+.cspk-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 2px solid #f1f5f9;
+    margin-top: 8px;
+}
+.cspk-tombol-sekunder {
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.cspk-tombol-sekunder:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.cspk-tombol-sekunder:disabled { opacity: 0.5; cursor: not-allowed; }
+.cspk-tombol-utama {
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #dc2626, #2563eb);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.30);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cspk-tombol-utama:hover { opacity: 0.9; transform: translateY(-1px); }
+.cspk-tombol-utama:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.cspk-tombol-biru {
+    background: linear-gradient(135deg, #059669, #2563eb) !important;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.28) !important;
+}
+
+/* Spinner dalam tombol */
+.cspk-spinner-tombol {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: cspk-putar 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+/* ---- POPUP KELOLA CABANG ---- */
+.cspk-overlay-popup {
+    z-index: 10000 !important;
+    background: rgba(15, 23, 42, 0.60) !important;
+}
+.cspk-popup-cabang {
+    background: white;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 440px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.35);
+    animation: cspk-naik 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cspk-popup-cabang-kepala {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #475569, #334155);
+    flex-shrink: 0;
+}
+.cspk-popup-cabang-judul {
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+}
+.cspk-popup-cabang-isi {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+}
+.cspk-popup-kosong {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+    padding: 24px 0;
+    margin: 0;
+}
+.cspk-popup-cabang-baris {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    gap: 8px;
+    transition: background 0.15s;
+}
+.cspk-popup-cabang-baris:hover { background: #f1f5f9; }
+.cspk-baris-edit { background: #eff6ff !important; border-color: #bfdbfe !important; }
+.cspk-popup-cabang-nama {
+    font-size: 14px;
+    color: #1e293b;
+    font-weight: 500;
+    flex: 1;
+}
+.cspk-popup-cabang-aksi {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.cspk-popup-btn-edit {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.cspk-popup-btn-edit:hover { background: #bfdbfe; transform: scale(1.1); }
+.cspk-popup-btn-hapus {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.cspk-popup-btn-hapus:hover { background: #fecaca; transform: scale(1.1); }
+.cspk-popup-cabang-input {
+    flex: 1;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #1e293b;
+    outline: none;
+    background: white;
+}
+.cspk-popup-cabang-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+.cspk-popup-btn-ok {
+    background: #dcfce7;
+    color: #16a34a;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+.cspk-popup-btn-ok:hover:not(:disabled) { background: #bbf7d0; }
+.cspk-popup-btn-ok:disabled { opacity: 0.5; cursor: not-allowed; }
+.cspk-popup-btn-x {
+    background: #f1f5f9;
+    color: #64748b;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+.cspk-popup-btn-x:hover:not(:disabled) { background: #e2e8f0; }
+.cspk-popup-btn-x:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Footer popup: tombol tambah atau input tambah */
+.cspk-popup-cabang-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    flex-shrink: 0;
+}
+.cspk-popup-btn-tambah {
+    width: 100%;
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1.5px dashed #cbd5e1;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.cspk-popup-btn-tambah:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+.cspk-popup-tambah-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* ---- DIALOG KONFIRMASI ---- */
+.cspk-overlay-konfirmasi {
+    z-index: 10001 !important;
+    background: rgba(15, 23, 42, 0.78) !important;
+}
+.cspk-modal-konfirmasi {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.4);
+    animation: cspk-naik 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cspk-konfirmasi-kepala {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+}
+.cspk-kepala-hapus  { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+.cspk-kepala-simpan { background: linear-gradient(135deg, #2563eb, #7c3aed); }
+.cspk-konfirmasi-judul {
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+}
+.cspk-konfirmasi-isi {
+    padding: 28px 24px 20px;
+    text-align: center;
+}
+.cspk-konfirmasi-ikon { font-size: 42px; margin-bottom: 14px; }
+.cspk-konfirmasi-pesan {
+    font-size: 15px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+}
+.cspk-konfirmasi-pesan b { color: #1e293b; }
+.cspk-konfirmasi-footer {
+    display: flex;
+    gap: 10px;
+    padding: 0 24px 24px;
+    justify-content: center;
+}
+.cspk-tombol-konfirmasi-ya {
+    flex: 1;
+    max-width: 200px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+}
+.cspk-tombol-konfirmasi-ya:hover { opacity: 0.9; transform: translateY(-1px); }
+.cspk-ya-merah {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+}
+.cspk-ya-biru {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+}
+
+/* ---- BARIS TABEL KLIKABLE ---- */
+.cspk-baris-klik { cursor: pointer; transition: background 0.15s; }
+.cspk-baris-klik:hover { background: #f0f7ff !important; }
+
+/* ---- TOMBOL KEMBALI ---- */
+.cspk-btn-kembali {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.15);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+}
+.cspk-btn-kembali:hover { background: rgba(255,255,255,0.25); border-color: white; }
+
+/* ---- HALAMAN DETAIL ---- */
+.cspk-detail-wrapper {
+    padding: 0 12px 40px;
+    max-width: 100%;
+    margin: 0;
+}
+
+/* Kartu header info SPK */
+.cspk-detail-header-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-top: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    margin-bottom: 24px;
+}
+.cspk-detail-meta-baris {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.cspk-detail-badge-no {
+    background: linear-gradient(135deg, #dc2626, #7c3aed);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+.cspk-detail-badge-custom {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+.cspk-detail-tanggal {
+    font-size: 16px;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: auto;
+}
+.cspk-detail-nama-pekerjaan {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 20px;
+    line-height: 1.3;
+}
+.cspk-detail-info-grid {
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.cspk-detail-info-blok {
+    flex: 1;
+    min-width: 140px;
+    padding: 14px 20px;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.cspk-detail-info-blok:last-child { border-right: none; }
+.cspk-detail-info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.cspk-detail-info-nilai {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+.cspk-detail-target {
+    font-size: 16px;
+    font-weight: 800;
+    color: #2563eb;
+}
+
+/* Seksi bahan baku */
+.cspk-detail-bahan-seksi {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+.cspk-detail-bahan-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.cspk-detail-bahan-judul {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+.cspk-detail-bahan-total {
+    font-size: 15px;
+    font-weight: 600;
+    color: #475569;
+}
+.cspk-btn-tambah-bahan {
+    padding: 9px 18px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+}
+.cspk-btn-tambah-bahan:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.cspk-loading-kecil {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 28px 24px;
+    color: #64748b;
+    font-size: 14px;
+}
+.cspk-bahan-kosong {
+    text-align: center;
+    padding: 48px 24px;
+    color: #94a3b8;
+}
+.cspk-bahan-kosong-ikon { font-size: 40px; margin-bottom: 12px; }
+.cspk-bahan-kosong p { font-size: 14px; margin: 0; }
+
+.cspk-kode-barang {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 600;
+    color: #1e293b;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+.cspk-nama-bahan { font-weight: 600; color: #1e293b; }
+.cspk-tabel-bahan { margin: 0; font-size: 16px; border-collapse: collapse; }
+.cspk-tabel-bahan thead th { font-size: 16px; padding: 15px 18px; }
+.cspk-tabel-bahan tbody td { padding: 15px 18px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
+.cspk-tabel-bahan tbody td:last-child { border-right: none; }
+.cspk-tabel-bahan thead th { border-right: 1px solid rgba(255,255,255,0.2); }
+.cspk-tabel-bahan thead th:last-child { border-right: none; }
+.cspk-tabel-bahan thead tr {
+    background: #16a34a;
+}
+.cspk-tabel-bahan thead th {
+    background: transparent;
+    color: white;
+    border-bottom: none;
+}
+.cspk-detail-bahan-seksi .cspk-tabel-wrapper {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 16px 16px 24px;
+}
+.cspk-modal-bahan { max-width: 580px; }
+
+/* ---- RESPONSIF ---- */
+@media (max-width: 900px) {
+    .cspk-tabel thead th:nth-child(8),
+    .cspk-tabel td:nth-child(8) { display: none; }
+}
+@media (max-width: 700px) {
+    .cspk-filterbar { margin: -18px 12px 16px; padding: 12px 14px; }
+    .cspk-tabel-wrapper { margin: 0 12px; }
+    .cspk-pagination { margin: 0 12px; }
+    .cspk-kosong { margin: 0 12px; }
+    .cspk-form-baris-2,
+    .cspk-form-baris-3 { grid-template-columns: 1fr; }
+    .cspk-tabel thead th:nth-child(3),
+    .cspk-tabel td:nth-child(3),
+    .cspk-tabel thead th:nth-child(7),
+    .cspk-tabel td:nth-child(7) { display: none; }
+    .cspk-modal { border-radius: 16px 16px 0 0; max-height: 96vh; }
+    .cspk-overlay { align-items: flex-end; padding: 0; }
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="action_spk_app" model="ir.actions.client">
+        <field name="name">SPK — Surat Perintah Kerja</field>
+        <field name="tag">spk_app</field>
+    </record>
+
+    <menuitem id="menu_spk_root"
+        name="SPK"
+        sequence="15"/>
+
+    <menuitem id="menu_spk_daftar"
+        name="Daftar SPK"
+        parent="menu_spk_root"
+        action="action_spk_app"
+        sequence="1"/>
+
+</odoo>

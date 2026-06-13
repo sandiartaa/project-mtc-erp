@@ -1,0 +1,14 @@
+- Aktifkan venv dulu:
+venv\Scripts\activate
+
+- Jalankan Odoo:
+python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev
+
+-Setelah buat database baru, harus jalankan ini vv
+python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev -i base
+
+-Setelah buat modul baru dari prompt harus run ulang 
+odoo nya jangan cuma refresh
+
+LANJUTIN CLAUDE
+claude --resume 3ab5d346-50c2-4533-92c8-6ece4a3300c0

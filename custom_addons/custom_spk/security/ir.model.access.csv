@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_spk_spk_all,spk.spk semua pengguna,model_spk_spk,,1,1,1,1
+access_spk_cabang_all,spk.cabang semua pengguna,model_spk_cabang,,1,1,1,1
+access_spk_bahan_baku_all,spk.bahan.baku semua pengguna,model_spk_bahan_baku,,1,1,1,1

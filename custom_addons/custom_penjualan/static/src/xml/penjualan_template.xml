@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_penjualan.Dashboard">
+    <div class="cpj-wrapper">
+
+        <!-- LOADING -->
+        <t t-if="state.memuat">
+            <div class="cpj-loading">
+                <div class="cpj-spinner"></div>
+                <p>Sedang memuat data pesanan...</p>
+            </div>
+        </t>
+
+        <t t-else="">
+            <!-- HERO -->
+            <div class="cpj-hero">
+                <div class="cpj-hero-lingkaran cpj-lingkaran-1"/>
+                <div class="cpj-hero-lingkaran cpj-lingkaran-2"/>
+                <div class="cpj-hero-konten">
+                    <h1>🛒 Penjualan</h1>
+                    <p>Pantau dan kelola semua pesanan kamu dalam satu tempat</p>
+                </div>
+            </div>
+
+            <!-- STATISTIK -->
+            <div class="cpj-stats">
+                <div class="cpj-stat cpj-stat-1">
+                    <div class="cpj-stat-ikon">📦</div>
+                    <div class="cpj-stat-data">
+                        <div class="cpj-stat-angka"><t t-esc="state.statistik.total"/></div>
+                        <div class="cpj-stat-judul">Total Pesanan</div>
+                    </div>
+                </div>
+                <div class="cpj-stat cpj-stat-2">
+                    <div class="cpj-stat-ikon">💰</div>
+                    <div class="cpj-stat-data">
+                        <div class="cpj-stat-angka cpj-angka-kecil"><t t-esc="formatRupiah(state.statistik.pendapatan)"/></div>
+                        <div class="cpj-stat-judul">Total Pendapatan</div>
+                    </div>
+                </div>
+                <div class="cpj-stat cpj-stat-3">
+                    <div class="cpj-stat-ikon">🆕</div>
+                    <div class="cpj-stat-data">
+                        <div class="cpj-stat-angka"><t t-esc="state.statistik.baru"/></div>
+                        <div class="cpj-stat-judul">Pesanan Baru</div>
+                    </div>
+                </div>
+                <div class="cpj-stat cpj-stat-4">
+                    <div class="cpj-stat-ikon">✅</div>
+                    <div class="cpj-stat-data">
+                        <div class="cpj-stat-angka"><t t-esc="state.statistik.selesai"/></div>
+                        <div class="cpj-stat-judul">Sudah Selesai</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOOLBAR -->
+            <div class="cpj-toolbar">
+                <div class="cpj-filter-bar">
+                    <span class="cpj-filter-judul">Tampilkan:</span>
+                    <button t-on-click="() => this.gantiFilter('semua')" t-attf-class="cpj-chip #{state.filter === 'semua' ? 'cpj-chip-aktif' : ''}">Semua</button>
+                    <button t-on-click="() => this.gantiFilter('baru')" t-attf-class="cpj-chip #{state.filter === 'baru' ? 'cpj-chip-aktif' : ''}">📝 Baru</button>
+                    <button t-on-click="() => this.gantiFilter('proses')" t-attf-class="cpj-chip #{state.filter === 'proses' ? 'cpj-chip-aktif' : ''}">⚙️ Diproses</button>
+                    <button t-on-click="() => this.gantiFilter('selesai')" t-attf-class="cpj-chip #{state.filter === 'selesai' ? 'cpj-chip-aktif' : ''}">✅ Selesai</button>
+                    <button t-on-click="() => this.gantiFilter('batal')" t-attf-class="cpj-chip #{state.filter === 'batal' ? 'cpj-chip-aktif' : ''}">❌ Dibatalkan</button>
+                </div>
+                <button class="cpj-btn-tambah" t-on-click="bukaFormTambah">➕ Tambah Pesanan</button>
+            </div>
+
+            <!-- GRID KARTU -->
+            <div class="cpj-grid">
+                <t t-if="state.pesanan.length === 0">
+                    <div class="cpj-kosong">
+                        <div class="cpj-kosong-ikon">😴</div>
+                        <p>Tidak ada pesanan di kategori ini</p>
+                    </div>
+                </t>
+                <t t-else="">
+                    <t t-foreach="state.pesanan" t-as="p" t-key="p.id">
+                        <div class="cpj-kartu" t-on-click="() => this.bukaDetail(p)">
+                            <div class="cpj-kartu-pita"/>
+                            <div class="cpj-kartu-atas">
+                                <span class="cpj-kartu-nomor"><t t-esc="p.name"/></span>
+                                <span t-attf-class="cpj-badge #{kelasStatus(p.state)}"><t t-esc="labelStatus(p.state)"/></span>
+                            </div>
+                            <div class="cpj-kartu-info">
+                                <div class="cpj-info-baris"><span class="cpj-ikon-kecil">👤</span><span><t t-esc="p.partner_id[1]"/></span></div>
+                                <div class="cpj-info-baris"><span class="cpj-ikon-kecil">📅</span><span><t t-esc="formatTanggal(p.date_order)"/></span></div>
+                                <t t-if="p.user_id">
+                                    <div class="cpj-info-baris"><span class="cpj-ikon-kecil">🧑‍💼</span><span><t t-esc="p.user_id[1]"/></span></div>
+                                </t>
+                            </div>
+                            <div class="cpj-kartu-bawah">
+                                <span class="cpj-kartu-total"><t t-esc="formatRupiah(p.amount_total)"/></span>
+                                <span class="cpj-kartu-cta">Lihat Detail →</span>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════════════
+             POPUP DETAIL PESANAN
+        ══════════════════════════════════════════════════════════ -->
+        <t t-if="state.pesananDipilih">
+            <div class="cpj-overlay" t-on-click="tutupDetail">
+                <div class="cpj-modal" t-on-click.stop="">
+
+                    <div class="cpj-modal-kepala">
+                        <div class="cpj-modal-judul">
+                            <h2><t t-esc="state.pesananDipilih.name"/></h2>
+                            <span t-attf-class="cpj-badge cpj-badge-besar #{kelasStatus(state.pesananDipilih.state)}">
+                                <t t-esc="labelStatus(state.pesananDipilih.state)"/>
+                            </span>
+                        </div>
+                        <button class="cpj-tombol-tutup" t-on-click="tutupDetail">✕</button>
+                    </div>
+
+                    <div class="cpj-modal-isi">
+                        <div class="cpj-info-panel">
+                            <div class="cpj-info-baris-modal">
+                                <span class="cpj-label-modal">👤 Pembeli</span>
+                                <span class="cpj-nilai-modal"><t t-esc="state.pesananDipilih.partner_id[1]"/></span>
+                            </div>
+                            <div class="cpj-info-baris-modal">
+                                <span class="cpj-label-modal">📅 Tanggal Pesan</span>
+                                <span class="cpj-nilai-modal"><t t-esc="formatTanggal(state.pesananDipilih.date_order)"/></span>
+                            </div>
+                            <t t-if="state.pesananDipilih.user_id">
+                                <div class="cpj-info-baris-modal">
+                                    <span class="cpj-label-modal">🧑‍💼 Sales</span>
+                                    <span class="cpj-nilai-modal"><t t-esc="state.pesananDipilih.user_id[1]"/></span>
+                                </div>
+                            </t>
+                        </div>
+
+                        <h3 class="cpj-subjudul">🛍️ Daftar Barang</h3>
+                        <div class="cpj-tabel-barang">
+                            <div class="cpj-tabel-kepala">
+                                <span>Nama Barang</span>
+                                <span class="cpj-tengah">Jumlah</span>
+                                <span class="cpj-kanan">Harga Satuan</span>
+                                <span class="cpj-kanan">Subtotal</span>
+                            </div>
+                            <t t-if="state.detailBarang.length === 0">
+                                <div class="cpj-tabel-kosong"><div class="cpj-spinner-kecil"/>Memuat...</div>
+                            </t>
+                            <t t-foreach="state.detailBarang" t-as="b" t-key="b.id">
+                                <div class="cpj-tabel-baris">
+                                    <span class="cpj-nama-barang"><t t-esc="b.product_id ? b.product_id[1] : b.name"/></span>
+                                    <span class="cpj-qty-barang"><t t-esc="b.product_uom_qty"/> pcs</span>
+                                    <span class="cpj-harga-barang"><t t-esc="formatRupiah(b.price_unit)"/></span>
+                                    <span class="cpj-subtotal-barang"><t t-esc="formatRupiah(b.price_subtotal)"/></span>
+                                </div>
+                            </t>
+                        </div>
+
+                        <!-- Footer: hapus | edit | tutup | buka odoo -->
+                        <div class="cpj-modal-footer cpj-detail-footer">
+                            <div class="cpj-tombol-grup">
+                                <button class="cpj-tombol-hapus"
+                                    t-on-click="() => this.konfirmasiHapus(state.pesananDipilih)">
+                                    🗑️ Hapus
+                                </button>
+                                <button class="cpj-tombol-edit"
+                                    t-on-click="() => this.bukaFormEdit(state.pesananDipilih)">
+                                    ✏️ Edit
+                                </button>
+                            </div>
+                            <div class="cpj-tombol-grup">
+                                <div class="cpj-modal-total">
+                                    <span class="cpj-total-label">Total</span>
+                                    <span class="cpj-total-nilai"><t t-esc="formatRupiah(state.pesananDipilih.amount_total)"/></span>
+                                </div>
+                                <button class="cpj-tombol-sekunder" t-on-click="tutupDetail">Tutup</button>
+                                <button class="cpj-tombol-utama" t-on-click="() => this.bukaOdoo(state.pesananDipilih.id)">Buka di Odoo →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════════════
+             POPUP FORM TAMBAH PESANAN
+        ══════════════════════════════════════════════════════════ -->
+        <t t-if="state.formTambah.buka">
+            <div class="cpj-overlay" t-on-click="tutupFormTambah">
+                <div class="cpj-modal cpj-modal-form" t-on-click.stop="">
+                    <div class="cpj-modal-kepala cpj-kepala-form">
+                        <div class="cpj-modal-judul">
+                            <h2>➕ Tambah Pesanan Baru</h2>
+                            <p class="cpj-subkepala">Isi data pesanan di bawah ini</p>
+                        </div>
+                        <button class="cpj-tombol-tutup" t-on-click="tutupFormTambah">✕</button>
+                    </div>
+                    <div class="cpj-modal-isi">
+                        <div class="cpj-form-seksi">
+                            <h3 class="cpj-subjudul">📋 Info Pesanan</h3>
+                            <div class="cpj-form-baris-2">
+                                <div class="cpj-form-grup">
+                                    <label class="cpj-form-label">👤 Pelanggan <span class="cpj-wajib">*</span></label>
+                                    <select class="cpj-form-input" t-on-change="(ev) => state.formTambah.partner_id = ev.target.value">
+                                        <option value="">-- Pilih Pelanggan --</option>
+                                        <t t-foreach="state.daftarPelanggan" t-as="partner" t-key="partner.id">
+                                            <option t-att-value="partner.id"><t t-esc="partner.name"/></option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="cpj-form-grup">
+                                    <label class="cpj-form-label">📅 Tanggal Pesanan</label>
+                                    <input type="date" class="cpj-form-input"
+                                        t-att-value="state.formTambah.tanggal"
+                                        t-on-change="(ev) => state.formTambah.tanggal = ev.target.value"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cpj-form-seksi">
+                            <div class="cpj-seksi-judul-baris">
+                                <h3 class="cpj-subjudul">🛒 Daftar Produk</h3>
+                                <button class="cpj-btn-baris" t-on-click="tambahBaris">+ Tambah Baris</button>
+                            </div>
+                            <div class="cpj-form-tabel">
+                                <div class="cpj-form-tabel-kepala">
+                                    <span class="col-produk">Nama Produk</span>
+                                    <span class="col-harga">Harga Satuan</span>
+                                    <span class="col-qty">Qty</span>
+                                    <span class="col-subtotal">Subtotal</span>
+                                    <span class="col-hapus"/>
+                                </div>
+                                <t t-if="state.formTambah.baris.length === 0">
+                                    <div class="cpj-form-tabel-kosong">Klik "+ Tambah Baris" untuk menambah produk</div>
+                                </t>
+                                <t t-foreach="state.formTambah.baris" t-as="baris" t-key="baris._id">
+                                    <div class="cpj-form-tabel-baris">
+                                        <div class="col-produk">
+                                            <select class="cpj-form-input cpj-input-produk"
+                                                t-on-change="(ev) => this.pilihProduk(baris_index, ev.target.value)">
+                                                <option value="">-- Pilih Produk --</option>
+                                                <t t-foreach="state.daftarProduk" t-as="prod" t-key="prod.id">
+                                                    <option t-att-value="prod.id"><t t-esc="prod.name"/></option>
+                                                </t>
+                                            </select>
+                                        </div>
+                                        <div class="col-harga">
+                                            <input type="number" min="0" class="cpj-form-input cpj-input-angka"
+                                                t-att-value="baris.harga"
+                                                t-on-change="(ev) => this.ubahHarga(baris_index, ev.target.value)"/>
+                                        </div>
+                                        <div class="col-qty">
+                                            <input type="number" min="1" class="cpj-form-input cpj-input-angka"
+                                                t-att-value="baris.qty"
+                                                t-on-change="(ev) => this.ubahQty(baris_index, ev.target.value)"/>
+                                        </div>
+                                        <div class="col-subtotal cpj-subtotal-baris">
+                                            <t t-esc="formatRupiah(hitungSubtotal(baris))"/>
+                                        </div>
+                                        <div class="col-hapus">
+                                            <button class="cpj-btn-hapus-baris" t-on-click="() => this.hapusBaris(baris_index)">✕</button>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                        <div class="cpj-modal-footer cpj-form-footer">
+                            <div class="cpj-modal-total">
+                                <span class="cpj-total-label">Total Pesanan</span>
+                                <span class="cpj-total-nilai"><t t-esc="formatRupiah(totalForm)"/></span>
+                            </div>
+                            <div class="cpj-tombol-grup">
+                                <button class="cpj-tombol-sekunder" t-att-disabled="state.formTambah.menyimpan" t-on-click="tutupFormTambah">Batal</button>
+                                <button class="cpj-tombol-utama" t-att-disabled="state.formTambah.menyimpan" t-on-click="simpanPesanan">
+                                    <t t-if="state.formTambah.menyimpan"><div class="cpj-spinner-tombol"/>Menyimpan...</t>
+                                    <t t-else="">💾 Simpan Pesanan</t>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════════════
+             POPUP FORM EDIT PESANAN
+        ══════════════════════════════════════════════════════════ -->
+        <t t-if="state.formEdit.buka">
+            <div class="cpj-overlay" t-on-click="tutupFormEdit">
+                <div class="cpj-modal cpj-modal-form" t-on-click.stop="">
+                    <div class="cpj-modal-kepala cpj-kepala-edit">
+                        <div class="cpj-modal-judul">
+                            <h2>✏️ Edit Pesanan</h2>
+                            <p class="cpj-subkepala"><t t-esc="state.formEdit.orderName"/></p>
+                        </div>
+                        <button class="cpj-tombol-tutup" t-on-click="tutupFormEdit">✕</button>
+                    </div>
+                    <div class="cpj-modal-isi">
+
+                        <!-- Loading state saat fetch baris -->
+                        <t t-if="state.formEdit.memuat">
+                            <div class="cpj-form-memuat">
+                                <div class="cpj-spinner"/>
+                                <p>Memuat data pesanan...</p>
+                            </div>
+                        </t>
+
+                        <t t-else="">
+                            <div class="cpj-form-seksi">
+                                <h3 class="cpj-subjudul">📋 Info Pesanan</h3>
+                                <div class="cpj-form-baris-2">
+                                    <div class="cpj-form-grup">
+                                        <label class="cpj-form-label">👤 Pelanggan <span class="cpj-wajib">*</span></label>
+                                        <select class="cpj-form-input"
+                                            t-on-change="(ev) => state.formEdit.partner_id = ev.target.value">
+                                            <option value="">-- Pilih Pelanggan --</option>
+                                            <t t-foreach="state.daftarPelanggan" t-as="partner" t-key="partner.id">
+                                                <option t-att-value="partner.id"
+                                                    t-att-selected="String(partner.id) === state.formEdit.partner_id">
+                                                    <t t-esc="partner.name"/>
+                                                </option>
+                                            </t>
+                                        </select>
+                                    </div>
+                                    <div class="cpj-form-grup">
+                                        <label class="cpj-form-label">📅 Tanggal Pesanan</label>
+                                        <input type="date" class="cpj-form-input"
+                                            t-att-value="state.formEdit.tanggal"
+                                            t-on-change="(ev) => state.formEdit.tanggal = ev.target.value"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="cpj-form-seksi">
+                                <div class="cpj-seksi-judul-baris">
+                                    <h3 class="cpj-subjudul">🛒 Daftar Produk</h3>
+                                    <button class="cpj-btn-baris" t-on-click="tambahBarisEdit">+ Tambah Baris</button>
+                                </div>
+                                <div class="cpj-form-tabel">
+                                    <div class="cpj-form-tabel-kepala">
+                                        <span class="col-produk">Nama Produk</span>
+                                        <span class="col-harga">Harga Satuan</span>
+                                        <span class="col-qty">Qty</span>
+                                        <span class="col-subtotal">Subtotal</span>
+                                        <span class="col-hapus"/>
+                                    </div>
+                                    <t t-if="state.formEdit.baris.length === 0">
+                                        <div class="cpj-form-tabel-kosong">Klik "+ Tambah Baris" untuk menambah produk</div>
+                                    </t>
+                                    <t t-foreach="state.formEdit.baris" t-as="baris" t-key="baris._id">
+                                        <div class="cpj-form-tabel-baris">
+                                            <div class="col-produk">
+                                                <select class="cpj-form-input cpj-input-produk"
+                                                    t-on-change="(ev) => this.pilihProdukEdit(baris_index, ev.target.value)">
+                                                    <option value="">-- Pilih Produk --</option>
+                                                    <t t-foreach="state.daftarProduk" t-as="prod" t-key="prod.id">
+                                                        <option t-att-value="prod.id"
+                                                            t-att-selected="prod.id === baris.product_id">
+                                                            <t t-esc="prod.name"/>
+                                                        </option>
+                                                    </t>
+                                                </select>
+                                            </div>
+                                            <div class="col-harga">
+                                                <input type="number" min="0" class="cpj-form-input cpj-input-angka"
+                                                    t-att-value="baris.harga"
+                                                    t-on-change="(ev) => this.ubahHargaEdit(baris_index, ev.target.value)"/>
+                                            </div>
+                                            <div class="col-qty">
+                                                <input type="number" min="1" class="cpj-form-input cpj-input-angka"
+                                                    t-att-value="baris.qty"
+                                                    t-on-change="(ev) => this.ubahQtyEdit(baris_index, ev.target.value)"/>
+                                            </div>
+                                            <div class="col-subtotal cpj-subtotal-baris">
+                                                <t t-esc="formatRupiah(hitungSubtotal(baris))"/>
+                                            </div>
+                                            <div class="col-hapus">
+                                                <button class="cpj-btn-hapus-baris" t-on-click="() => this.hapusBarisEdit(baris_index)">✕</button>
+                                            </div>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+
+                            <div class="cpj-modal-footer cpj-form-footer">
+                                <div class="cpj-modal-total">
+                                    <span class="cpj-total-label">Total Pesanan</span>
+                                    <span class="cpj-total-nilai"><t t-esc="formatRupiah(totalEdit)"/></span>
+                                </div>
+                                <div class="cpj-tombol-grup">
+                                    <button class="cpj-tombol-sekunder" t-att-disabled="state.formEdit.menyimpan" t-on-click="tutupFormEdit">Batal</button>
+                                    <button class="cpj-tombol-utama cpj-tombol-utama-biru" t-att-disabled="state.formEdit.menyimpan" t-on-click="validasiDanKonfirmasiEdit">
+                                        <t t-if="state.formEdit.menyimpan"><div class="cpj-spinner-tombol"/>Menyimpan...</t>
+                                        <t t-else="">💾 Simpan Perubahan</t>
+                                    </button>
+                                </div>
+                            </div>
+                        </t>
+
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ═══════════════════════════════════════════════════════
+             DIALOG KONFIRMASI (z-index tertinggi, muncul di atas segalanya)
+        ══════════════════════════════════════════════════════════ -->
+        <t t-if="state.konfirmasi.buka">
+            <div class="cpj-overlay cpj-overlay-konfirmasi">
+                <div class="cpj-modal-konfirmasi">
+
+                    <!-- Header sesuai warna aksi -->
+                    <div t-attf-class="cpj-konfirmasi-kepala #{state.konfirmasi.warnaYa === 'merah' ? 'cpj-kepala-hapus' : 'cpj-kepala-simpan'}">
+                        <span class="cpj-konfirmasi-judul"><t t-esc="state.konfirmasi.judul"/></span>
+                        <button class="cpj-tombol-tutup" t-on-click="tutupKonfirmasi">✕</button>
+                    </div>
+
+                    <!-- Pesan -->
+                    <div class="cpj-konfirmasi-isi">
+                        <div class="cpj-konfirmasi-ikon">
+                            <t t-if="state.konfirmasi.warnaYa === 'merah'">⚠️</t>
+                            <t t-else="">💬</t>
+                        </div>
+                        <p class="cpj-konfirmasi-pesan" t-out="state.konfirmasi.pesan"/>
+                    </div>
+
+                    <!-- Tombol pilihan -->
+                    <div class="cpj-konfirmasi-footer">
+                        <button class="cpj-tombol-sekunder cpj-konfirmasi-batal" t-on-click="tutupKonfirmasi">
+                            Tidak, Batal
+                        </button>
+                        <button t-attf-class="cpj-tombol-konfirmasi-ya #{state.konfirmasi.warnaYa === 'merah' ? 'cpj-ya-merah' : 'cpj-ya-biru'}"
+                            t-on-click="jalankanKonfirmasi">
+                            <t t-esc="state.konfirmasi.labelYa"/>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+</templates>
