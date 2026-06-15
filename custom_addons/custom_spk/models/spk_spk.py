@@ -26,12 +26,21 @@ class SpkSpk(models.Model):
     )
     qty = fields.Float('Jumlah (Qty)', required=True, default=1.0, digits=(16, 2))
     unit = fields.Selection(
-        [('karton', 'Karton'), ('layer', 'Layer')],
+        [('karton', 'Karton'), ('layer', 'Layer'), ('pcs', 'Pcs')],
         string='Satuan', required=True
     )
+    layer_per_karton = fields.Integer('Layer per Karton', default=1)
+    pcs_per_layer = fields.Integer('Pcs per Layer', default=1)
     standard_price = fields.Float(
         'Harga Standar', required=True, digits=(16, 0)
     )
+    # Nominal gaji per satuan produksi (dipakai di tab Gaji)
+    nominal_gaji = fields.Float('Nominal Gaji', digits=(16, 0), default=0.0)
+    status = fields.Selection(
+        [('open', 'Open'), ('closed', 'Closed')],
+        string='Status', required=True, default='open'
+    )
+    tgl_selesai = fields.Date('Tanggal Selesai')
     active = fields.Boolean('Aktif', default=True)
 
     @api.constrains('qty')

@@ -6,7 +6,8 @@
 
 /* ---- WRAPPER ---- */
 .cspk-wrapper {
-    min-height: 100vh;
+    height: 100%;
+    overflow-y: auto;
     background: #f0f4f8;
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
     padding-bottom: 40px;
@@ -15,7 +16,7 @@
 /* ---- HEADER ---- */
 .cspk-header {
     background: linear-gradient(135deg, #dc2626 0%, #7c3aed 50%, #2563eb 100%);
-    padding: 28px 32px 40px;
+    padding: 12px 32px 16px;
     position: relative;
     overflow: hidden;
 }
@@ -282,6 +283,23 @@
     background: #eff6ff;
     color: #2563eb;
     white-space: nowrap;
+}
+
+.cspk-badge-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.cspk-status-open {
+    background: #dcfce7;
+    color: #16a34a;
+}
+.cspk-status-closed {
+    background: #f1f5f9;
+    color: #64748b;
 }
 
 /* ---- TOMBOL AKSI DI TABEL ---- */
@@ -1080,9 +1098,9 @@
     border-radius: 0;
 }
 .cspk-nama-bahan { font-weight: 600; color: #1e293b; }
-.cspk-tabel-bahan { margin: 0; font-size: 16px; border-collapse: collapse; }
-.cspk-tabel-bahan thead th { font-size: 16px; padding: 15px 18px; }
-.cspk-tabel-bahan tbody td { padding: 15px 18px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
+.cspk-tabel-bahan { margin: 0; font-size: 13px; border-collapse: collapse; }
+.cspk-tabel-bahan thead th { font-size: 13px; padding: 10px 14px; }
+.cspk-tabel-bahan tbody td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; }
 .cspk-tabel-bahan tbody td:last-child { border-right: none; }
 .cspk-tabel-bahan thead th { border-right: 1px solid rgba(255,255,255,0.2); }
 .cspk-tabel-bahan thead th:last-child { border-right: none; }
@@ -1101,6 +1119,542 @@
     padding: 16px 16px 24px;
 }
 .cspk-modal-bahan { max-width: 580px; }
+
+/* ---- TAB BAR (detail SPK) ---- */
+.cspk-tab-bar {
+    display: flex;
+    gap: 0;
+    padding: 0 16px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 0;
+    background: white;
+    border-radius: 12px 12px 0 0;
+}
+.cspk-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.cspk-tab-btn:hover { color: #1e293b; background: #f8fafc; }
+.cspk-tab-btn.aktif { color: #714B67; border-bottom-color: #714B67; }
+.cspk-tab-badge {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 22px;
+    text-align: center;
+}
+.cspk-tab-btn.aktif .cspk-tab-badge { background: #714B67; color: white; }
+
+/* ---- SEKSI FORMULASI ---- */
+.cspk-detail-formulasi-seksi {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+.cspk-detail-bahan-seksi { border-radius: 0 0 16px 16px; }
+
+/* Tombol tambah formulasi — indigo */
+.cspk-btn-tambah-formulasi {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    box-shadow: 0 4px 12px rgba(79,70,229,0.32) !important;
+}
+
+/* Tabel formulasi — header biru */
+.cspk-tabel-formulasi { margin: 0; font-size: 16px; border-collapse: collapse; }
+.cspk-tabel-formulasi thead tr { background: #2563eb; }
+.cspk-tabel-formulasi thead th {
+    font-size: 15px;
+    padding: 15px 18px;
+    color: white;
+    background: transparent;
+    border-right: 1px solid rgba(255,255,255,0.2);
+    border-bottom: none;
+}
+.cspk-tabel-formulasi thead th:last-child { border-right: none; }
+.cspk-tabel-formulasi tbody td {
+    padding: 14px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+}
+.cspk-tabel-formulasi tbody td:last-child { border-right: none; }
+.cspk-detail-formulasi-seksi .cspk-tabel-wrapper {
+    margin: 0; border-radius: 0; box-shadow: none; padding: 16px 16px 24px;
+}
+
+/* Badge Ya / Tidak */
+.cspk-badge-ya {
+    display: inline-block;
+    background: #d1fae5;
+    color: #065f46;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.cspk-badge-tidak {
+    display: inline-block;
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.cspk-tgl-update { font-size: 13px; color: #64748b; white-space: nowrap; }
+
+/* Header modal formulasi */
+.cspk-kepala-formulasi {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+}
+.cspk-tombol-formulasi {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    box-shadow: 0 4px 14px rgba(79,70,229,0.32) !important;
+}
+.cspk-modal-formulasi { max-width: 580px; }
+
+/* Breakdown produksi di kartu detail SPK */
+.cspk-produksi-breakdown {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+    border-radius: 10px;
+    border: 1px solid #d1fae5;
+    flex-wrap: wrap;
+}
+.cspk-breakdown-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.cspk-breakdown-angka {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+.cspk-breakdown-label {
+    font-size: 9px;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.cspk-breakdown-op {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+.cspk-breakdown-total {
+    font-size: 13px;
+    font-weight: 800;
+    color: #16a34a;
+    margin-left: 4px;
+}
+
+/* Ringkasan produksi dalam form SPK */
+.cspk-ringkasan-produksi {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+    font-size: 14px;
+    color: #166534;
+    margin-bottom: 16px;
+}
+.cspk-ringkasan-produksi b { font-size: 16px; color: #15803d; }
+
+/* Preview kebutuhan dalam form formulasi */
+.cspk-formulasi-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #eff6ff;
+    border-radius: 8px;
+    border: 1px solid #bfdbfe;
+    font-size: 14px;
+    color: #1e40af;
+    margin-bottom: 16px;
+}
+.cspk-formulasi-preview b { font-size: 16px; font-weight: 800; color: #1d4ed8; }
+
+/* Badge satuan & hint */
+.cspk-badge-satuan {
+    display: inline-block;
+    background: #e0e7ff;
+    color: #3730a3;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.cspk-kebutuhan-bold { font-weight: 700; color: #1e293b; }
+.cspk-form-hint {
+    font-size: 12px;
+    color: #f59e0b;
+    margin-top: 4px;
+    display: block;
+}
+.cspk-teks-abu { color: #cbd5e1; font-size: 15px; }
+
+/* ---- RINCIAN VARIAN BAHAN BAKU ---- */
+.cspk-qty-kurang { font-weight: 700; color: #dc2626; }
+
+/* Checkbox rincian */
+.cspk-toggle-rincian {
+    display: flex;
+    justify-content: center;
+    cursor: pointer;
+}
+.cspk-toggle-rincian input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #7c3aed;
+}
+.cspk-row-expanded td { background: #f5f3ff !important; }
+.cspk-detail-cell { padding: 0 !important; }
+.cspk-detail-panel {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 4px 16px 6px;
+}
+.cspk-detail-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.cspk-detail-panel-judul {
+    font-size: 11px;
+    color: #6b7280;
+}
+.cspk-btn-tambah-detail {
+    font-size: 11px;
+    padding: 2px 8px;
+    border: 1px solid #059669;
+    border-radius: 4px;
+    background: #ecfdf5;
+    color: #059669;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+.cspk-btn-tambah-detail:hover { background: #d1fae5; }
+.cspk-tabel-detail {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: inherit;
+    background: white;
+    border-radius: 0;
+    overflow: hidden;
+    box-shadow: none;
+}
+.cspk-tabel-detail th {
+    padding: 2px 6px;
+    background: #16a34a;
+    color: white;
+    font-weight: 700;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 0.01em;
+}
+.cspk-tabel-detail tbody tr:hover { background: inherit !important; }
+.cspk-tabel-detail thead { pointer-events: none; }
+.cspk-tabel-detail thead tr,
+.cspk-tabel-detail thead tr:hover,
+.cspk-tabel-detail thead tr:active,
+.cspk-tabel-detail thead th,
+.cspk-tabel-detail thead th:hover,
+.cspk-tabel-detail thead th:active,
+.cspk-tabel-detail thead th:focus {
+    background: #16a34a !important;
+    color: white !important;
+    cursor: default !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+.cspk-tabel-detail td {
+    padding: 0px 6px;
+    line-height: 1.2;
+    border-bottom: 1px solid #f1f5f9;
+    color: #374151;
+}
+.cspk-detail-total-row td {
+    background: #f1f5f9;
+    font-weight: 600;
+    border-top: 1px solid #cbd5e1;
+    padding: 1px 6px;
+}
+.cspk-detail-status-ok { color: #059669; font-weight: 700; }
+.cspk-detail-status-kurang { color: #d97706; font-size: 12px; font-weight: 600; }
+.cspk-detail-status-lebih { color: #dc2626; font-size: 12px; font-weight: 600; }
+.cspk-detail-pembagi { color: #374151; font-weight: 600; }
+.cspk-tabel-detail .cspk-aksi-grup { gap: 4px; line-height: 1; }
+.cspk-modal-kecil { max-width: 420px; }
+
+/* Checkbox grup dalam form formulasi */
+.cspk-form-checkbox-grup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+}
+.cspk-form-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 500;
+}
+.cspk-form-checkbox-item input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: #4f46e5;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ---- BAHAN BAKU: PENANDA QTY CUSTOM ---- */
+.cspk-badge-custom-qty {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+/* ---- GAJI: KARTU PERHITUNGAN ---- */
+.cspk-gaji-card {
+    max-width: 520px;
+    margin: 8px auto 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    padding: 8px 20px;
+}
+.cspk-gaji-baris {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.cspk-gaji-baris:last-child { border-bottom: none; }
+.cspk-gaji-label {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 500;
+}
+.cspk-gaji-nilai {
+    font-size: 15px;
+    color: #111827;
+    text-align: right;
+}
+.cspk-gaji-baris-total .cspk-gaji-nilai { font-size: 17px; color: #714B67; }
+.cspk-gaji-potongan b { color: #dc2626; }
+.cspk-gaji-baris-final {
+    margin-top: 4px;
+    border-top: 2px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 0 0 12px 12px;
+}
+.cspk-gaji-baris-final .cspk-gaji-label { font-size: 14px; color: #111827; font-weight: 700; }
+.cspk-gaji-baris-final .cspk-gaji-nilai { font-size: 20px; color: #15803d; font-weight: 700; }
+.cspk-gaji-input {
+    width: 160px;
+    text-align: right;
+    display: inline-block;
+}
+
+/* ---- SBH: OPNAME / KET ---- */
+.cspk-opname {
+    color: #dc2626;
+    font-weight: 700;
+}
+/* Kotak merah untuk sel OPNAME & Ket saat ada barang hilang */
+.cspk-sbh-merah {
+    background: #fee2e2 !important;
+}
+/* Baris merah untuk bahan yang keterangannya "Kurang" */
+.cspk-sbh-row-merah td {
+    background: #fef2f2;
+}
+/* Baris total harga (Ket Kurang) di paling bawah */
+.cspk-sbh-total-row td {
+    background: #f9fafb;
+    border-top: 2px solid #e5e7eb;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    font-size: 13px;
+}
+.cspk-sbh-ket {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.cspk-sbh-ket-kurang {
+    background: #fecaca;
+    color: #b91c1c;
+}
+.cspk-sbh-ket-lebih {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* ---- HPR: PROGRESS BAR ---- */
+.cspk-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 130px;
+}
+.cspk-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.cspk-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+.cspk-progress-merah { background: #ef4444; }
+.cspk-progress-kuning { background: #f59e0b; }
+.cspk-progress-hijau { background: #16a34a; }
+.cspk-progress-abu { background: #9ca3af; }
+.cspk-progress-teks {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    min-width: 38px;
+    text-align: right;
+}
+.cspk-btn-input-hpr {
+    background: #714B67;
+    color: #fff;
+    border-color: #714B67;
+}
+
+/* ---- HPR: BADGE STATUS OTOMATIS ---- */
+.cspk-hpr-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.cspk-hpr-status-semua {
+    background: #dcfce7;
+    color: #15803d;
+}
+.cspk-hpr-status-sebagian {
+    background: #fef3c7;
+    color: #b45309;
+}
+.cspk-hpr-status-lebih {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+/* ---- HPR: LAYOUT 2 TABEL BERDAMPINGAN ---- */
+.cspk-hpr-split {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.cspk-hpr-kiri { flex: 1 1 58%; min-width: 0; }
+.cspk-hpr-kanan { flex: 1 1 42%; min-width: 0; }
+.cspk-hpr-split .cspk-tabel-wrapper { margin: 0; }
+.cspk-hpr-kanan-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.cspk-hpr-kanan-judul {
+    font-size: 13px;
+    font-weight: 700;
+    color: #374151;
+}
+/* Tinggi baris disamakan agar baris kiri & kanan sejajar */
+.cspk-hpr-split .cspk-tabel thead tr { height: 44px; }
+.cspk-hpr-baris { height: 52px; }
+.cspk-hpr-split .cspk-nama-bahan {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Jangan sembunyikan kolom tabel split pada layar kecil (override aturan generik) */
+.cspk-hpr-split .cspk-tabel td:nth-child(3),
+.cspk-hpr-split .cspk-tabel th:nth-child(3) { display: table-cell !important; }
+
+/* ---- HPR: RINGKASAN TOTAL HASIL PRODUKSI ---- */
+.cspk-hpr-summary-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #374151;
+}
+.cspk-hpr-summary-sep { color: #9ca3af; font-weight: 700; }
+.cspk-progress-wrap-bar { width: 170px; flex: none; }
+
+@media (max-width: 800px) {
+    .cspk-hpr-split { flex-direction: column; }
+    .cspk-hpr-kiri, .cspk-hpr-kanan { width: 100%; flex: none; }
+}
 
 /* ---- RESPONSIF ---- */
 @media (max-width: 900px) {

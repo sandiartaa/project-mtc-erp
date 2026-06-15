@@ -2,3 +2,7 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_spk_spk_all,spk.spk semua pengguna,model_spk_spk,,1,1,1,1
 access_spk_cabang_all,spk.cabang semua pengguna,model_spk_cabang,,1,1,1,1
 access_spk_bahan_baku_all,spk.bahan.baku semua pengguna,model_spk_bahan_baku,,1,1,1,1
+access_spk_formulasi_all,spk.formulasi semua pengguna,model_spk_formulasi,,1,1,1,1
+access_spk_bahan_detail_all,spk.bahan.detail semua pengguna,model_spk_bahan_detail,,1,1,1,1
+access_spk_hpr_all,spk.hpr semua pengguna,model_spk_hpr,,1,1,1,1
+access_spk_sbh_all,spk.sbh semua pengguna,model_spk_sbh,,1,1,1,1
