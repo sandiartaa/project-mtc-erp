@@ -240,6 +240,9 @@
 }
 .cspk-tabel thead th.cspk-tengah { text-align: center; }
 .cspk-tabel thead th.cspk-kanan  { text-align: right; }
+/* Outline antar kolom — garis pemisah vertikal */
+.cspk-tabel thead th { border-right: 1px solid rgba(255,255,255,0.25); }
+.cspk-tabel thead th:last-child { border-right: none; }
 
 .cspk-tabel tbody tr {
     border-bottom: 1px solid #f1f5f9;
@@ -257,6 +260,8 @@
 }
 .cspk-tabel td.cspk-tengah { text-align: center; }
 .cspk-tabel td.cspk-kanan  { text-align: right; }
+.cspk-tabel td { border-right: 1px solid #f1f5f9; }
+.cspk-tabel td:last-child { border-right: none; }
 .cspk-angka { font-weight: 500; }
 
 /* Cell: No. SPK */
@@ -339,6 +344,94 @@
 .cspk-btn-hapus:hover {
     background: #fee2e2;
     border-color: #ef4444;
+}
+/* Tombol History (riwayat) */
+.cspk-btn-history {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1.5px solid #c4b5fd;
+    background: #f5f3ff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.cspk-btn-history:hover {
+    background: #ede9fe;
+    border-color: #8b5cf6;
+}
+
+/* ---- MODAL RIWAYAT (HISTORY) ---- */
+.cspk-modal-riwayat { max-width: 560px; }
+.cspk-kepala-riwayat::before { background: linear-gradient(135deg, #7c3aed, #2563eb); }
+.cspk-riwayat-isi { max-height: 60vh; overflow-y: auto; }
+.cspk-riwayat-kosong {
+    text-align: center;
+    padding: 32px 16px;
+    color: #94a3b8;
+}
+.cspk-riwayat-kosong-ikon { font-size: 36px; margin-bottom: 8px; }
+.cspk-riwayat-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.cspk-riwayat-item {
+    position: relative;
+    padding: 0 0 18px 24px;
+    border-left: 2px solid #e2e8f0;
+}
+.cspk-riwayat-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+.cspk-riwayat-titik {
+    position: absolute;
+    left: -7px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #e2e8f0;
+}
+.cspk-titik-buat { background: #16a34a; }
+.cspk-titik-edit { background: #2563eb; }
+.cspk-riwayat-konten {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.cspk-riwayat-baris-atas {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.cspk-riwayat-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.cspk-badge-buat { background: #dcfce7; color: #15803d; }
+.cspk-badge-edit { background: #dbeafe; color: #1d4ed8; }
+.cspk-riwayat-user {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+.cspk-riwayat-waktu {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-left: auto;
+}
+.cspk-riwayat-ket {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #475569;
 }
 
 /* ---- PAGINATION ---- */
@@ -1024,6 +1117,11 @@
     font-weight: 600;
     color: #1e293b;
 }
+.cspk-detail-info-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+}
 .cspk-detail-target {
     font-size: 16px;
     font-weight: 800;
@@ -1319,6 +1417,24 @@
     margin-top: 4px;
     display: block;
 }
+/* Label dengan checkbox custom di kanan (Harga Standar) */
+.cspk-label-inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.cspk-cek-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6d28d9;
+    cursor: pointer;
+    text-transform: none;
+}
+.cspk-cek-custom input { cursor: pointer; }
 .cspk-teks-abu { color: #cbd5e1; font-size: 15px; }
 
 /* ---- RINCIAN VARIAN BAHAN BAKU ---- */
@@ -1498,11 +1614,6 @@
 }
 .cspk-gaji-baris-final .cspk-gaji-label { font-size: 14px; color: #111827; font-weight: 700; }
 .cspk-gaji-baris-final .cspk-gaji-nilai { font-size: 20px; color: #15803d; font-weight: 700; }
-.cspk-gaji-input {
-    width: 160px;
-    text-align: right;
-    display: inline-block;
-}
 
 /* ---- SBH: OPNAME / KET ---- */
 .cspk-opname {
@@ -1622,6 +1733,21 @@
     color: #374151;
 }
 /* Tinggi baris disamakan agar baris kiri & kanan sejajar */
+.cspk-tabel-hpr thead tr { background: #16a34a; }
+
+/* ---- BORDER KOLOM DALAM TABEL SBH ---- */
+.cspk-tabel-sbh td {
+    border-right: 1px solid #e2e8f0;
+}
+.cspk-tabel-sbh td:last-child {
+    border-right: none;
+}
+.cspk-tabel-sbh thead th {
+    border-right: 1px solid rgba(255, 255, 255, 0.25);
+}
+.cspk-tabel-sbh thead th:last-child {
+    border-right: none;
+}
 .cspk-hpr-split .cspk-tabel thead tr { height: 44px; }
 .cspk-hpr-baris { height: 52px; }
 .cspk-hpr-split .cspk-nama-bahan {
@@ -1656,6 +1782,199 @@
     .cspk-hpr-kiri, .cspk-hpr-kanan { width: 100%; flex: none; }
 }
 
+/* ---- POPUP RINCIAN BELUM LENGKAP ---- */
+.cspk-kepala-warning {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+.cspk-modal-rincian-kurang {
+    max-width: 560px;
+}
+.cspk-rincian-kurang-pesan {
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #78350f;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+.cspk-tombol-warning-ok {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+}
+.cspk-tombol-warning-ok:hover {
+    background: linear-gradient(135deg, #b45309 0%, #92400e 100%) !important;
+}
+/* ---- TAB TERKUNCI (HPR / SBH / Gaji saat rincian bermasalah) ---- */
+.cspk-tab-terkunci {
+    background: #374151 !important;
+    color: #9ca3af !important;
+    border-color: #374151 !important;
+    cursor: not-allowed !important;
+    opacity: 0.75;
+}
+.cspk-tab-terkunci:hover {
+    background: #4b5563 !important;
+    color: #d1d5db !important;
+    transform: none !important;
+}
+.cspk-tab-terkunci.aktif {
+    background: #1f2937 !important;
+    color: #9ca3af !important;
+}
+.cspk-tab-kunci-ikon {
+    font-size: 11px;
+    margin-left: 4px;
+    opacity: 0.85;
+}
+
+.cspk-badge-rincian-kurang {
+    display: inline-block;
+    background: #fee2e2;
+    color: #b91c1c;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+.cspk-badge-rincian-lebih {
+    display: inline-block;
+    background: #fef3c7;
+    color: #b45309;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+.cspk-teks-lebih {
+    color: #b45309;
+    font-weight: 700;
+}
+
+/* ---- PICKER BAHAN BAKU ---- */
+.cspk-picker-cari-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 12px;
+    margin-bottom: 12px;
+}
+.cspk-picker-cari-ikon { font-size: 15px; color: #94a3b8; flex-shrink: 0; }
+.cspk-picker-cari-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 13.5px;
+    color: #1e293b;
+    outline: none;
+}
+.cspk-picker-list {
+    min-height: 80px;
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.cspk-picker-kosong {
+    padding: 28px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+.cspk-picker-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    background: white;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.cspk-picker-item:last-child { border-bottom: none; }
+.cspk-picker-item:hover { background: #f0f9ff; }
+.cspk-picker-item-nama {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #1e293b;
+}
+.cspk-picker-item-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+}
+.cspk-picker-kode {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+.cspk-picker-harga { color: #16a34a; font-weight: 600; }
+.cspk-picker-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.cspk-picker-nav-btn {
+    padding: 5px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.cspk-picker-nav-btn:hover:not(:disabled) { background: #f0f9ff; border-color: #2563eb; color: #2563eb; }
+.cspk-picker-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.cspk-picker-halaman-info { font-size: 12.5px; color: #64748b; }
+.cspk-picker-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 4px;
+}
+.cspk-picker-buat-baru {
+    padding: 8px 18px;
+    border: 1.5px dashed #2563eb;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.cspk-picker-buat-baru:hover { background: #dbeafe; }
+
+/* Selisih positif (lebih/surplus) di kolom SBH */
+.cspk-selisih-plus {
+    color: #16a34a;
+    font-weight: 700;
+}
+
+/* ---- POPUP SBH BELUM SELESAI ---- */
+.cspk-kepala-sbh-kurang {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+.cspk-tombol-sbh-ok {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+}
+.cspk-tombol-sbh-ok:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+}
+
 /* ---- RESPONSIF ---- */
 @media (max-width: 900px) {
     .cspk-tabel thead th:nth-child(8),
@@ -1674,4 +1993,58 @@
     .cspk-tabel td:nth-child(7) { display: none; }
     .cspk-modal { border-radius: 16px 16px 0 0; max-height: 96vh; }
     .cspk-overlay { align-items: flex-end; padding: 0; }
+}
+
+/* ---- KATEGORI SBH & BARIS GABUNGAN ---- */
+.cspk-badge-kategori {
+    display: inline-block;
+    background: #ede9fe;
+    color: #6d28d9;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.cspk-sbh-row-anggota td { background: #faf9ff; }
+.cspk-sbh-row-gabungan td {
+    background: #f5f3ff;
+    border-top: 2px solid #c4b5fd;
+    font-weight: 600;
+}
+
+/* ---- RINCIAN KURANG/LEBIH DI TAB GAJI ---- */
+.cspk-gaji-rincian {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+}
+.cspk-gaji-rincian-kolom {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.cspk-gaji-rincian-judul {
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+}
+.cspk-judul-kurang { color: #dc2626; }
+.cspk-judul-lebih { color: #16a34a; }
+.cspk-gaji-rincian-list { list-style: none; margin: 0; padding: 0; }
+.cspk-gaji-rincian-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dashed #e2e8f0;
+    font-size: 13px;
+}
+.cspk-gaji-rincian-item:last-child { border-bottom: none; }
+.cspk-gaji-rincian-nama { color: #1e293b; }
+.cspk-gaji-rincian-nilai { font-weight: 700; white-space: nowrap; }
+@media (max-width: 768px) {
+    .cspk-gaji-rincian { grid-template-columns: 1fr; }
 }

@@ -16,7 +16,6 @@ class SpkBahanBaku(models.Model):
     pic_id = fields.Many2one('res.users', 'PIC Bahan', domain=[('active', '=', True)])
     gudang_asal = fields.Char('Gudang Asal')
     keterangan = fields.Char('Keterangan')
-    has_rincian = fields.Boolean('Aktifkan Rincian', default=False)
 
     def write(self, vals):
         # Jika nama_bahan berubah, sinkronkan ke formulasi SPK yang sama

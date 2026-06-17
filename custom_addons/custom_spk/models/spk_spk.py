@@ -32,10 +32,10 @@ class SpkSpk(models.Model):
     layer_per_karton = fields.Integer('Layer per Karton', default=1)
     pcs_per_layer = fields.Integer('Pcs per Layer', default=1)
     standard_price = fields.Float(
-        'Harga Standar', required=True, digits=(16, 0)
+        'Harga Standar', digits=(16, 0), default=0.0
     )
-    # Nominal gaji per satuan produksi (dipakai di tab Gaji)
-    nominal_gaji = fields.Float('Nominal Gaji', digits=(16, 0), default=0.0)
+    # True = harga standar diatur manual user; False = otomatis dari total bahan baku
+    is_harga_standar_custom = fields.Boolean('Harga Standar Custom', default=False)
     status = fields.Selection(
         [('open', 'Open'), ('closed', 'Closed')],
         string='Status', required=True, default='open'
@@ -62,4 +62,35 @@ class SpkSpk(models.Model):
                 vals['name'] = (
                     self.env['ir.sequence'].next_by_code('spk.spk') or 'Baru'
                 )
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        # Catat riwayat pembuatan SPK
+        for rec in records:
+            self.env['spk.riwayat'].create({
+                'spk_id': rec.id,
+                'aksi': 'create',
+                'keterangan': 'SPK dibuat',
+            })
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        # Catat setiap perubahan ke riwayat (siapa & kapan otomatis).
+        # context skip_riwayat dipakai bila perlu menulis tanpa mencatat.
+        if not self.env.context.get('skip_riwayat'):
+            # Susun daftar nama field yang diubah (abaikan kolom teknis bawaan)
+            magic = ('id', 'create_uid', 'create_date', 'write_uid', 'write_date')
+            labels = []
+            for key in vals:
+                if key in magic:
+                    continue
+                field = self._fields.get(key)
+                if field:
+                    labels.append(field.string or key)
+            ket = 'Ubah: ' + ', '.join(labels) if labels else 'Diedit'
+            for rec in self:
+                self.env['spk.riwayat'].create({
+                    'spk_id': rec.id,
+                    'aksi': 'edit',
+                    'keterangan': ket,
+                })
+        return res

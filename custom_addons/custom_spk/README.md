@@ -8,13 +8,13 @@ Modul untuk membuat, melihat, mengedit, dan menghapus Surat Perintah Kerja (SPK)
   - **Daftar SPK** — halaman utama dengan tabel SPK, filter, pencarian, dan pagination
 
 ## Model/tabel baru yang dibuat
-- `spk.spk` — tabel utama Surat Perintah Kerja
+- `spk.spk` — tabel utama Surat Perintah Kerja. Harga Standar otomatis dihitung dari total bahan baku (mulai 0 saat baru); bisa di-custom manual lewat Edit (centang "Atur manual"), dan saat custom tidak ikut berubah otomatis.
 - `spk.cabang` — master cabang (perlu diisi terlebih dahulu lewat Settings → Technical → Model)
 - `spk.bahan.baku` — daftar bahan baku (PBH) per SPK
-- `spk.bahan.detail` — rincian varian per bahan baku (warna/ukuran)
 - `spk.formulasi` — formulasi pemakaian bahan per satuan produksi
-- `spk.hpr` — catatan produksi per SPK (tanggal kirim, hasil produksi); mengurangi qty bahan secara akumulatif
-- `spk.sbh` — SBH (Status Barang Kembali) per bahan baku: barang bagus & rusak (input), barang hilang & total kembali otomatis
+- `spk.hpr` — catatan produksi per SPK (tanggal kirim, hasil produksi, gudang penerima/PIC); mengurangi qty bahan secara akumulatif
+- `spk.sbh` — SBH (Status Barang Kembali) per bahan baku: barang sisa (input, default = sisa yang diharapkan), gudang penerima/PIC, kategori (text manual). Bahan ber-kategori sama digabung jadi 1 baris & nilai gabungan dipakai untuk Ket/potongan gaji. Barang hilang & stock akhir otomatis
+- `spk.riwayat` — riwayat (history) perubahan tiap SPK: mencatat siapa & kapan SPK dibuat, dan setiap kali diedit
 
 ## Fitur HPR (Hasil Produksi & Retur)
 Di halaman detail SPK terdapat tab **🚚 HPR** yang menampilkan setiap bahan baku beserta:

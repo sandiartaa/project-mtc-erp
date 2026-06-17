@@ -35,10 +35,10 @@ class SpkApp extends Component {
             // Bahan baku
             daftarBahan: [],
             memuatBahan: false,
-            daftarDetail: [],   // semua detail untuk SPK aktif
             formBahan: {
                 buka: false,
-                mode: 'tambah',   // 'tambah' | 'edit'
+                langkah: 'pilih',  // 'pilih' = picker, 'isi' = form
+                mode: 'tambah',    // 'tambah' | 'edit'
                 bahanId: null,
                 menyimpan: false,
                 kode_barang: "",
@@ -50,17 +50,14 @@ class SpkApp extends Component {
                 gudang_asal: "",
                 keterangan: "",
             },
-
-            // Rincian varian bahan
-            formDetail: {
-                buka: false,
-                mode: 'tambah',
-                detailId: null,
-                bahanId: null,
-                menyimpan: false,
-                keterangan: "",
-                qty: 0,
+            pickerBahan: {
+                cari: "",
+                halaman: 1,
+                perHalaman: 10,
+                daftarSemua: [],
+                memuat: false,
             },
+
 
             // HPR (Hasil Produksi & Retur) per bahan baku
             daftarHpr: [],   // semua entri HPR untuk SPK aktif
@@ -72,6 +69,7 @@ class SpkApp extends Component {
                 menyimpan: false,
                 tanggal_kirim: "",
                 hasil_produksi: 0,
+                gudang_penerima: "",
             },
 
             // SBH (Status Barang Kembali) per bahan baku
@@ -85,8 +83,9 @@ class SpkApp extends Component {
                 kodeBarang: "",
                 namaBahan: "",
                 menyimpan: false,
-                barang_bagus: 0,
-                barang_rusak: 0,
+                barang_sisa: 0,
+                gudang_penerima: "",
+                kategori: "",
             },
 
             // Formulasi produk
@@ -152,6 +151,20 @@ class SpkApp extends Component {
                 warnaYa: "merah",
             },
 
+            // Popup peringatan SBH belum selesai (blokir tab Gaji)
+            popupSbhKurang: {
+                buka: false,
+                daftarBahan: [],  // [{nama_bahan, kode_barang}]
+            },
+
+            // Modal riwayat (history) perubahan per SPK
+            riwayat: {
+                buka: false,
+                memuat: false,
+                spkName: "",
+                daftar: [],   // [{aksi, keterangan, user_id, create_date}]
+            },
+
             // Form tambah SPK baru
             formTambah: {
                 buka: false,
@@ -187,6 +200,7 @@ class SpkApp extends Component {
                 layer_per_karton: 1,
                 pcs_per_layer: 1,
                 standard_price: 0,
+                harga_standar_custom: false,
                 custom_number: "",
                 status: "open",
                 tgl_selesai: "",
@@ -269,7 +283,8 @@ class SpkApp extends Component {
                     domain,
                     ["id", "name", "nama_pekerjaan", "spk_date", "branch_id", "pic_id",
                      "product_id", "qty", "unit", "layer_per_karton", "pcs_per_layer",
-                     "standard_price", "nominal_gaji", "custom_number", "status", "tgl_selesai"],
+                     "standard_price", "is_harga_standar_custom", "custom_number", "status", "tgl_selesai",
+                     "create_uid", "create_date", "write_uid", "write_date"],
                     { limit: this.state.perHalaman, offset, order: "spk_date desc, id desc" }
                 ),
                 this.orm.searchCount("spk.spk", domain),
@@ -575,9 +590,6 @@ class SpkApp extends Component {
         if (parseFloat(f.qty) <= 0) {
             this.notification.add("Jumlah (Qty) harus lebih dari 0!", { type: "warning" }); return;
         }
-        if (parseFloat(f.standard_price) < 0) {
-            this.notification.add("Harga Standar tidak boleh negatif!", { type: "warning" }); return;
-        }
 
         f.menyimpan = true;
         try {
@@ -591,7 +603,9 @@ class SpkApp extends Component {
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
                 pcs_per_layer: parseInt(f.pcs_per_layer) || 1,
-                standard_price: parseFloat(f.standard_price),
+                // Harga standar mulai 0 & otomatis (dihitung dari total bahan baku)
+                standard_price: 0,
+                is_harga_standar_custom: false,
                 ...(f.custom_number ? { custom_number: f.custom_number } : {}),
                 status: f.status || "open",
                 ...(f.tgl_selesai ? { tgl_selesai: f.tgl_selesai } : {}),
@@ -626,6 +640,7 @@ class SpkApp extends Component {
         f.layer_per_karton = spk.layer_per_karton || 1;
         f.pcs_per_layer = spk.pcs_per_layer || 1;
         f.standard_price = spk.standard_price || 0;
+        f.harga_standar_custom = spk.is_harga_standar_custom || false;
         f.custom_number = spk.custom_number || "";
         f.status = spk.status || "open";
         f.tgl_selesai = spk.tgl_selesai || "";
@@ -657,7 +672,12 @@ class SpkApp extends Component {
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
                 pcs_per_layer: parseInt(f.pcs_per_layer) || 1,
-                standard_price: parseFloat(f.standard_price),
+                // Harga standar: tulis nilai manual hanya bila di-custom.
+                // Bila tidak custom, harga standar disinkronkan otomatis dari total bahan.
+                is_harga_standar_custom: f.harga_standar_custom,
+                ...(f.harga_standar_custom
+                    ? { standard_price: parseFloat(f.standard_price) || 0 }
+                    : {}),
                 custom_number: f.custom_number || false,
                 status: f.status || "open",
                 tgl_selesai: f.tgl_selesai || false,
@@ -680,7 +700,6 @@ class SpkApp extends Component {
         this.state.spkId = id;
         this.state.tabDetail = 'bahan';
         this.state.daftarFormulasi = [];
-        this.state.daftarDetail = [];
         this.state.daftarHpr = [];
         this.state.daftarSbh = [];
         this.state.spkDipilih = {
@@ -697,7 +716,13 @@ class SpkApp extends Component {
             layer_per_karton: spk.layer_per_karton || 1,
             pcs_per_layer: spk.pcs_per_layer || 1,
             standard_price: spk.standard_price,
-            nominal_gaji: spk.nominal_gaji || 0,
+            is_harga_standar_custom: spk.is_harga_standar_custom || false,
+            status: spk.status,
+            tgl_selesai: spk.tgl_selesai,
+            create_uid: spk.create_uid,
+            create_date: spk.create_date,
+            write_uid: spk.write_uid,
+            write_date: spk.write_date,
         };
         this.state.halaman = 'detail';
         await this.muatMaster();
@@ -715,10 +740,36 @@ class SpkApp extends Component {
         this.state.spkId = null;
         this.state.daftarBahan = [];
         this.state.daftarFormulasi = [];
-        this.state.daftarDetail = [];
         this.state.daftarHpr = [];
         this.state.daftarSbh = [];
         this.state.tabDetail = 'bahan';
+    }
+
+    // ─── RIWAYAT (HISTORY) SPK ───────────────────────────────────────────────
+
+    async bukaRiwayat(spk) {
+        const r = this.state.riwayat;
+        r.buka = true;
+        r.memuat = true;
+        r.spkName = spk.name;
+        r.daftar = [];
+        try {
+            r.daftar = await this.orm.searchRead(
+                "spk.riwayat",
+                [["spk_id", "=", spk.id]],
+                ["aksi", "keterangan", "user_id", "create_date"],
+                { order: "id desc" }
+            );
+        } catch (e) {
+            console.error("Gagal memuat riwayat:", e);
+            this.notification.add("Gagal memuat riwayat.", { type: "danger" });
+        }
+        r.memuat = false;
+    }
+
+    tutupRiwayat() {
+        this.state.riwayat.buka = false;
+        this.state.riwayat.daftar = [];
     }
 
     // ─── BAHAN BAKU ───────────────────────────────────────────────────────────
@@ -730,22 +781,24 @@ class SpkApp extends Component {
                 this.orm.searchRead(
                     "spk.bahan.baku",
                     [["spk_id", "=", spkId]],
-                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "pic_id", "gudang_asal", "keterangan", "has_rincian"],
+                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "pic_id", "gudang_asal", "keterangan"],
                     { order: "id asc" }
                 ),
             ]);
             this.state.daftarBahan = bahan;
-            await this.muatDetail(spkId);
         } catch (e) {
             console.error("Gagal memuat bahan baku:", e);
             this.notification.add("Gagal memuat bahan baku.", { type: "danger" });
         }
         this.state.memuatBahan = false;
+        // Harga standar otomatis menyesuaikan total bahan baku (kecuali di-custom)
+        await this.syncHargaStandar();
     }
 
-    bukaFormBahan() {
+    async bukaFormBahan() {
         const f = this.state.formBahan;
         f.buka = true;
+        f.langkah = 'pilih';
         f.mode = 'tambah';
         f.bahanId = null;
         f.menyimpan = false;
@@ -757,11 +810,99 @@ class SpkApp extends Component {
         f.pic_id = "";
         f.gudang_asal = "";
         f.keterangan = "";
+        // Reset picker
+        const p = this.state.pickerBahan;
+        p.cari = "";
+        p.halaman = 1;
+        await this.muatSemuaBahanPicker();
+    }
+
+    async muatSemuaBahanPicker() {
+        const p = this.state.pickerBahan;
+        p.memuat = true;
+        try {
+            const semua = await this.orm.searchRead(
+                'spk.bahan.baku',
+                [],
+                ['kode_barang', 'nama_bahan', 'harga', 'pic_id', 'gudang_asal', 'keterangan'],
+                { order: 'nama_bahan asc', limit: 0 }
+            );
+            // Deduplikasi berdasarkan nama_bahan (ambil data paling lengkap)
+            const map = new Map();
+            for (const b of semua) {
+                const key = (b.nama_bahan || "").trim().toLowerCase();
+                if (!key) continue;
+                if (!map.has(key) || b.harga > 0) map.set(key, b);
+            }
+            p.daftarSemua = Array.from(map.values()).sort((a, b) =>
+                (a.nama_bahan || "").localeCompare(b.nama_bahan || "")
+            );
+        } catch (e) {
+            console.error("Gagal memuat daftar bahan:", e);
+        } finally {
+            p.memuat = false;
+        }
+    }
+
+    get pickerBahanTerfilter() {
+        const p = this.state.pickerBahan;
+        const cari = (p.cari || "").trim().toLowerCase();
+        const hasil = cari
+            ? p.daftarSemua.filter(b =>
+                (b.nama_bahan || "").toLowerCase().includes(cari) ||
+                (b.kode_barang || "").toLowerCase().includes(cari)
+              )
+            : p.daftarSemua;
+        const mulai = (p.halaman - 1) * p.perHalaman;
+        return hasil.slice(mulai, mulai + p.perHalaman);
+    }
+
+    get pickerTotalHalaman() {
+        const p = this.state.pickerBahan;
+        const cari = (p.cari || "").trim().toLowerCase();
+        const total = cari
+            ? p.daftarSemua.filter(b =>
+                (b.nama_bahan || "").toLowerCase().includes(cari) ||
+                (b.kode_barang || "").toLowerCase().includes(cari)
+              ).length
+            : p.daftarSemua.length;
+        return Math.max(1, Math.ceil(total / p.perHalaman));
+    }
+
+    pickerCariInput(ev) {
+        this.state.pickerBahan.cari = ev.target.value;
+        this.state.pickerBahan.halaman = 1;
+    }
+
+    pickerHalamanBerikut() {
+        const p = this.state.pickerBahan;
+        if (p.halaman < this.pickerTotalHalaman) p.halaman++;
+    }
+
+    pickerHalamanSebelum() {
+        const p = this.state.pickerBahan;
+        if (p.halaman > 1) p.halaman--;
+    }
+
+    pilihBahanDariPicker(item) {
+        const f = this.state.formBahan;
+        f.kode_barang = item.kode_barang || "";
+        f.nama_bahan = item.nama_bahan || "";
+        f.harga = item.harga || 0;
+        f.pic_id = item.pic_id ? String(item.pic_id[0]) : "";
+        f.gudang_asal = item.gudang_asal || "";
+        f.keterangan = item.keterangan || "";
+        f.langkah = 'isi';
+    }
+
+    buatBahanBaruPicker() {
+        this.state.formBahan.langkah = 'isi';
     }
 
     bukaFormEditBahan(bahan) {
         const f = this.state.formBahan;
         f.buka = true;
+        f.langkah = 'isi';
         f.mode = 'edit';
         f.bahanId = bahan.id;
         f.menyimpan = false;
@@ -846,122 +987,31 @@ class SpkApp extends Component {
         }
     }
 
-    // ─── RINCIAN VARIAN BAHAN ────────────────────────────────────────────────
-
-    async toggleRincianBahan(bahan) {
-        const newVal = !bahan.has_rincian;
-        await this.orm.write("spk.bahan.baku", [bahan.id], { has_rincian: newVal });
-        await this.muatBahan(this.state.spkId);
-    }
-
-    async muatDetail(spkId) {
-        try {
-            const detail = await this.orm.searchRead(
-                "spk.bahan.detail",
-                [["bahan_id.spk_id", "=", spkId]],
-                ["id", "keterangan", "qty", "bahan_id"],
-                { order: "id asc" }
-            );
-            this.state.daftarDetail = detail;
-        } catch (e) {
-            console.error("Gagal memuat detail:", e);
-        }
-    }
-
-    getDetailForBahan(bahanId) {
-        return this.state.daftarDetail.filter(d => d.bahan_id[0] === bahanId);
-    }
-
-    totalDetailForBahan(bahanId) {
-        return this.getDetailForBahan(bahanId).reduce((sum, d) => sum + (d.qty || 0), 0);
-    }
-
-    bukaFormDetail(bahan) {
-        const f = this.state.formDetail;
-        f.buka = true;
-        f.mode = 'tambah';
-        f.detailId = null;
-        f.bahanId = bahan.id;
-        f.menyimpan = false;
-        f.keterangan = "";
-        f.qty = 0;
-    }
-
-    bukaFormEditDetail(detail) {
-        const f = this.state.formDetail;
-        f.buka = true;
-        f.mode = 'edit';
-        f.detailId = detail.id;
-        f.bahanId = this.state.expandedBahanId;
-        f.menyimpan = false;
-        f.keterangan = detail.keterangan || "";
-        f.qty = detail.qty || 0;
-    }
-
-    tutupFormDetail() {
-        this.state.formDetail.buka = false;
-    }
-
-    async simpanDetail() {
-        const f = this.state.formDetail;
-        if (!f.keterangan.trim()) {
-            this.notification.add("Keterangan wajib diisi!", { type: "warning" });
-            return;
-        }
-        f.menyimpan = true;
-        try {
-            const vals = {
-                keterangan: f.keterangan.trim(),
-                qty: parseFloat(f.qty) || 0,
-            };
-            if (f.mode === 'tambah') {
-                await this.orm.create("spk.bahan.detail", [{ bahan_id: f.bahanId, ...vals }]);
-                this.notification.add("Rincian berhasil ditambahkan!", { type: "success" });
-            } else {
-                await this.orm.write("spk.bahan.detail", [f.detailId], vals);
-                this.notification.add("Rincian berhasil diperbarui!", { type: "success" });
-            }
-            this.tutupFormDetail();
-            await this.muatDetail(this.state.spkId);
-        } catch (e) {
-            console.error("Gagal simpan detail:", e);
-            this.notification.add("Gagal menyimpan rincian.", { type: "danger" });
-        }
-        f.menyimpan = false;
-    }
-
-    konfirmasiHapusDetail(detail) {
-        this.tampilKonfirmasi({
-            judul: "Hapus Rincian",
-            pesan: "Hapus rincian <b>" + detail.keterangan + "</b>?",
-            labelYa: "Ya, Hapus",
-            warnaYa: "merah",
-            aksi: () => this.lakukanHapusDetail(detail),
-        });
-    }
-
-    async lakukanHapusDetail(detail) {
-        try {
-            await this.orm.unlink("spk.bahan.detail", [detail.id]);
-            await this.muatDetail(this.state.spkId);
-            this.notification.add("Rincian berhasil dihapus.", { type: "success" });
-        } catch (e) {
-            console.error("Gagal hapus detail:", e);
-            this.notification.add("Gagal menghapus rincian.", { type: "danger" });
-        }
-    }
-
     get totalHargaBahan() {
         return this.state.daftarBahan.reduce((sum, b) => {
-            let qty;
-            if (b.has_rincian) {
-                qty = this.totalDetailForBahan(b.id);
-            } else {
-                const keb = this.qtyEfektifBahan(b);
-                qty = keb !== null ? keb : (b.qty || 0);
-            }
+            const keb = this.qtyEfektifBahan(b);
+            const qty = keb !== null ? keb : (b.qty || 0);
             return sum + (qty * (b.harga || 0));
         }, 0);
+    }
+
+    // Sinkronkan Harga Standar SPK = total harga bahan baku.
+    // Tidak dilakukan bila user sudah meng-custom harga standarnya.
+    async syncHargaStandar() {
+        const s = this.state.spkDipilih;
+        if (!s || s.is_harga_standar_custom) return;
+        const total = Math.round(this.totalHargaBahan || 0);
+        if (Math.round(s.standard_price || 0) === total) return;  // sudah sama
+        s.standard_price = total;
+        try {
+            // skip_riwayat: perubahan otomatis tidak dicatat sebagai edit manual
+            await this.orm.write(
+                "spk.spk", [this.state.spkId], { standard_price: total },
+                { context: { skip_riwayat: true } }
+            );
+        } catch (e) {
+            console.error("Gagal sinkron harga standar:", e);
+        }
     }
 
     // ─── KALKULASI PRODUKSI ───────────────────────────────────────────────────
@@ -1060,7 +1110,32 @@ class SpkApp extends Component {
 
     // ─── TAB & FORMULASI ──────────────────────────────────────────────────────
 
+    // True jika ada bahan yang belum punya entri SBH — dipakai untuk warna tab Gaji
+    get adaSbhBelumLengkap() {
+        return this.cekSbhBelumLengkap().length > 0;
+    }
+
+    // Kembalikan daftar bahan yang belum memiliki data SBH sama sekali
+    cekSbhBelumLengkap() {
+        return this.state.daftarBahan
+            .filter(b => !this.getSbhForBahan(b.id))
+            .map(b => ({ nama_bahan: b.nama_bahan, kode_barang: b.kode_barang || '-' }));
+    }
+
+    tutupPopupSbhKurang() {
+        this.state.popupSbhKurang.buka = false;
+        this.state.popupSbhKurang.daftarBahan = [];
+    }
+
     pindahTab(tab) {
+        if (tab === 'gaji') {
+            const sbhKurang = this.cekSbhBelumLengkap();
+            if (sbhKurang.length > 0) {
+                this.state.popupSbhKurang.daftarBahan = sbhKurang;
+                this.state.popupSbhKurang.buka = true;
+                return;
+            }
+        }
         this.state.tabDetail = tab;
     }
 
@@ -1080,6 +1155,8 @@ class SpkApp extends Component {
             this.notification.add("Gagal memuat formulasi.", { type: "danger" });
         }
         this.state.memuatFormulasi = false;
+        // Formulasi memengaruhi qty efektif → harga standar disinkronkan ulang
+        await this.syncHargaStandar();
     }
 
     bukaFormFormulasi() {
@@ -1181,7 +1258,7 @@ class SpkApp extends Component {
             const hpr = await this.orm.searchRead(
                 "spk.hpr",
                 [["spk_id", "=", spkId]],
-                ["id", "tanggal_kirim", "hasil_produksi"],
+                ["id", "tanggal_kirim", "hasil_produksi", "gudang_penerima"],
                 { order: "tanggal_kirim asc, id asc" }
             );
             this.state.daftarHpr = hpr;
@@ -1265,6 +1342,7 @@ class SpkApp extends Component {
         f.menyimpan = false;
         f.tanggal_kirim = new Date().toISOString().slice(0, 10);
         f.hasil_produksi = 0;
+        f.gudang_penerima = "";
     }
 
     // Buka form edit catatan produksi
@@ -1276,6 +1354,7 @@ class SpkApp extends Component {
         f.menyimpan = false;
         f.tanggal_kirim = entry.tanggal_kirim || "";
         f.hasil_produksi = entry.hasil_produksi || 0;
+        f.gudang_penerima = entry.gudang_penerima || "";
     }
 
     tutupFormHpr() {
@@ -1293,6 +1372,7 @@ class SpkApp extends Component {
             const vals = {
                 hasil_produksi: parseFloat(f.hasil_produksi) || 0,
                 tanggal_kirim: f.tanggal_kirim || false,
+                gudang_penerima: f.gudang_penerima ? f.gudang_penerima.trim() : false,
             };
             if (f.mode === 'tambah') {
                 await this.orm.create("spk.hpr", [{ spk_id: this.state.spkId, ...vals }]);
@@ -1366,7 +1446,7 @@ class SpkApp extends Component {
             const sbh = await this.orm.searchRead(
                 "spk.sbh",
                 [["bahan_id.spk_id", "=", spkId]],
-                ["id", "bahan_id", "barang_bagus", "barang_rusak"],
+                ["id", "bahan_id", "barang_sisa", "gudang_penerima", "kategori"],
                 { order: "id asc" }
             );
             this.state.daftarSbh = sbh;
@@ -1386,17 +1466,13 @@ class SpkApp extends Component {
         return this.konsumsiBahanHpr(bahan);
     }
 
-    barangBagusSbh(bahan) {
+    // Barang sisa = jumlah barang kembali (gabungan bagus + rusak) yang diinput user
+    barangSisaSbh(bahan) {
         const sbh = this.getSbhForBahan(bahan.id);
-        return sbh ? (sbh.barang_bagus || 0) : 0;
+        return sbh ? (sbh.barang_sisa || 0) : 0;
     }
 
-    barangRusakSbh(bahan) {
-        const sbh = this.getSbhForBahan(bahan.id);
-        return sbh ? (sbh.barang_rusak || 0) : 0;
-    }
-
-    // Sisa = Qty SPK − Total Kembali (porsi yang dibagi jadi bagus/rusak/hilang)
+    // Sisa = Qty SPK − Total Kembali (porsi yang seharusnya jadi barang sisa/hilang)
     sisaSbh(bahan) {
         const qtySpk = this.qtyEfektifBahan(bahan);
         const total = this.totalKembaliSbh(bahan);
@@ -1404,18 +1480,19 @@ class SpkApp extends Component {
         return qtySpk - total;
     }
 
-    // Barang hilang = sisa − bagus − rusak (otomatis)
+    // Barang hilang = sisa − barang sisa (otomatis)
     barangHilangSbh(bahan) {
         const sisa = this.sisaSbh(bahan);
         if (sisa === null) return null;
-        return sisa - this.barangBagusSbh(bahan) - this.barangRusakSbh(bahan);
+        return sisa - this.barangSisaSbh(bahan);
     }
 
-    // Stock akhir = barang rusak + barang hilang
+    // Stock akhir = barang sisa + Total Kembali (HPR) − Qty SPK (PBH)
     stockAkhirSbh(bahan) {
-        const hilang = this.barangHilangSbh(bahan);
-        if (hilang === null) return null;
-        return this.barangRusakSbh(bahan) + hilang;
+        const qtySpk = this.qtyEfektifBahan(bahan);
+        const totalKembali = this.totalKembaliSbh(bahan);
+        if (qtySpk === null || totalKembali === null) return null;
+        return this.barangSisaSbh(bahan) + totalKembali - qtySpk;
     }
 
     // Harga bahan + 30%
@@ -1430,13 +1507,89 @@ class SpkApp extends Component {
         return hilang * this.harga130Bahan(bahan);
     }
 
-    // Total harga seluruh bahan yang Ket = "Kurang" (barang hilang > 0)
+    // ─── KATEGORI & PENGGABUNGAN BAHAN SBH ───────────────────────────────────
+    // Kategori bahan diambil dari entri SBH (text manual). "" jika belum diisi.
+    kategoriBahan(bahan) {
+        const sbh = this.getSbhForBahan(bahan.id);
+        return (sbh && sbh.kategori) ? sbh.kategori.trim() : "";
+    }
+
+    // Anggota satu kategori = semua bahan dengan kategori (trim) yang sama
+    anggotaKategori(kategori) {
+        return this.state.daftarBahan.filter(b => this.kategoriBahan(b) === kategori);
+    }
+
+    // Penjumlahan nilai untuk sekumpulan bahan (baris gabungan kategori)
+    qtySpkGabungan(anggota) {
+        return anggota.reduce((s, b) => { const q = this.qtyEfektifBahan(b); return s + (q !== null ? q : 0); }, 0);
+    }
+    totalKembaliGabungan(anggota) {
+        return anggota.reduce((s, b) => { const t = this.totalKembaliSbh(b); return s + (t !== null ? t : 0); }, 0);
+    }
+    barangSisaGabungan(anggota) {
+        return anggota.reduce((s, b) => s + this.barangSisaSbh(b), 0);
+    }
+    // Hilang gabungan = (Qty SPK − Total Kembali) − Barang Sisa (semua dijumlah dulu)
+    hilangGabungan(anggota) {
+        return (this.qtySpkGabungan(anggota) - this.totalKembaliGabungan(anggota)) - this.barangSisaGabungan(anggota);
+    }
+    stockAkhirGabungan(anggota) {
+        return this.barangSisaGabungan(anggota) + this.totalKembaliGabungan(anggota) - this.qtySpkGabungan(anggota);
+    }
+    // Harga+30% gabungan: pakai harga anggota pertama (beda warna dianggap sama harga)
+    harga130Gabungan(anggota) {
+        return anggota.length ? this.harga130Bahan(anggota[0]) : 0;
+    }
+    totalHargaGabungan(anggota) {
+        return this.hilangGabungan(anggota) * this.harga130Gabungan(anggota);
+    }
+
+    // Baris yang dirender di tabel SBH: tiap bahan + 1 baris gabungan per kategori
+    // (baris gabungan muncul tepat setelah anggota terakhir kategori tsb).
+    get sbhRows() {
+        const arr = this.state.daftarBahan;
+        const lastIdx = {};
+        arr.forEach((b, i) => {
+            const k = this.kategoriBahan(b);
+            if (k) lastIdx[k] = i;
+        });
+        const rows = [];
+        arr.forEach((b, i) => {
+            const k = this.kategoriBahan(b);
+            rows.push({ tipe: 'bahan', bahan: b, kategori: k });
+            if (k && lastIdx[k] === i) {
+                rows.push({ tipe: 'gabungan', kategori: k, anggota: this.anggotaKategori(k) });
+            }
+        });
+        return rows;
+    }
+
+    // "Unit" perhitungan untuk Ket & gaji: bahan ber-kategori digabung jadi 1 unit,
+    // bahan tanpa kategori jadi unit sendiri. Hanya bahan yang sudah ada entri SBH.
+    get unitSbhList() {
+        const arr = this.state.daftarBahan;
+        const units = [];
+        const katSeen = {};
+        for (const b of arr) {
+            if (!this.getSbhForBahan(b.id)) continue;
+            const k = this.kategoriBahan(b);
+            if (k) {
+                if (katSeen[k]) continue;
+                katSeen[k] = true;
+                const anggota = this.anggotaKategori(k);
+                units.push({ label: k, gabungan: true, hilang: this.hilangGabungan(anggota), totalHarga: this.totalHargaGabungan(anggota) });
+            } else {
+                units.push({ label: b.nama_bahan, gabungan: false, hilang: this.barangHilangSbh(b), totalHarga: this.totalHargaSbh(b) || 0 });
+            }
+        }
+        return units;
+    }
+
+    // Total harga seluruh unit yang Ket = "Kurang" (hilang > 0) → potongan gaji
     get totalHargaKurangSbh() {
-        return this.state.daftarBahan.reduce((sum, b) => {
-            if (!this.getSbhForBahan(b.id)) return sum;
-            const hilang = this.barangHilangSbh(b);
-            if (hilang === null || hilang <= 0) return sum;
-            return sum + (this.totalHargaSbh(b) || 0);
+        return this.unitSbhList.reduce((sum, u) => {
+            if (u.hilang === null || u.hilang <= 0) return sum;
+            return sum + (u.totalHarga || 0);
         }, 0);
     }
 
@@ -1447,12 +1600,13 @@ class SpkApp extends Component {
         return this.totalHasilProduksiHpr;
     }
 
+    // Harga per satuan = harga standar SPK saat ini (otomatis, bukan input manual)
     get gajiNominal() {
         const s = this.state.spkDipilih;
-        return s ? (s.nominal_gaji || 0) : 0;
+        return s ? (s.standard_price || 0) : 0;
     }
 
-    // Total kotor = total karton × nominal gaji
+    // Total kotor = total karton × harga standar SPK
     get gajiTotal() {
         return this.gajiTotalKarton * this.gajiNominal;
     }
@@ -1467,15 +1621,19 @@ class SpkApp extends Component {
         return this.gajiTotal - this.gajiPotongan;
     }
 
-    async ubahNominalGaji(val) {
-        const nominal = parseFloat(val) || 0;
-        if (this.state.spkDipilih) this.state.spkDipilih.nominal_gaji = nominal;
-        try {
-            await this.orm.write("spk.spk", [this.state.spkId], { nominal_gaji: nominal });
-        } catch (e) {
-            console.error("Gagal simpan nominal gaji:", e);
-            this.notification.add("Gagal menyimpan nominal gaji.", { type: "danger" });
+    // Rincian item kurang & lebih untuk ditampilkan di tab Gaji (per unit/kategori)
+    get gajiRincian() {
+        const kurang = [];
+        const lebih = [];
+        for (const u of this.unitSbhList) {
+            if (u.hilang === null) continue;
+            if (u.hilang > 0) {
+                kurang.push({ label: u.label, gabungan: u.gabungan, qty: u.hilang, totalHarga: u.totalHarga || 0 });
+            } else if (u.hilang < 0) {
+                lebih.push({ label: u.label, gabungan: u.gabungan, qty: Math.abs(u.hilang) });
+            }
         }
+        return { kurang, lebih };
     }
 
     bukaFormSbh(bahan) {
@@ -1489,13 +1647,18 @@ class SpkApp extends Component {
         if (sbh) {
             f.mode = 'edit';
             f.sbhId = sbh.id;
-            f.barang_bagus = sbh.barang_bagus || 0;
-            f.barang_rusak = sbh.barang_rusak || 0;
+            f.barang_sisa = sbh.barang_sisa || 0;
+            f.gudang_penerima = sbh.gudang_penerima || "";
+            f.kategori = sbh.kategori || "";
         } else {
             f.mode = 'tambah';
             f.sbhId = null;
-            f.barang_bagus = 0;
-            f.barang_rusak = 0;
+            // Nilai default = sisa yang diharapkan (Qty SPK − Total Kembali),
+            // user tinggal menyesuaikan bila ada yang hilang.
+            const sisa = this.sisaSbh(bahan);
+            f.barang_sisa = (sisa !== null && sisa > 0) ? sisa : 0;
+            f.gudang_penerima = "";
+            f.kategori = "";
         }
     }
 
@@ -1527,7 +1690,7 @@ class SpkApp extends Component {
         const sisa = this.formSbhSisa;
         if (sisa === null) return null;
         const f = this.state.formSbh;
-        return sisa - (parseFloat(f.barang_bagus) || 0) - (parseFloat(f.barang_rusak) || 0);
+        return sisa - (parseFloat(f.barang_sisa) || 0);
     }
 
     async simpanSbh() {
@@ -1535,8 +1698,9 @@ class SpkApp extends Component {
         f.menyimpan = true;
         try {
             const vals = {
-                barang_bagus: parseFloat(f.barang_bagus) || 0,
-                barang_rusak: parseFloat(f.barang_rusak) || 0,
+                barang_sisa: parseFloat(f.barang_sisa) || 0,
+                gudang_penerima: f.gudang_penerima ? f.gudang_penerima.trim() : false,
+                kategori: f.kategori ? f.kategori.trim() : false,
             };
             if (f.mode === 'tambah') {
                 await this.orm.create("spk.sbh", [{ bahan_id: f.bahanId, ...vals }]);

@@ -1,6 +1,6 @@
 {
     'name': 'SPK — Surat Perintah Kerja',
-    'version': '1.0.0',
+    'version': '1.1.0',
     'category': 'Custom',
     'summary': 'Manajemen Surat Perintah Kerja (SPK) produksi',
     'description': (

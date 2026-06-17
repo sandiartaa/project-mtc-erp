@@ -11,4 +11,4 @@ python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev -i base
 odoo nya jangan cuma refresh
 
 LANJUTIN CLAUDE
-claude --resume 3ab5d346-50c2-4533-92c8-6ece4a3300c0
+claude --resume 9d4208f4-6c8f-483b-8d8e-c02588db7ff0
