@@ -8,7 +8,11 @@ Modul untuk membuat, melihat, mengedit, dan menghapus Surat Perintah Kerja (SPK)
   - **Daftar SPK** — halaman utama dengan tabel SPK, filter, pencarian, dan pagination
 
 ## Model/tabel baru yang dibuat
-- `spk.spk` — tabel utama Surat Perintah Kerja. Harga Standar otomatis dihitung dari total bahan baku (mulai 0 saat baru); bisa di-custom manual lewat Edit (centang "Atur manual"), dan saat custom tidak ikut berubah otomatis.
+- `spk.spk` — tabel utama Surat Perintah Kerja. **Nama SPK diambil dari produk** (`barang_id` → `spk.barang`), bukan input manual lagi. Harga Standar otomatis dihitung dari total bahan baku (mulai 0 saat baru); bisa di-custom manual lewat Edit (centang "Atur manual"), dan saat custom tidak ikut berubah otomatis.
+- `spk.barang` — master barang/produk milik modul ini (tabel sendiri, BUKAN `product.product` bawaan). Diisi lewat tombol **+ Tambah Barang** (Kode, Nama, Harga, Satuan, PIC, Kategori, Gudang, Keterangan); menjadi sumber nama saat membuat SPK. Tiap dropdown di form ini berupa picker dengan pencarian, maksimal 5 pilihan per halaman, dan tombol next/prev.
+- `spk.satuan` — master satuan barang, bisa tambah/edit/hapus lewat popup **⚙ Kelola Satuan**. Default awal: Karton, Layer, Pcs.
+- `spk.kategori` — master kategori barang, bisa tambah/edit/hapus lewat popup **⚙ Kelola Kategori**.
+- `spk.gudang` — master gudang, bisa tambah/edit/hapus lewat popup **⚙ Kelola Gudang**. Default awal: Gudang Bahan Kemas.
 - `spk.cabang` — master cabang (perlu diisi terlebih dahulu lewat Settings → Technical → Model)
 - `spk.bahan.baku` — daftar bahan baku (PBH) per SPK
 - `spk.formulasi` — formulasi pemakaian bahan per satuan produksi
@@ -29,8 +33,8 @@ Setiap bahan baku memiliki satu entri HPR. Data HPR ikut terhapus otomatis bila 
 1. Sebelum bisa menambah SPK, buat data Cabang terlebih dahulu:
    - Aktifkan mode developer (Settings → Activate Developer Mode)
    - Buka Settings → Technical → spk.cabang → buat data cabang
-2. Pastikan sudah ada minimal satu Produk di sistem (Inventory atau Sales)
-3. Buka menu **SPK → Daftar SPK**, klik **+ Tambah SPK**
+2. Tambahkan minimal satu Barang lewat tombol **+ Tambah Barang** (di pojok kanan atas halaman Daftar SPK)
+3. Buka menu **SPK → Daftar SPK**, klik **+ Tambah SPK** — klik kotak **Produk (Nama SPK)** untuk mencari & memilih barang (muncul 5 barang berurut abjad)
 
 ## Cara Uninstall
 1. Buka Odoo → Apps → cari "SPK" → klik Uninstall

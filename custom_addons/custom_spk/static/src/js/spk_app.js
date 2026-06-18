@@ -118,11 +118,72 @@ class SpkApp extends Component {
                 tanggalAkhir: "",
             },
 
-            // Master data (cabang, pic, produk)
+            // Master data (cabang, pic, barang/produk)
             daftarCabang: [],
             daftarPic: [],
-            daftarProduk: [],
+            daftarBarang: [],
+            daftarBarangMaster: [],
+            daftarSatuan: [],
+            daftarKategori: [],
+            daftarGudang: [],
             masterDimuat: false,
+
+            // Popup Master Barang (daftar + tambah/edit/hapus)
+            popupBarang: {
+                buka: false,
+                cari: "",
+            },
+
+            // Popup kelola master generik (satuan/kategori/gudang): tambah/edit/hapus
+            popupMaster: {
+                buka: false,
+                target: "",       // 'satuan' | 'kategori' | 'gudang'
+                judul: "",
+                model: "",
+                editId: null,
+                editNama: "",
+                menyimpan: false,
+                tambahAktif: false,
+                tambahNama: "",
+                tambahMenyimpan: false,
+            },
+
+            // Picker generik untuk dropdown di form Tambah Barang
+            // (search + maks 5 + next/prev). Satu picker terbuka pada satu waktu.
+            pickerField: {
+                buka: false,
+                target: "",       // 'satuan' | 'pic' | 'kategori' | 'gudang'
+                cari: "",
+                halaman: 1,
+            },
+
+            // Picker produk (dropdown cari) untuk form tambah/edit SPK.
+            // Menampilkan 5 barang berurut abjad; nama SPK diambil dari barang.
+            pickerBarang: {
+                buka: false,
+                target: "",      // 'formTambah' | 'formEdit'
+                cari: "",
+            },
+
+            // Form barang (tambah/edit) ke tabel spk.barang
+            formBarang: {
+                buka: false,
+                menyimpan: false,
+                mode: 'tambah',     // 'tambah' | 'edit'
+                barangId: null,
+                kode: "",
+                nama: "",
+                harga: 0,
+                satuan_id: "",
+                satuan_nama: "",
+                pic_id: "",
+                pic_nama: "",
+                kategori_id: "",
+                kategori_nama: "",
+                gudang_id: "",
+                gudang_nama: "",
+                keterangan: "",
+            },
 
             // Popup kelola cabang (edit nama / hapus / tambah)
             popupCabang: {
@@ -169,11 +230,11 @@ class SpkApp extends Component {
             formTambah: {
                 buka: false,
                 menyimpan: false,
-                nama_pekerjaan: "",
                 spk_date: new Date().toISOString().slice(0, 10),
                 branch_id: "",
                 pic_id: "",
-                product_id: "",
+                barang_id: "",
+                barang_nama: "",
                 qty: 1,
                 unit: "",
                 layer_per_karton: 1,
@@ -190,11 +251,11 @@ class SpkApp extends Component {
                 menyimpan: false,
                 spkId: null,
                 spkName: "",
-                nama_pekerjaan: "",
                 spk_date: "",
                 branch_id: "",
                 pic_id: "",
-                product_id: "",
+                barang_id: "",
+                barang_nama: "",
                 qty: 1,
                 unit: "",
                 layer_per_karton: 1,
@@ -218,7 +279,7 @@ class SpkApp extends Component {
     async muatMaster() {
         if (this.state.masterDimuat) return;
         try {
-            const [cabang, pic, produk] = await Promise.all([
+            const [cabang, pic, barang, satuan, kategori, gudang] = await Promise.all([
                 this.orm.searchRead(
                     "spk.cabang",
                     [["active", "=", true]],
@@ -232,18 +293,463 @@ class SpkApp extends Component {
                     { limit: 200, order: "name asc" }
                 ),
                 this.orm.searchRead(
-                    "product.product",
+                    "spk.barang",
                     [["active", "=", true]],
                     ["id", "name"],
-                    { limit: 300, order: "name asc" }
+                    { limit: 0, order: "name asc" }
+                ),
+                this.orm.searchRead(
+                    "spk.satuan",
+                    [["active", "=", true]],
+                    ["id", "name"],
+                    { order: "name asc" }
+                ),
+                this.orm.searchRead(
+                    "spk.kategori",
+                    [["active", "=", true]],
+                    ["id", "name"],
+                    { order: "name asc" }
+                ),
+                this.orm.searchRead(
+                    "spk.gudang",
+                    [["active", "=", true]],
+                    ["id", "name"],
+                    { order: "name asc" }
                 ),
             ]);
             this.state.daftarCabang = cabang;
             this.state.daftarPic = pic;
-            this.state.daftarProduk = produk;
+            this.state.daftarBarang = barang;
+            this.state.daftarSatuan = satuan;
+            this.state.daftarKategori = kategori;
+            this.state.daftarGudang = gudang;
             this.state.masterDimuat = true;
         } catch (e) {
             console.error("Gagal memuat master data:", e);
+        }
+    }
+
+    // Muat ulang daftar barang (dipakai setelah menambah barang baru)
+    async muatBarang() {
+        try {
+            this.state.daftarBarang = await this.orm.searchRead(
+                "spk.barang",
+                [["active", "=", true]],
+                ["id", "name"],
+                { limit: 0, order: "name asc" }
+            );
+        } catch (e) {
+            console.error("Gagal memuat barang:", e);
+        }
+    }
+
+    // Info master per target (model + judul + nama state list)
+    _masterInfo(target) {
+        return {
+            satuan: { model: "spk.satuan", judul: "Satuan", daftar: "daftarSatuan" },
+            kategori: { model: "spk.kategori", judul: "Kategori", daftar: "daftarKategori" },
+            gudang: { model: "spk.gudang", judul: "Gudang", daftar: "daftarGudang" },
+        }[target];
+    }
+
+    // Muat ulang satu daftar master
+    async muatMasterList(target) {
+        const info = this._masterInfo(target);
+        try {
+            this.state[info.daftar] = await this.orm.searchRead(
+                info.model, [["active", "=", true]], ["id", "name"], { order: "name asc" }
+            );
+        } catch (e) {
+            console.error("Gagal memuat " + target + ":", e);
+        }
+    }
+
+    // Daftar master yang sedang dikelola di popup
+    get popupMasterDaftar() {
+        const info = this._masterInfo(this.state.popupMaster.target);
+        return info ? (this.state[info.daftar] || []) : [];
+    }
+
+    // ─── POPUP KELOLA MASTER GENERIK (satuan/kategori/gudang) ─────────────────
+    async bukaPopupMaster(target) {
+        const info = this._masterInfo(target);
+        await this.muatMasterList(target);
+        const p = this.state.popupMaster;
+        p.buka = true;
+        p.target = target;
+        p.judul = info.judul;
+        p.model = info.model;
+        p.editId = null;
+        p.editNama = "";
+        p.tambahAktif = false;
+        p.tambahNama = "";
+    }
+
+    tutupPopupMaster() {
+        const p = this.state.popupMaster;
+        p.buka = false;
+        p.editId = null;
+        p.editNama = "";
+        p.tambahAktif = false;
+        p.tambahNama = "";
+    }
+
+    async tambahMasterDariPopup() {
+        const p = this.state.popupMaster;
+        const nama = p.tambahNama.trim();
+        if (!nama) {
+            this.notification.add("Nama " + p.judul.toLowerCase() + " tidak boleh kosong!", { type: "warning" });
+            return;
+        }
+        p.tambahMenyimpan = true;
+        try {
+            await this.orm.create(p.model, [{ name: nama }]);
+            await this.muatMasterList(p.target);
+            p.tambahAktif = false;
+            p.tambahNama = "";
+            this.notification.add(p.judul + " \"" + nama + "\" berhasil ditambahkan!", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah master:", e);
+            this.notification.add("Gagal menambahkan. Coba lagi.", { type: "danger" });
+        }
+        p.tambahMenyimpan = false;
+    }
+
+    mulaiEditMaster(item) {
+        this.state.popupMaster.editId = item.id;
+        this.state.popupMaster.editNama = item.name;
+    }
+
+    batalEditMaster() {
+        this.state.popupMaster.editId = null;
+        this.state.popupMaster.editNama = "";
+    }
+
+    async simpanEditMaster() {
+        const p = this.state.popupMaster;
+        const nama = p.editNama.trim();
+        if (!nama) {
+            this.notification.add("Nama " + p.judul.toLowerCase() + " tidak boleh kosong!", { type: "warning" });
+            return;
+        }
+        p.menyimpan = true;
+        try {
+            await this.orm.write(p.model, [p.editId], { name: nama });
+            await this.muatMasterList(p.target);
+            this.batalEditMaster();
+            this.notification.add("Nama " + p.judul.toLowerCase() + " berhasil diperbarui!", { type: "success" });
+        } catch (e) {
+            console.error("Gagal edit master:", e);
+            this.notification.add("Gagal memperbarui. Coba lagi.", { type: "danger" });
+        }
+        p.menyimpan = false;
+    }
+
+    hapusMaster(item) {
+        const p = this.state.popupMaster;
+        this.tampilKonfirmasi({
+            judul: "Hapus " + p.judul,
+            pesan: "Apakah Anda yakin ingin menghapus " + p.judul.toLowerCase() + " <b>" + item.name + "</b>?",
+            labelYa: "Ya, Hapus",
+            warnaYa: "merah",
+            aksi: () => this.lakukanHapusMaster(item),
+        });
+    }
+
+    async lakukanHapusMaster(item) {
+        const p = this.state.popupMaster;
+        const target = p.target;
+        try {
+            await this.orm.unlink(p.model, [item.id]);
+            await this.muatMasterList(target);
+            // Bersihkan pilihan di form bila nilai yang dipakai dihapus
+            if (this.state.formBarang[target + "_id"] === String(item.id)) {
+                this.state.formBarang[target + "_id"] = "";
+                this.state.formBarang[target + "_nama"] = "";
+            }
+            this.notification.add(p.judul + " berhasil dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus master:", e);
+            this.notification.add("Gagal menghapus. Data mungkin masih digunakan.", { type: "danger" });
+        }
+    }
+
+    // ─── PICKER FIELD GENERIK (form Tambah Barang) ───────────────────────────
+    // Sumber data untuk picker yang sedang terbuka
+    get _pickerFieldSource() {
+        const map = {
+            satuan: "daftarSatuan", pic: "daftarPic",
+            kategori: "daftarKategori", gudang: "daftarGudang",
+        };
+        return this.state[map[this.state.pickerField.target]] || [];
+    }
+
+    // Hasil filter sesuai kata kunci (untuk hitung total halaman)
+    get pickerFieldTersaring() {
+        const cari = (this.state.pickerField.cari || "").trim().toLowerCase();
+        const src = this._pickerFieldSource;
+        return cari ? src.filter(x => (x.name || "").toLowerCase().includes(cari)) : src;
+    }
+
+    // Maksimal 5 item pada halaman aktif
+    get pickerFieldHalaman() {
+        const mulai = (this.state.pickerField.halaman - 1) * 5;
+        return this.pickerFieldTersaring.slice(mulai, mulai + 5);
+    }
+
+    get pickerFieldTotalHalaman() {
+        return Math.max(1, Math.ceil(this.pickerFieldTersaring.length / 5));
+    }
+
+    bukaPickerField(target) {
+        const p = this.state.pickerField;
+        if (p.buka && p.target === target) {
+            p.buka = false;
+            return;
+        }
+        p.buka = true;
+        p.target = target;
+        p.cari = "";
+        p.halaman = 1;
+    }
+
+    tutupPickerField() {
+        this.state.pickerField.buka = false;
+    }
+
+    pickerFieldInput(ev) {
+        this.state.pickerField.cari = ev.target.value;
+        this.state.pickerField.halaman = 1;
+    }
+
+    pickerFieldNext() {
+        const p = this.state.pickerField;
+        if (p.halaman < this.pickerFieldTotalHalaman) p.halaman++;
+    }
+
+    pickerFieldPrev() {
+        const p = this.state.pickerField;
+        if (p.halaman > 1) p.halaman--;
+    }
+
+    // Label terpilih untuk ditampilkan di input picker
+    pickerNama(target) {
+        return this.state.formBarang[target + "_nama"] || "";
+    }
+
+    pilihField(item) {
+        const t = this.state.pickerField.target;
+        this.state.formBarang[t + "_id"] = String(item.id);
+        this.state.formBarang[t + "_nama"] = item.name || "";
+        this.tutupPickerField();
+    }
+
+    // ─── PICKER PRODUK (NAMA SPK) ────────────────────────────────────────────
+    // Buka/tutup dropdown pilih produk untuk form tertentu ('formTambah'|'formEdit')
+    bukaPickerBarang(target) {
+        const p = this.state.pickerBarang;
+        if (p.buka && p.target === target) {
+            p.buka = false;
+            return;
+        }
+        p.buka = true;
+        p.target = target;
+        p.cari = "";
+    }
+
+    tutupPickerBarang() {
+        this.state.pickerBarang.buka = false;
+    }
+
+    pickerBarangInput(ev) {
+        this.state.pickerBarang.cari = ev.target.value;
+    }
+
+    // 5 barang teratas (berurut abjad) sesuai kata kunci pencarian
+    get pickerBarangTerfilter() {
+        const cari = (this.state.pickerBarang.cari || "").trim().toLowerCase();
+        const hasil = cari
+            ? this.state.daftarBarang.filter(b =>
+                (b.name || "").toLowerCase().includes(cari))
+            : this.state.daftarBarang;
+        return hasil.slice(0, 5);
+    }
+
+    // Pilih barang dari picker → set ke form target sebagai nama SPK
+    pilihBarang(item, target) {
+        const f = this.state[target];
+        f.barang_id = String(item.id);
+        f.barang_nama = item.name || "";
+        this.tutupPickerBarang();
+    }
+
+    // ─── MASTER BARANG (popup daftar + CRUD) ─────────────────────────────────
+    async bukaPopupBarang() {
+        await this.muatMaster();   // pastikan satuan/pic/kategori/gudang siap untuk form
+        this.state.popupBarang.buka = true;
+        this.state.popupBarang.cari = "";
+        await this.muatBarangMaster();
+    }
+
+    tutupPopupBarang() {
+        this.state.popupBarang.buka = false;
+    }
+
+    // Muat daftar barang lengkap (untuk tabel master)
+    async muatBarangMaster() {
+        try {
+            this.state.daftarBarangMaster = await this.orm.searchRead(
+                "spk.barang",
+                [["active", "=", true]],
+                ["id", "name", "kode", "harga", "satuan_id", "pic_id", "kategori_id", "gudang_id", "keterangan"],
+                { order: "name asc", limit: 0 }
+            );
+        } catch (e) {
+            console.error("Gagal memuat master barang:", e);
+        }
+    }
+
+    get barangMasterTersaring() {
+        const cari = (this.state.popupBarang.cari || "").trim().toLowerCase();
+        const src = this.state.daftarBarangMaster;
+        if (!cari) return src;
+        return src.filter(b =>
+            (b.name || "").toLowerCase().includes(cari) ||
+            (b.kode || "").toLowerCase().includes(cari)
+        );
+    }
+
+    // ─── FORM BARANG (tambah/edit) ───────────────────────────────────────────
+    bukaFormBarang() {
+        const f = this.state.formBarang;
+        f.buka = true;
+        f.menyimpan = false;
+        f.mode = 'tambah';
+        f.barangId = null;
+        f.kode = "";
+        f.nama = "";
+        f.harga = 0;
+        f.satuan_id = "";
+        f.satuan_nama = "";
+        f.pic_id = "";
+        f.pic_nama = "";
+        f.kategori_id = "";
+        f.kategori_nama = "";
+        f.gudang_id = "";
+        f.gudang_nama = "";
+        f.keterangan = "";
+        this.tutupPickerField();
+    }
+
+    bukaFormEditBarang(b) {
+        const f = this.state.formBarang;
+        f.buka = true;
+        f.menyimpan = false;
+        f.mode = 'edit';
+        f.barangId = b.id;
+        f.kode = b.kode || "";
+        f.nama = b.name || "";
+        f.harga = b.harga || 0;
+        f.satuan_id = b.satuan_id ? String(b.satuan_id[0]) : "";
+        f.satuan_nama = b.satuan_id ? b.satuan_id[1] : "";
+        f.pic_id = b.pic_id ? String(b.pic_id[0]) : "";
+        f.pic_nama = b.pic_id ? b.pic_id[1] : "";
+        f.kategori_id = b.kategori_id ? String(b.kategori_id[0]) : "";
+        f.kategori_nama = b.kategori_id ? b.kategori_id[1] : "";
+        f.gudang_id = b.gudang_id ? String(b.gudang_id[0]) : "";
+        f.gudang_nama = b.gudang_id ? b.gudang_id[1] : "";
+        f.keterangan = b.keterangan || "";
+        this.tutupPickerField();
+    }
+
+    tutupFormBarang() {
+        this.state.formBarang.buka = false;
+        this.tutupPickerField();
+    }
+
+    // Enter di input nama barang = langsung simpan
+    keydownBarang(ev) {
+        if (ev.key === 'Enter') this.simpanBarang();
+    }
+
+    async simpanBarang() {
+        const f = this.state.formBarang;
+        const nama = f.nama.trim();
+        if (!nama) {
+            this.notification.add("Nama barang tidak boleh kosong!", { type: "warning" });
+            return;
+        }
+        f.menyimpan = true;
+        try {
+            // Pakai false untuk mengosongkan nilai (penting saat edit menghapus pilihan)
+            const vals = {
+                name: nama,
+                kode: f.kode ? f.kode.trim() : false,
+                harga: parseFloat(f.harga) || 0,
+                satuan_id: f.satuan_id ? parseInt(f.satuan_id) : false,
+                pic_id: f.pic_id ? parseInt(f.pic_id) : false,
+                kategori_id: f.kategori_id ? parseInt(f.kategori_id) : false,
+                gudang_id: f.gudang_id ? parseInt(f.gudang_id) : false,
+                keterangan: f.keterangan ? f.keterangan.trim() : false,
+            };
+            if (f.mode === 'edit') {
+                await this.orm.write("spk.barang", [f.barangId], vals);
+                this.notification.add("Barang \"" + nama + "\" berhasil diperbarui!", { type: "success" });
+            } else {
+                await this.orm.create("spk.barang", [vals]);
+                this.notification.add("Barang \"" + nama + "\" berhasil ditambahkan!", { type: "success" });
+            }
+            await Promise.all([this.muatBarang(), this.muatBarangMaster()]);
+            this.tutupFormBarang();
+        } catch (e) {
+            console.error("Gagal simpan barang:", e);
+            this.notification.add("Gagal menyimpan barang. Coba lagi.", { type: "danger" });
+        }
+        f.menyimpan = false;
+    }
+
+    konfirmasiDuplikatBarang(b) {
+        this.tampilKonfirmasi({
+            judul: "Duplikat Barang",
+            pesan: "Duplikat barang <b>" + b.name + "</b> menjadi salinan baru?",
+            labelYa: "Ya, Duplikat",
+            warnaYa: "biru",
+            aksi: () => this.lakukanDuplikatBarang(b),
+        });
+    }
+
+    async lakukanDuplikatBarang(b) {
+        try {
+            await this.orm.call(
+                "spk.barang", "copy", [[b.id]],
+                { default: { name: (b.name || "") + " (copy)" } }
+            );
+            await Promise.all([this.muatBarang(), this.muatBarangMaster()]);
+            this.notification.add("Barang berhasil diduplikat.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal duplikat barang:", e);
+            this.notification.add("Gagal menduplikat barang. Coba lagi.", { type: "danger" });
+        }
+    }
+
+    konfirmasiHapusBarang(b) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Barang",
+            pesan: "Apakah Anda yakin ingin menghapus barang <b>" + b.name + "</b>?",
+            labelYa: "Ya, Hapus",
+            warnaYa: "merah",
+            aksi: () => this.lakukanHapusBarang(b),
+        });
+    }
+
+    async lakukanHapusBarang(b) {
+        try {
+            await this.orm.unlink("spk.barang", [b.id]);
+            await Promise.all([this.muatBarang(), this.muatBarangMaster()]);
+            this.notification.add("Barang berhasil dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus barang:", e);
+            this.notification.add("Gagal menghapus. Barang mungkin masih dipakai SPK.", { type: "danger" });
         }
     }
 
@@ -256,7 +762,7 @@ class SpkApp extends Component {
             domain.push('|', '|', '|',
                 ['name', 'ilike', f.cari],
                 ['custom_number', 'ilike', f.cari],
-                ['nama_pekerjaan', 'ilike', f.cari],
+                ['barang_id.name', 'ilike', f.cari],
                 ['pic_id.name', 'ilike', f.cari]
             );
         }
@@ -281,8 +787,8 @@ class SpkApp extends Component {
                 this.orm.searchRead(
                     "spk.spk",
                     domain,
-                    ["id", "name", "nama_pekerjaan", "spk_date", "branch_id", "pic_id",
-                     "product_id", "qty", "unit", "layer_per_karton", "pcs_per_layer",
+                    ["id", "name", "spk_date", "branch_id", "pic_id",
+                     "barang_id", "qty", "unit", "layer_per_karton", "pcs_per_layer",
                      "standard_price", "is_harga_standar_custom", "custom_number", "status", "tgl_selesai",
                      "create_uid", "create_date", "write_uid", "write_date"],
                     { limit: this.state.perHalaman, offset, order: "spk_date desc, id desc" }
@@ -566,7 +1072,8 @@ class SpkApp extends Component {
         f.spk_date = new Date().toISOString().slice(0, 10);
         f.branch_id = "";
         f.pic_id = "";
-        f.product_id = "";
+        f.barang_id = "";
+        f.barang_nama = "";
         f.qty = 1;
         f.unit = "";
         f.layer_per_karton = 1;
@@ -575,17 +1082,18 @@ class SpkApp extends Component {
         f.custom_number = "";
         f.status = "open";
         f.tgl_selesai = "";
+        this.tutupPickerBarang();
     }
 
     tutupFormTambah() {
         this.state.formTambah.buka = false;
+        this.tutupPickerBarang();
     }
 
     async simpanSpk() {
         const f = this.state.formTambah;
-        if (!f.nama_pekerjaan.trim()) { this.notification.add("Nama Pekerjaan wajib diisi!", { type: "warning" }); return; }
+        if (!f.barang_id) { this.notification.add("Pilih Produk terlebih dahulu!", { type: "warning" }); return; }
         if (!f.pic_id)     { this.notification.add("Pilih PIC terlebih dahulu!", { type: "warning" }); return; }
-        if (!f.product_id) { this.notification.add("Pilih Produk terlebih dahulu!", { type: "warning" }); return; }
         if (!f.unit)       { this.notification.add("Pilih Satuan terlebih dahulu!", { type: "warning" }); return; }
         if (parseFloat(f.qty) <= 0) {
             this.notification.add("Jumlah (Qty) harus lebih dari 0!", { type: "warning" }); return;
@@ -594,11 +1102,10 @@ class SpkApp extends Component {
         f.menyimpan = true;
         try {
             await this.orm.create("spk.spk", [{
-                nama_pekerjaan: f.nama_pekerjaan.trim(),
                 spk_date: f.spk_date,
                 ...(f.branch_id ? { branch_id: parseInt(f.branch_id) } : {}),
                 pic_id: parseInt(f.pic_id),
-                product_id: parseInt(f.product_id),
+                barang_id: parseInt(f.barang_id),
                 qty: parseFloat(f.qty),
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
@@ -630,11 +1137,11 @@ class SpkApp extends Component {
         f.menyimpan = false;
         f.spkId = spk.id;
         f.spkName = spk.name;
-        f.nama_pekerjaan = spk.nama_pekerjaan || "";
         f.spk_date = spk.spk_date || new Date().toISOString().slice(0, 10);
         f.branch_id = spk.branch_id ? String(spk.branch_id[0]) : "";
         f.pic_id = spk.pic_id ? String(spk.pic_id[0]) : "";
-        f.product_id = spk.product_id ? String(spk.product_id[0]) : "";
+        f.barang_id = spk.barang_id ? String(spk.barang_id[0]) : "";
+        f.barang_nama = spk.barang_id ? spk.barang_id[1] : "";
         f.qty = spk.qty || 1;
         f.unit = spk.unit || "";
         f.layer_per_karton = spk.layer_per_karton || 1;
@@ -648,13 +1155,13 @@ class SpkApp extends Component {
 
     tutupFormEdit() {
         this.state.formEdit.buka = false;
+        this.tutupPickerBarang();
     }
 
     async simpanEdit() {
         const f = this.state.formEdit;
-        if (!f.nama_pekerjaan.trim()) { this.notification.add("Nama Pekerjaan wajib diisi!", { type: "warning" }); return; }
+        if (!f.barang_id) { this.notification.add("Pilih Produk terlebih dahulu!", { type: "warning" }); return; }
         if (!f.pic_id)     { this.notification.add("Pilih PIC terlebih dahulu!", { type: "warning" }); return; }
-        if (!f.product_id) { this.notification.add("Pilih Produk terlebih dahulu!", { type: "warning" }); return; }
         if (!f.unit)       { this.notification.add("Pilih Satuan terlebih dahulu!", { type: "warning" }); return; }
         if (parseFloat(f.qty) <= 0) {
             this.notification.add("Jumlah (Qty) harus lebih dari 0!", { type: "warning" }); return;
@@ -663,11 +1170,10 @@ class SpkApp extends Component {
         f.menyimpan = true;
         try {
             await this.orm.write("spk.spk", [f.spkId], {
-                nama_pekerjaan: f.nama_pekerjaan.trim(),
                 spk_date: f.spk_date,
                 branch_id: f.branch_id ? parseInt(f.branch_id) : false,
                 pic_id: parseInt(f.pic_id),
-                product_id: parseInt(f.product_id),
+                barang_id: parseInt(f.barang_id),
                 qty: parseFloat(f.qty),
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
@@ -705,12 +1211,11 @@ class SpkApp extends Component {
         this.state.spkDipilih = {
             id,
             name: spk.name,
-            nama_pekerjaan: spk.nama_pekerjaan,
             spk_date: spk.spk_date,
             custom_number: spk.custom_number,
             branch_id: spk.branch_id,
             pic_id: spk.pic_id,
-            product_id: spk.product_id,
+            barang_id: spk.barang_id,
             qty: spk.qty,
             unit: spk.unit,
             layer_per_karton: spk.layer_per_karton || 1,

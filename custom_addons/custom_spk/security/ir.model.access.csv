@@ -1,6 +1,10 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_spk_spk_all,spk.spk semua pengguna,model_spk_spk,,1,1,1,1
 access_spk_cabang_all,spk.cabang semua pengguna,model_spk_cabang,,1,1,1,1
+access_spk_barang_all,spk.barang semua pengguna,model_spk_barang,,1,1,1,1
+access_spk_satuan_all,spk.satuan semua pengguna,model_spk_satuan,,1,1,1,1
+access_spk_kategori_all,spk.kategori semua pengguna,model_spk_kategori,,1,1,1,1
+access_spk_gudang_all,spk.gudang semua pengguna,model_spk_gudang,,1,1,1,1
 access_spk_bahan_baku_all,spk.bahan.baku semua pengguna,model_spk_bahan_baku,,1,1,1,1
 access_spk_formulasi_all,spk.formulasi semua pengguna,model_spk_formulasi,,1,1,1,1
 access_spk_hpr_all,spk.hpr semua pengguna,model_spk_hpr,,1,1,1,1

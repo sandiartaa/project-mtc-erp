@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Satuan default (sama seperti pilihan satuan saat membuat SPK).
+         noupdate="1" agar bila user menghapus/mengeditnya tidak dibuat ulang
+         saat modul di-update. -->
+    <data noupdate="1">
+        <record id="satuan_karton" model="spk.satuan">
+            <field name="name">Karton</field>
+        </record>
+        <record id="satuan_layer" model="spk.satuan">
+            <field name="name">Layer</field>
+        </record>
+        <record id="satuan_pcs" model="spk.satuan">
+            <field name="name">Pcs</field>
+        </record>
+    </data>
+</odoo>

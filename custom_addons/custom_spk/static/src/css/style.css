@@ -871,6 +871,21 @@
     transition: background 0.15s, transform 0.1s;
 }
 .cspk-popup-btn-hapus:hover { background: #fecaca; transform: scale(1.1); }
+.cspk-popup-btn-duplikat {
+    background: #ede9fe;
+    color: #6d28d9;
+    border: none;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.cspk-popup-btn-duplikat:hover { background: #ddd6fe; transform: scale(1.1); }
 .cspk-popup-cabang-input {
     flex: 1;
     border: 1px solid #93c5fd;
@@ -1217,6 +1232,52 @@
     padding: 16px 16px 24px;
 }
 .cspk-modal-bahan { max-width: 580px; }
+
+/* Modal Tambah Barang — besar, mepet batas layar (bukan menyesuaikan isi) */
+.cspk-modal-barang {
+    max-width: none;
+    width: 100%;
+    height: calc(100vh - 40px);
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+/* Isi memenuhi sisa tinggi & bisa di-scroll; footer menempel di bawah */
+.cspk-modal-barang .cspk-modal-isi {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+.cspk-modal-barang .cspk-modal-footer { margin-top: auto; }
+
+/* Modal Master Barang — besar, mepet batas layar */
+.cspk-modal-master-barang {
+    max-width: none;
+    width: 100%;
+    height: calc(100vh - 40px);
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.cspk-modal-master-barang .cspk-modal-isi {
+    flex: 1;
+    overflow-y: auto;
+}
+/* Toolbar: search + tombol tambah */
+.cspk-master-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.cspk-master-toolbar .cspk-form-input { flex: 1; }
+.cspk-master-toolbar .cspk-btn-tambah-bahan { flex-shrink: 0; }
+/* Tabel master: kolom aksi & tombol */
+.cspk-tabel-master { margin: 0; }
+.cspk-master-aksi { display: flex; gap: 6px; justify-content: center; }
 
 /* ---- TAB BAR (detail SPK) ---- */
 .cspk-tab-bar {
@@ -2047,4 +2108,115 @@
 .cspk-gaji-rincian-nilai { font-weight: 700; white-space: nowrap; }
 @media (max-width: 768px) {
     .cspk-gaji-rincian { grid-template-columns: 1fr; }
+}
+
+/* ---- AKSI HEADER (Tambah Barang + Tambah SPK) ---- */
+.cspk-header-aksi {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+/* Tombol Tambah Barang — varian outline putih agar beda dari Tambah SPK */
+.cspk-btn-barang {
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.2s;
+}
+.cspk-btn-barang:hover {
+    background: rgba(255,255,255,0.22);
+    transform: translateY(-2px);
+}
+
+/* ---- PICKER PRODUK (dropdown cari + list 5) ---- */
+.cspk-picker { position: relative; }
+.cspk-picker-input { cursor: pointer; background: white; }
+.cspk-picker-input:hover { border-color: #2563eb; }
+.cspk-picker-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: white;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.cspk-picker-cari {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 6px;
+    outline: none;
+}
+.cspk-picker-cari:focus { border-color: #2563eb; }
+.cspk-picker-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #1e293b;
+    transition: background 0.12s;
+}
+.cspk-picker-item:hover { background: #eff6ff; color: #2563eb; }
+.cspk-picker-kosong {
+    padding: 14px 12px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+/* Baris picker: input + tombol kelola ⚙ sejajar */
+.cspk-picker-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+.cspk-picker-row .cspk-picker-input { flex: 1; }
+
+/* Navigasi next/prev di dalam dropdown picker */
+.cspk-picker-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #f1f5f9;
+}
+.cspk-picker-nav-btn {
+    padding: 5px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #2563eb;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.cspk-picker-nav-btn:hover:not(:disabled) { background: #eff6ff; }
+.cspk-picker-nav-btn:disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    border-color: #f1f5f9;
+}
+.cspk-picker-nav-info {
+    font-size: 12.5px;
+    color: #64748b;
+    font-weight: 600;
 }

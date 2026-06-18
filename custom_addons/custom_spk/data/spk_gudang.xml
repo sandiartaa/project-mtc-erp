@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Gudang default. noupdate="1" agar bila user menghapus/mengeditnya
+         tidak dibuat ulang saat modul di-update. -->
+    <data noupdate="1">
+        <record id="gudang_bahan_kemas" model="spk.gudang">
+            <field name="name">Gudang Bahan Kemas</field>
+        </record>
+    </data>
+</odoo>

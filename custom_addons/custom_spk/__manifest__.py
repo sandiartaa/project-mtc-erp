@@ -1,6 +1,6 @@
 {
     'name': 'SPK — Surat Perintah Kerja',
-    'version': '1.1.0',
+    'version': '1.4.0',
     'category': 'Custom',
     'summary': 'Manajemen Surat Perintah Kerja (SPK) produksi',
     'description': (
@@ -8,10 +8,12 @@
         'dengan tampilan modern merah-biru, CRUD lengkap, dan penomoran otomatis.'
     ),
     'author': 'Custom',
-    'depends': ['base', 'product'],
+    'depends': ['base'],
     'data': [
         'security/ir.model.access.csv',
         'data/spk_sequence.xml',
+        'data/spk_satuan.xml',
+        'data/spk_gudang.xml',
         'views/spk_menus.xml',
     ],
     'assets': {

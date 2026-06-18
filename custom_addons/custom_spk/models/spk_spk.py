@@ -10,7 +10,6 @@ class SpkSpk(models.Model):
     name = fields.Char(
         'No. SPK', readonly=True, default='Baru', copy=False, index=True
     )
-    nama_pekerjaan = fields.Char('Nama Pekerjaan', default='')
     custom_number = fields.Char('Nomor Custom')
     spk_date = fields.Date(
         'Tanggal SPK', required=True, default=fields.Date.today, index=True
@@ -21,8 +20,11 @@ class SpkSpk(models.Model):
     pic_id = fields.Many2one(
         'res.users', 'Diperintahkan Kepada (PIC)', required=True
     )
-    product_id = fields.Many2one(
-        'product.product', 'Produksi', required=True
+    # Nama SPK diambil dari barang ini (tabel custom spk.barang), bukan input manual.
+    # required=False di level DB agar update modul pada data lama tidak gagal;
+    # kewajiban diisi divalidasi di UI saat membuat/edit SPK.
+    barang_id = fields.Many2one(
+        'spk.barang', 'Produk', ondelete='restrict', index=True
     )
     qty = fields.Float('Jumlah (Qty)', required=True, default=1.0, digits=(16, 2))
     unit = fields.Selection(
