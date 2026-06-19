@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, api
 
 
 class SpkBarang(models.Model):
@@ -22,3 +22,13 @@ class SpkBarang(models.Model):
     gudang_id = fields.Many2one('spk.gudang', 'Gudang', ondelete='set null')
     keterangan = fields.Char('Keterangan')
     active = fields.Boolean('Aktif', default=True)
+
+    # Formulasi (resep bahan) milik barang ini. Boleh kosong (barang tanpa formulasi).
+    formulasi_ids = fields.One2many('spk.barang.formulasi', 'barang_id', 'Formulasi')
+    # Jumlah baris formulasi — dipakai badge "punya formulasi / tidak" di daftar barang.
+    formulasi_count = fields.Integer('Jumlah Formulasi', compute='_compute_formulasi_count')
+
+    @api.depends('formulasi_ids')
+    def _compute_formulasi_count(self):
+        for rec in self:
+            rec.formulasi_count = len(rec.formulasi_ids)

@@ -7,6 +7,7 @@ access_spk_kategori_all,spk.kategori semua pengguna,model_spk_kategori,,1,1,1,1
 access_spk_gudang_all,spk.gudang semua pengguna,model_spk_gudang,,1,1,1,1
 access_spk_bahan_baku_all,spk.bahan.baku semua pengguna,model_spk_bahan_baku,,1,1,1,1
 access_spk_formulasi_all,spk.formulasi semua pengguna,model_spk_formulasi,,1,1,1,1
+access_spk_barang_formulasi_all,spk.barang.formulasi semua pengguna,model_spk_barang_formulasi,,1,1,1,1
 access_spk_hpr_all,spk.hpr semua pengguna,model_spk_hpr,,1,1,1,1
 access_spk_sbh_all,spk.sbh semua pengguna,model_spk_sbh,,1,1,1,1
 access_spk_riwayat_all,spk.riwayat semua pengguna,model_spk_riwayat,,1,1,1,1

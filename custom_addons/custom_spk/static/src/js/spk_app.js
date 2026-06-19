@@ -134,6 +134,26 @@ class SpkApp extends Component {
                 cari: "",
             },
 
+            // Popup Detail Barang (klik baris barang → tampil detail + tab formulasi)
+            popupBarangDetail: {
+                buka: false,
+                barang: null,        // salinan plain record barang yang dipilih
+                tab: 'info',         // 'info' | 'formulasi'
+            },
+            // Formulasi milik master barang yang sedang dibuka
+            daftarBarangFormulasi: [],
+            memuatBarangFormulasi: false,
+            formBarangFormulasi: {
+                buka: false,
+                mode: 'tambah',      // 'tambah' | 'edit'
+                formulasiId: null,
+                menyimpan: false,
+                nama_bahan: "",
+                qty: 1,
+                satuan_hitung: 'pcs',
+                keterangan: "",
+            },
+
             // Popup kelola master generik (satuan/kategori/gudang): tambah/edit/hapus
             popupMaster: {
                 buka: false,
@@ -601,7 +621,7 @@ class SpkApp extends Component {
             this.state.daftarBarangMaster = await this.orm.searchRead(
                 "spk.barang",
                 [["active", "=", true]],
-                ["id", "name", "kode", "harga", "satuan_id", "pic_id", "kategori_id", "gudang_id", "keterangan"],
+                ["id", "name", "kode", "harga", "satuan_id", "pic_id", "kategori_id", "gudang_id", "keterangan", "formulasi_count"],
                 { order: "name asc", limit: 0 }
             );
         } catch (e) {
@@ -750,6 +770,151 @@ class SpkApp extends Component {
         } catch (e) {
             console.error("Gagal hapus barang:", e);
             this.notification.add("Gagal menghapus. Barang mungkin masih dipakai SPK.", { type: "danger" });
+        }
+    }
+
+    // ─── DETAIL BARANG + FORMULASI PER BARANG ────────────────────────────────
+    // Klik satu baris barang di Master Barang → buka modal detail (info + formulasi)
+    async bukaDetailBarang(b) {
+        const d = this.state.popupBarangDetail;
+        d.buka = true;
+        d.tab = 'info';
+        // Salinan plain (hindari proxy nested) — cukup untuk ditampilkan
+        d.barang = {
+            id: b.id,
+            name: b.name,
+            kode: b.kode,
+            harga: b.harga,
+            satuan_id: b.satuan_id,
+            pic_id: b.pic_id,
+            kategori_id: b.kategori_id,
+            gudang_id: b.gudang_id,
+            keterangan: b.keterangan,
+        };
+        await this.muatBarangFormulasi(b.id);
+    }
+
+    tutupDetailBarang() {
+        const d = this.state.popupBarangDetail;
+        d.buka = false;
+        d.barang = null;
+        this.state.daftarBarangFormulasi = [];
+        this.tutupFormBarangFormulasi();
+    }
+
+    pindahTabBarang(tab) {
+        this.state.popupBarangDetail.tab = tab;
+    }
+
+    async muatBarangFormulasi(barangId) {
+        if (!barangId) return;
+        this.state.memuatBarangFormulasi = true;
+        try {
+            this.state.daftarBarangFormulasi = await this.orm.searchRead(
+                "spk.barang.formulasi",
+                [["barang_id", "=", barangId]],
+                ["id", "nama_bahan", "qty", "satuan_hitung", "keterangan"],
+                { order: "id asc" }
+            );
+        } catch (e) {
+            console.error("Gagal memuat formulasi barang:", e);
+            this.notification.add("Gagal memuat formulasi barang.", { type: "danger" });
+        }
+        this.state.memuatBarangFormulasi = false;
+    }
+
+    bukaFormBarangFormulasi() {
+        const f = this.state.formBarangFormulasi;
+        f.buka = true;
+        f.mode = 'tambah';
+        f.formulasiId = null;
+        f.menyimpan = false;
+        f.nama_bahan = "";
+        f.qty = 1;
+        f.satuan_hitung = 'pcs';
+        f.keterangan = "";
+    }
+
+    bukaFormEditBarangFormulasi(formula) {
+        const f = this.state.formBarangFormulasi;
+        f.buka = true;
+        f.mode = 'edit';
+        f.formulasiId = formula.id;
+        f.menyimpan = false;
+        f.nama_bahan = formula.nama_bahan || "";
+        f.qty = formula.qty || 1;
+        f.satuan_hitung = formula.satuan_hitung || 'pcs';
+        f.keterangan = formula.keterangan || "";
+    }
+
+    tutupFormBarangFormulasi() {
+        this.state.formBarangFormulasi.buka = false;
+    }
+
+    async simpanBarangFormulasi() {
+        const f = this.state.formBarangFormulasi;
+        const barangId = this.state.popupBarangDetail.barang
+            ? this.state.popupBarangDetail.barang.id : null;
+        if (!barangId) return;
+        if (!f.nama_bahan.trim()) {
+            this.notification.add("Nama Bahan wajib diisi!", { type: "warning" });
+            return;
+        }
+        if (parseFloat(f.qty) <= 0) {
+            this.notification.add("Qty harus lebih dari 0!", { type: "warning" });
+            return;
+        }
+        f.menyimpan = true;
+        try {
+            const vals = {
+                nama_bahan: f.nama_bahan.trim(),
+                qty: parseFloat(f.qty),
+                satuan_hitung: f.satuan_hitung,
+                keterangan: f.keterangan ? f.keterangan.trim() : false,
+            };
+            if (f.mode === 'tambah') {
+                await this.orm.create("spk.barang.formulasi", [{ barang_id: barangId, ...vals }]);
+                this.notification.add("Formulasi berhasil ditambahkan!", { type: "success" });
+            } else {
+                await this.orm.write("spk.barang.formulasi", [f.formulasiId], vals);
+                this.notification.add("Formulasi berhasil diperbarui!", { type: "success" });
+            }
+            this.tutupFormBarangFormulasi();
+            // Muat ulang daftar formulasi + tabel master (agar badge jumlah ikut update)
+            await Promise.all([
+                this.muatBarangFormulasi(barangId),
+                this.muatBarangMaster(),
+            ]);
+        } catch (e) {
+            console.error("Gagal simpan formulasi barang:", e);
+            this.notification.add("Gagal menyimpan formulasi. Pastikan nama bahan belum ada.", { type: "danger" });
+        }
+        f.menyimpan = false;
+    }
+
+    konfirmasiHapusBarangFormulasi(formula) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Formulasi",
+            pesan: "Hapus formulasi <b>" + formula.nama_bahan + "</b> dari barang ini?",
+            labelYa: "Ya, Hapus",
+            warnaYa: "merah",
+            aksi: () => this.lakukanHapusBarangFormulasi(formula),
+        });
+    }
+
+    async lakukanHapusBarangFormulasi(formula) {
+        const barangId = this.state.popupBarangDetail.barang
+            ? this.state.popupBarangDetail.barang.id : null;
+        try {
+            await this.orm.unlink("spk.barang.formulasi", [formula.id]);
+            await Promise.all([
+                this.muatBarangFormulasi(barangId),
+                this.muatBarangMaster(),
+            ]);
+            this.notification.add("Formulasi berhasil dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus formulasi barang:", e);
+            this.notification.add("Gagal menghapus formulasi.", { type: "danger" });
         }
     }
 

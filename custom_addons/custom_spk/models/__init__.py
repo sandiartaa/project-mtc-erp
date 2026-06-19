@@ -3,6 +3,7 @@ from . import spk_satuan
 from . import spk_kategori
 from . import spk_gudang
 from . import spk_barang
+from . import spk_barang_formulasi
 from . import spk_spk
 from . import spk_bahan_baku
 from . import spk_formulasi
