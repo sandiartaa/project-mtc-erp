@@ -10,6 +10,7 @@
     'author': 'Custom',
     'depends': ['base'],
     'data': [
+        'security/spk_groups.xml',
         'security/ir.model.access.csv',
         'data/spk_sequence.xml',
         'data/spk_satuan.xml',

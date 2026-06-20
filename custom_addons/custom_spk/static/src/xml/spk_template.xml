@@ -1545,7 +1545,7 @@
              FORM TAMBAH SPK
         ════════════════════════════════════════════════ -->
         <t t-if="state.formTambah.buka">
-            <div class="cspk-overlay" t-on-click="tutupFormTambah">
+            <div class="cspk-overlay">
                 <div class="cspk-modal" t-on-click.stop="">
 
                     <div class="cspk-modal-kepala cspk-kepala-tambah">
@@ -1673,18 +1673,10 @@
                                     t-on-change="(ev) => state.formTambah.qty = ev.target.value"/>
                             </div>
                             <div class="cspk-form-grup">
-                                <label class="cspk-form-label">
-                                    Satuan <span class="cspk-wajib">*</span>
-                                </label>
-                                <select class="cspk-form-input"
-                                    t-on-change="(ev) => state.formTambah.unit = ev.target.value">
-                                    <option value="">-- Pilih Satuan --</option>
-                                    <t t-foreach="unitPilihan" t-as="u" t-key="u.value">
-                                        <option t-att-value="u.value">
-                                            <t t-esc="u.label"/>
-                                        </option>
-                                    </t>
-                                </select>
+                                <label class="cspk-form-label">Satuan</label>
+                                <input type="text" class="cspk-form-input" disabled="disabled"
+                                    t-att-value="state.formTambah.unit ? labelUnit(state.formTambah.unit) : 'Otomatis dari produk'"/>
+                                <span class="cspk-form-hint">Mengikuti satuan produk yang dipilih.</span>
                             </div>
                             <div class="cspk-form-grup">
                                 <label class="cspk-form-label">Harga Standar (Rp)</label>
@@ -1736,6 +1728,22 @@
                                 📊 Total: <b><t t-esc="formatAngka(formTambahTotalPcs)"/></b> Pcs
                             </div>
                         </t>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Harga per Satuan (Rp)</label>
+                                <input type="number" min="0" step="1" class="cspk-form-input"
+                                    t-att-value="state.formTambah.harga_satuan"
+                                    t-on-input="(ev) => state.formTambah.harga_satuan = ev.target.value"/>
+                                <span class="cspk-form-hint">Terisi otomatis dari harga produk. Bisa diubah manual.</span>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Harga Total (Rp)</label>
+                                <input type="text" class="cspk-form-input" disabled="disabled"
+                                    t-att-value="'Rp ' + formatAngka(formTambahHargaTotal)"/>
+                                <span class="cspk-form-hint">Harga per satuan × Qty.</span>
+                            </div>
+                        </div>
 
                         <div class="cspk-form-baris-2">
                             <div class="cspk-form-grup">
@@ -2415,6 +2423,22 @@
                                 📊 Total: <b><t t-esc="formatAngka(formEditTotalPcs)"/></b> Pcs
                             </div>
                         </t>
+
+                        <div class="cspk-form-baris-2">
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Harga per Satuan (Rp)</label>
+                                <input type="number" min="0" step="1" class="cspk-form-input"
+                                    t-att-value="state.formEdit.harga_satuan"
+                                    t-on-input="(ev) => state.formEdit.harga_satuan = ev.target.value"/>
+                                <span class="cspk-form-hint">Terisi otomatis dari harga produk. Bisa diubah manual.</span>
+                            </div>
+                            <div class="cspk-form-grup">
+                                <label class="cspk-form-label">Harga Total (Rp)</label>
+                                <input type="text" class="cspk-form-input" disabled="disabled"
+                                    t-att-value="'Rp ' + formatAngka(formEditHargaTotal)"/>
+                                <span class="cspk-form-hint">Harga per satuan × Qty.</span>
+                            </div>
+                        </div>
 
                         <div class="cspk-form-baris-2">
                             <div class="cspk-form-grup">

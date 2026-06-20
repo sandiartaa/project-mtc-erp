@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_wo_app" model="ir.actions.client">
+        <field name="name">Work Orders</field>
+        <field name="tag">wo_app</field>
+    </record>
+
+    <!-- Menu top-level, hanya untuk pemilik grup Akses Work Orders -->
+    <menuitem id="menu_wo_root" name="Work Orders" sequence="16"
+              groups="custom_work_orders.group_work_orders_user"/>
+    <menuitem id="menu_wo_daftar" name="Daftar Work Order"
+              parent="menu_wo_root" action="action_wo_app" sequence="1"
+              groups="custom_work_orders.group_work_orders_user"/>
+</odoo>

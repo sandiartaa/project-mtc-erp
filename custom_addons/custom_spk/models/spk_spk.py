@@ -33,6 +33,13 @@ class SpkSpk(models.Model):
     )
     layer_per_karton = fields.Integer('Layer per Karton', default=1)
     pcs_per_layer = fields.Integer('Pcs per Layer', default=1)
+    # Harga per satuan (otomatis dari harga produk saat dipilih, bisa diubah manual)
+    harga_satuan = fields.Float('Harga per Satuan', digits=(16, 0), default=0.0)
+    # Harga total = harga per satuan x qty (dihitung otomatis)
+    harga_total = fields.Float(
+        'Harga Total', digits=(16, 0),
+        compute='_compute_harga_total', store=True
+    )
     standard_price = fields.Float(
         'Harga Standar', digits=(16, 0), default=0.0
     )
@@ -44,6 +51,11 @@ class SpkSpk(models.Model):
     )
     tgl_selesai = fields.Date('Tanggal Selesai')
     active = fields.Boolean('Aktif', default=True)
+
+    @api.depends('harga_satuan', 'qty')
+    def _compute_harga_total(self):
+        for rec in self:
+            rec.harga_total = (rec.harga_satuan or 0.0) * (rec.qty or 0.0)
 
     @api.constrains('qty')
     def _check_qty(self):

@@ -259,6 +259,7 @@ class SpkApp extends Component {
                 unit: "",
                 layer_per_karton: 1,
                 pcs_per_layer: 1,
+                harga_satuan: 0,
                 standard_price: 0,
                 custom_number: "",
                 status: "open",
@@ -280,6 +281,7 @@ class SpkApp extends Component {
                 unit: "",
                 layer_per_karton: 1,
                 pcs_per_layer: 1,
+                harga_satuan: 0,
                 standard_price: 0,
                 harga_standar_custom: false,
                 custom_number: "",
@@ -315,7 +317,7 @@ class SpkApp extends Component {
                 this.orm.searchRead(
                     "spk.barang",
                     [["active", "=", true]],
-                    ["id", "name"],
+                    ["id", "name", "satuan_id", "harga"],
                     { limit: 0, order: "name asc" }
                 ),
                 this.orm.searchRead(
@@ -355,7 +357,7 @@ class SpkApp extends Component {
             this.state.daftarBarang = await this.orm.searchRead(
                 "spk.barang",
                 [["active", "=", true]],
-                ["id", "name"],
+                ["id", "name", "satuan_id", "harga"],
                 { limit: 0, order: "name asc" }
             );
         } catch (e) {
@@ -600,6 +602,17 @@ class SpkApp extends Component {
         const f = this.state[target];
         f.barang_id = String(item.id);
         f.barang_nama = item.name || "";
+        // Satuan SPK otomatis mengikuti satuan produk yang dipilih
+        // (cocokkan nama satuan produk dengan pilihan unit karton/layer/pcs).
+        const satuanNama = item.satuan_id ? (item.satuan_id[1] || "") : "";
+        const cocok = this.unitPilihan.find(
+            u => u.label.toLowerCase() === satuanNama.trim().toLowerCase()
+        );
+        if (cocok) {
+            f.unit = cocok.value;
+        }
+        // Harga per satuan otomatis mengikuti harga produk yang dipilih
+        f.harga_satuan = item.harga || 0;
         this.tutupPickerBarang();
     }
 
@@ -954,6 +967,7 @@ class SpkApp extends Component {
                     domain,
                     ["id", "name", "spk_date", "branch_id", "pic_id",
                      "barang_id", "qty", "unit", "layer_per_karton", "pcs_per_layer",
+                     "harga_satuan", "harga_total",
                      "standard_price", "is_harga_standar_custom", "custom_number", "status", "tgl_selesai",
                      "create_uid", "create_date", "write_uid", "write_date"],
                     { limit: this.state.perHalaman, offset, order: "spk_date desc, id desc" }
@@ -1243,6 +1257,7 @@ class SpkApp extends Component {
         f.unit = "";
         f.layer_per_karton = 1;
         f.pcs_per_layer = 1;
+        f.harga_satuan = 0;
         f.standard_price = 0;
         f.custom_number = "";
         f.status = "open";
@@ -1259,7 +1274,7 @@ class SpkApp extends Component {
         const f = this.state.formTambah;
         if (!f.barang_id) { this.notification.add("Pilih Produk terlebih dahulu!", { type: "warning" }); return; }
         if (!f.pic_id)     { this.notification.add("Pilih PIC terlebih dahulu!", { type: "warning" }); return; }
-        if (!f.unit)       { this.notification.add("Pilih Satuan terlebih dahulu!", { type: "warning" }); return; }
+        if (!f.unit)       { this.notification.add("Satuan otomatis dari produk. Produk yang dipilih belum punya satuan Karton/Layer/Pcs — atur satuan produk dulu di Master Barang.", { type: "warning" }); return; }
         if (parseFloat(f.qty) <= 0) {
             this.notification.add("Jumlah (Qty) harus lebih dari 0!", { type: "warning" }); return;
         }
@@ -1275,6 +1290,7 @@ class SpkApp extends Component {
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
                 pcs_per_layer: parseInt(f.pcs_per_layer) || 1,
+                harga_satuan: parseFloat(f.harga_satuan) || 0,
                 // Harga standar mulai 0 & otomatis (dihitung dari total bahan baku)
                 standard_price: 0,
                 is_harga_standar_custom: false,
@@ -1311,6 +1327,7 @@ class SpkApp extends Component {
         f.unit = spk.unit || "";
         f.layer_per_karton = spk.layer_per_karton || 1;
         f.pcs_per_layer = spk.pcs_per_layer || 1;
+        f.harga_satuan = spk.harga_satuan || 0;
         f.standard_price = spk.standard_price || 0;
         f.harga_standar_custom = spk.is_harga_standar_custom || false;
         f.custom_number = spk.custom_number || "";
@@ -1343,6 +1360,7 @@ class SpkApp extends Component {
                 unit: f.unit,
                 layer_per_karton: parseInt(f.layer_per_karton) || 1,
                 pcs_per_layer: parseInt(f.pcs_per_layer) || 1,
+                harga_satuan: parseFloat(f.harga_satuan) || 0,
                 // Harga standar: tulis nilai manual hanya bila di-custom.
                 // Bila tidak custom, harga standar disinkronkan otomatis dari total bahan.
                 is_harga_standar_custom: f.harga_standar_custom,
@@ -1385,6 +1403,8 @@ class SpkApp extends Component {
             unit: spk.unit,
             layer_per_karton: spk.layer_per_karton || 1,
             pcs_per_layer: spk.pcs_per_layer || 1,
+            harga_satuan: spk.harga_satuan || 0,
+            harga_total: spk.harga_total || 0,
             standard_price: spk.standard_price,
             is_harga_standar_custom: spk.is_harga_standar_custom || false,
             status: spk.status,
@@ -1723,6 +1743,17 @@ class SpkApp extends Component {
         if (f.unit === 'karton') return qty * (parseInt(f.layer_per_karton) || 1) * (parseInt(f.pcs_per_layer) || 1);
         if (f.unit === 'layer') return qty * (parseInt(f.pcs_per_layer) || 1);
         return qty;
+    }
+
+    // Harga total = harga per satuan x qty (live, untuk preview di form)
+    get formTambahHargaTotal() {
+        const f = this.state.formTambah;
+        return (parseFloat(f.harga_satuan) || 0) * (parseFloat(f.qty) || 0);
+    }
+
+    get formEditHargaTotal() {
+        const f = this.state.formEdit;
+        return (parseFloat(f.harga_satuan) || 0) * (parseFloat(f.qty) || 0);
     }
 
     hitungKebutuhanFormulasi(formula) {
@@ -2448,7 +2479,7 @@ class SpkApp extends Component {
     }
 
     labelUnit(unit) {
-        const map = { karton: "Karton", layer: "Layer" };
+        const map = { karton: "Karton", layer: "Layer", pcs: "Pcs" };
         return map[unit] || unit;
     }
 }

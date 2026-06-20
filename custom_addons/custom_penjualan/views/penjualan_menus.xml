@@ -8,7 +8,8 @@
 
     <menuitem id="menu_penjualan_root"
         name="Penjualan"
-        sequence="5"/>
+        sequence="5"
+        groups="custom_penjualan.group_penjualan_user"/>
 
     <menuitem id="menu_penjualan_dashboard"
         name="Dashboard Pesanan"

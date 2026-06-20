@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- View daftar (Odoo 19: pakai <list>, bukan <tree>). Editable agar
+         cepat menambah baris; kode terisi otomatis setelah disimpan. -->
+    <record id="view_cui_user_info_list" model="ir.ui.view">
+        <field name="name">cui.user.info.list</field>
+        <field name="model">cui.user.info</field>
+        <field name="arch" type="xml">
+            <list string="Data Karyawan" editable="bottom">
+                <field name="kode" readonly="1"/>
+                <field name="user_id"/>
+                <field name="divisi"/>
+                <field name="subdivisi"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- View form -->
+    <record id="view_cui_user_info_form" model="ir.ui.view">
+        <field name="name">cui.user.info.form</field>
+        <field name="model">cui.user.info</field>
+        <field name="arch" type="xml">
+            <form string="Data Karyawan">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="kode" readonly="1"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="divisi"/>
+                            <field name="subdivisi"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- View pencarian + group by divisi -->
+    <record id="view_cui_user_info_search" model="ir.ui.view">
+        <field name="name">cui.user.info.search</field>
+        <field name="model">cui.user.info</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="kode"/>
+                <field name="user_id"/>
+                <field name="divisi"/>
+                <field name="subdivisi"/>
+                <filter name="grup_divisi" string="Divisi"
+                        context="{'group_by': 'divisi'}"/>
+                <filter name="grup_subdivisi" string="Subdivisi"
+                        context="{'group_by': 'subdivisi'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action membuka model custom (BUKAN res.users) -->
+    <record id="action_cui_user_info" model="ir.actions.act_window">
+        <field name="name">Data Karyawan</field>
+        <field name="res_model">cui.user.info</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_cui_user_info_search"/>
+    </record>
+
+    <!-- Menu top-level baru (khusus Administrator) -->
+    <menuitem id="menu_cui_root" name="Data Karyawan" sequence="50"
+              groups="base.group_system"/>
+    <menuitem id="menu_cui_user_info" name="Daftar Data Karyawan"
+              parent="menu_cui_root" action="action_cui_user_info" sequence="10"
+              groups="base.group_system"/>
+</odoo>

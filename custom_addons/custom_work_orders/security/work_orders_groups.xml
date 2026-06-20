@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Grup akses modul Work Orders.
+         - implied base.group_user: pemilik grup otomatis Internal User.
+         - admin dimasukkan agar tetap bisa melihat & mengelola. -->
+    <record id="group_work_orders_user" model="res.groups">
+        <field name="name">Akses Work Orders</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+</odoo>

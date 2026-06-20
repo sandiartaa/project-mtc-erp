@@ -1,0 +1,429 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_work_orders.WoApp">
+    <div class="cwo-wrapper">
+
+        <!-- HEADER -->
+        <div class="cwo-header">
+            <div class="cwo-header-lingkaran cwo-ling-1"/>
+            <div class="cwo-header-lingkaran cwo-ling-2"/>
+            <div class="cwo-header-konten">
+                <div class="cwo-header-judul">
+                    <div class="cwo-header-ikon">🛠️</div>
+                    <div>
+                        <h1>Work Orders</h1>
+                        <p>Product · IN CHARGE · Requestor · Timeline · Approval</p>
+                    </div>
+                </div>
+                <div class="cwo-header-aksi">
+                    <button class="cwo-btn-import" t-on-click="bukaImpor">⬆ Import</button>
+                    <button class="cwo-btn-tambah" t-on-click="bukaFormTambah">+ Tambah Work Order</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER -->
+        <div class="cwo-filterbar">
+            <div class="cwo-filter-grup">
+                <input type="text" class="cwo-filter-input cwo-filter-cari"
+                    placeholder="Cari No. / name / code..."
+                    t-att-value="state.cari"
+                    t-on-input="(ev) => state.cari = ev.target.value"
+                    t-on-keydown="handleKeydown"/>
+                <button class="cwo-btn-cari" t-on-click="cariData">Cari</button>
+            </div>
+            <div class="cwo-filter-status">
+                <button t-attf-class="cwo-fs-btn #{state.filterStatus === '' ? 'cwo-fs-aktif' : ''}"
+                    t-on-click="() => this.setFilterStatus('')">Semua</button>
+                <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'ongoing' ? 'cwo-fs-aktif' : ''}"
+                    t-on-click="() => this.setFilterStatus('ongoing')">Ongoing</button>
+                <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'finished' ? 'cwo-fs-aktif' : ''}"
+                    t-on-click="() => this.setFilterStatus('finished')">Finished</button>
+            </div>
+            <button class="cwo-btn-reset" t-on-click="resetCari">Reset</button>
+        </div>
+
+        <!-- LOADING -->
+        <t t-if="state.memuat">
+            <div class="cwo-loading"><div class="cwo-spinner"/><p>Memuat data...</p></div>
+        </t>
+
+        <t t-else="">
+            <t t-if="state.list.length === 0">
+                <div class="cwo-kosong">
+                    <div class="cwo-kosong-ikon">📭</div>
+                    <h3>Belum ada Work Order</h3>
+                    <p>Klik tombol di bawah untuk menambah</p>
+                    <button class="cwo-btn-tambah cwo-btn-tambah-kosong"
+                        t-on-click="bukaFormTambah">+ Tambah Work Order</button>
+                </div>
+            </t>
+
+            <t t-else="">
+                <div class="cwo-tabel-wrapper">
+                    <table class="cwo-tabel">
+                        <thead>
+                            <tr class="cwo-grup-row">
+                                <th rowspan="2" class="cwo-tengah cwo-col-no">No.</th>
+                                <th rowspan="2" class="cwo-tengah cwo-col-status">Status</th>
+                                <th colspan="5" class="cwo-grup cwo-grup-pd">Product</th>
+                                <th colspan="2" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
+                                <th rowspan="2" class="cwo-tengah cwo-col-req">Requestor</th>
+                                <th colspan="3" class="cwo-grup cwo-grup-tl">Timeline</th>
+                                <th colspan="2" class="cwo-grup cwo-grup-ap">Approval</th>
+                                <th rowspan="2" class="cwo-tengah cwo-col-aksi">Action</th>
+                            </tr>
+                            <tr class="cwo-sub-row">
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Brand</th>
+                                <th>Details</th>
+                                <th class="cwo-tengah">Image</th>
+                                <th>Designer 2D/3D</th>
+                                <th class="cwo-tengah">Lokal/RRC</th>
+                                <th>Req Date</th>
+                                <th>Target</th>
+                                <th>Finish Date</th>
+                                <th>Approver</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                                <tr>
+                                    <td class="cwo-tengah"><span class="cwo-badge-no"><t t-esc="rec.wo_number"/></span></td>
+                                    <td class="cwo-tengah">
+                                        <span t-attf-class="cwo-badge-st #{kelasStatus(rec.status)}">
+                                            <t t-esc="labelStatus(rec.status)"/>
+                                        </span>
+                                    </td>
+                                    <td><b><t t-esc="rec.name"/></b></td>
+                                    <td><t t-esc="rec.code or '—'"/></td>
+                                    <td><t t-esc="rec.brand or '—'"/></td>
+                                    <td class="cwo-sel-details"><t t-esc="rec.details or '—'"/></td>
+                                    <td class="cwo-tengah">
+                                        <t t-if="rec.image_ada">
+                                            <img class="cwo-thumb" t-att-src="'/web/image/wo.work.order/' + rec.id + '/image'"/>
+                                        </t>
+                                        <t t-else=""><span class="cwo-sel-kosong">—</span></t>
+                                    </td>
+                                    <td><t t-esc="rec.incharge_id ? rec.incharge_id[1] : '—'"/></td>
+                                    <td class="cwo-tengah">
+                                        <t t-if="rec.lokal_rrc">
+                                            <span class="cwo-badge-lr"><t t-esc="labelLokalRrc(rec.lokal_rrc)"/></span>
+                                        </t>
+                                        <t t-else=""><span class="cwo-sel-kosong">—</span></t>
+                                    </td>
+                                    <td><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></td>
+                                    <td><t t-esc="formatTanggal(rec.request_date)"/></td>
+                                    <td><t t-esc="formatTanggal(rec.target_date)"/></td>
+                                    <td><t t-esc="formatTanggal(rec.finish_date)"/></td>
+                                    <td><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
+                                    <td><t t-esc="formatTanggal(rec.approval_date)"/></td>
+                                    <td class="cwo-tengah">
+                                        <div class="cwo-aksi-grup">
+                                            <button class="cwo-ico cwo-ico-edit" title="Edit"
+                                                t-on-click="() => this.bukaFormEdit(rec)">
+                                                <i class="fa fa-pencil"/>
+                                            </button>
+                                            <button class="cwo-ico cwo-ico-hapus" title="Hapus"
+                                                t-on-click="() => this.konfirmasiHapus(rec)">
+                                                <i class="fa fa-trash-o"/>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+
+        <!-- ══════════ MODAL FORM ══════════ -->
+        <t t-if="state.form.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2>
+                                <t t-esc="state.form.mode === 'edit' ? '✏️ Edit Work Order' : '➕ Tambah Work Order'"/>
+                                <t t-if="state.form.mode === 'edit'"> — <t t-esc="state.form.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupForm">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+
+                        <!-- No. + Status -->
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">No.</label>
+                                <input type="text" class="cwo-form-input" disabled="disabled"
+                                    t-att-value="state.form.mode === 'edit' ? state.form.wo_number : 'Otomatis (WO00001, ...)'"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Status</label>
+                                <div class="cwo-status-toggle">
+                                    <t t-foreach="statusPilihan" t-as="s" t-key="s.value">
+                                        <button type="button"
+                                            t-attf-class="cwo-st-btn #{state.form.status === s.value ? 'cwo-st-aktif' : ''}"
+                                            t-on-click="() => state.form.status = s.value">
+                                            <t t-esc="s.label"/>
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product -->
+                        <div class="cwo-seksi-judul cwo-sj-pd">Product</div>
+                        <div class="cwo-form-baris-3">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Name <span class="cwo-wajib">*</span></label>
+                                <input type="text" class="cwo-form-input"
+                                    t-att-value="state.form.name"
+                                    t-on-input="(ev) => state.form.name = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Code</label>
+                                <input type="text" class="cwo-form-input"
+                                    t-att-value="state.form.code"
+                                    t-on-input="(ev) => state.form.code = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Brand</label>
+                                <input type="text" class="cwo-form-input"
+                                    t-att-value="state.form.brand"
+                                    t-on-input="(ev) => state.form.brand = ev.target.value"/>
+                            </div>
+                        </div>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Details</label>
+                            <textarea class="cwo-form-input cwo-form-textarea" rows="4"
+                                placeholder="Bisa beberapa baris — tekan Enter untuk baris baru..."
+                                t-att-value="state.form.details"
+                                t-on-input="(ev) => state.form.details = ev.target.value"></textarea>
+                        </div>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Image</label>
+                            <div class="cwo-img-area">
+                                <div class="cwo-img-preview">
+                                    <t t-if="state.form.image_preview"><img t-att-src="state.form.image_preview"/></t>
+                                    <t t-elif="state.form.image_ada"><img t-att-src="urlGambarForm()"/></t>
+                                    <t t-else=""><span class="cwo-img-kosong">Tidak ada gambar</span></t>
+                                </div>
+                                <div class="cwo-img-aksi">
+                                    <input type="file" accept="image/*" t-on-change="onPilihGambar"/>
+                                    <button type="button" class="cwo-btn-hapus-img"
+                                        t-if="state.form.image_preview or state.form.image_ada"
+                                        t-on-click="hapusGambar">Hapus Gambar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- IN CHARGE -->
+                        <div class="cwo-seksi-judul cwo-sj-ic">IN CHARGE</div>
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Designer 2D/3D</label>
+                                <div class="cwo-picker">
+                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                        placeholder="-- Pilih User --"
+                                        t-att-value="state.form.incharge_nama"
+                                        t-on-click="() => this.bukaUserPicker('incharge')"/>
+                                    <t t-if="state.userPicker.buka and state.userPicker.target === 'incharge'">
+                                        <t t-call="custom_work_orders.UserPickerPanel"/>
+                                    </t>
+                                </div>
+                                <span class="cwo-form-hint">Hanya user berakses Work Orders.</span>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Lokal/RRC</label>
+                                <select class="cwo-form-input"
+                                    t-on-change="(ev) => state.form.lokal_rrc = ev.target.value">
+                                    <option value="">-- Pilih --</option>
+                                    <t t-foreach="lokalRrcPilihan" t-as="lr" t-key="lr.value">
+                                        <option t-att-value="lr.value"
+                                            t-att-selected="lr.value === state.form.lokal_rrc">
+                                            <t t-esc="lr.label"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Requestor -->
+                        <div class="cwo-seksi-judul cwo-sj-rq">Requestor</div>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Requestor</label>
+                            <div class="cwo-picker">
+                                <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                    placeholder="-- Pilih User --"
+                                    t-att-value="state.form.requestor_nama"
+                                    t-on-click="() => this.bukaUserPicker('requestor')"/>
+                                <t t-if="state.userPicker.buka and state.userPicker.target === 'requestor'">
+                                    <t t-call="custom_work_orders.UserPickerPanel"/>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="cwo-seksi-judul cwo-sj-tl">Timeline</div>
+                        <div class="cwo-form-baris-3">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Req Date</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.request_date"
+                                    t-on-change="(ev) => state.form.request_date = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Target</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.target_date"
+                                    t-on-change="(ev) => state.form.target_date = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Finish Date</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.finish_date"
+                                    t-on-change="(ev) => state.form.finish_date = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <!-- Approval -->
+                        <div class="cwo-seksi-judul cwo-sj-ap">Approval</div>
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Approver</label>
+                                <div class="cwo-picker">
+                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                        placeholder="-- Pilih User --"
+                                        t-att-value="state.form.approver_nama"
+                                        t-on-click="() => this.bukaUserPicker('approver')"/>
+                                    <t t-if="state.userPicker.buka and state.userPicker.target === 'approver'">
+                                        <t t-call="custom_work_orders.UserPickerPanel"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Date</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.approval_date"
+                                    t-on-change="(ev) => state.form.approval_date = ev.target.value"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.form.menyimpan"
+                            t-on-click="tutupForm">Batal</button>
+                        <button class="cwo-tombol-utama" t-att-disabled="state.form.menyimpan"
+                            t-on-click="simpan">
+                            <t t-if="state.form.menyimpan"><span class="cwo-spinner-tombol"/>Menyimpan...</t>
+                            <t t-else="">Simpan</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL IMPORT CSV ══════════ -->
+        <t t-if="state.impor.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-impor" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⬆ Import Work Orders (CSV)</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupImpor">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <div class="cwo-impor-info">
+                            <p>Kolom CSV (baris pertama = header):</p>
+                            <code class="cwo-impor-kode">Name, Code, Brand, Details, Designer 2D/3D, Lokal/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status, Image</code>
+                            <ul class="cwo-impor-tips">
+                                <li><b>Name</b> wajib. <b>No.</b> dibuat otomatis (tidak perlu di CSV).</li>
+                                <li><b>Designer/Requestor/Approver</b> diisi nama user; dicocokkan dengan user akses Work Orders.</li>
+                                <li><b>Lokal/RRC</b>: Lokal / RRC. <b>Status</b>: Ongoing / Finished. <b>Tanggal</b>: YYYY-MM-DD atau DD/MM/YYYY.</li>
+                                <li><b>Image</b>: teks base64 (gambar tempelan Excel tidak ikut ke CSV — pakai upload di form).</li>
+                                <li>Impor <b>menambah</b> data — data lama tidak terhapus.</li>
+                            </ul>
+                            <button class="cwo-btn-template" t-on-click="unduhTemplate">⬇ Unduh Template CSV</button>
+                        </div>
+                        <div class="cwo-impor-upload">
+                            <input type="file" accept=".csv,text/csv" t-on-change="onPilihFile"/>
+                            <span class="cwo-impor-nama" t-if="state.impor.namaFile"><t t-esc="state.impor.namaFile"/></span>
+                        </div>
+                        <div class="cwo-impor-batch" t-if="state.impor.batch.length">
+                            <div class="cwo-impor-batch-judul">Riwayat Impor (hapus per batch)</div>
+                            <t t-foreach="state.impor.batch" t-as="b" t-key="b.batch">
+                                <div class="cwo-impor-batch-baris">
+                                    <span class="cwo-impor-batch-nama"><t t-esc="b.batch"/></span>
+                                    <span class="cwo-impor-batch-jml"><t t-esc="b.jumlah"/> baris</span>
+                                    <button class="cwo-ico cwo-ico-hapus" title="Hapus batch"
+                                        t-on-click="() => this.konfirmasiHapusBatch(b)">
+                                        <i class="fa fa-trash-o"/>
+                                    </button>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.impor.proses"
+                            t-on-click="tutupImpor">Tutup</button>
+                        <button class="cwo-tombol-utama" t-att-disabled="state.impor.proses"
+                            t-on-click="lakukanImpor">
+                            <t t-if="state.impor.proses"><span class="cwo-spinner-tombol"/>Mengimpor...</t>
+                            <t t-else="">Import Sekarang</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ KONFIRMASI ══════════ -->
+        <t t-if="state.konfirmasi.buka">
+            <div class="cwo-overlay cwo-overlay-konfirmasi">
+                <div class="cwo-modal-konfirmasi" t-on-click.stop="">
+                    <h3><t t-esc="state.konfirmasi.judul"/></h3>
+                    <p t-out="konfirmasiPesan"/>
+                    <div class="cwo-konfirmasi-aksi">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupKonfirmasi">Batal</button>
+                        <button class="cwo-tombol-konfirmasi cwo-konfirmasi-merah"
+                            t-on-click="jalankanKonfirmasi">
+                            <t t-esc="state.konfirmasi.labelYa"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+<!-- Panel picker user (dipakai untuk Designer/Requestor/Approver) -->
+<t t-name="custom_work_orders.UserPickerPanel">
+    <div class="cwo-picker-panel">
+        <input type="text" class="cwo-picker-cari" placeholder="Cari user..."
+            t-att-value="state.userPicker.cari" t-on-input="userInput"/>
+        <div class="cwo-picker-item cwo-picker-clear" t-on-click="() => this.pilihUser(false)">— Kosongkan —</div>
+        <t t-if="userHalaman.length === 0">
+            <div class="cwo-picker-kosong">Tidak ada user.</div>
+        </t>
+        <t t-else="">
+            <t t-foreach="userHalaman" t-as="u" t-key="u.id">
+                <div class="cwo-picker-item" t-on-click="() => this.pilihUser(u)">
+                    <t t-esc="u.name"/>
+                </div>
+            </t>
+        </t>
+        <div class="cwo-picker-nav" t-if="userTotalHalaman > 1">
+            <button class="cwo-picker-navbtn" t-on-click="userPrev"
+                t-att-disabled="state.userPicker.halaman &lt;= 1">‹ Prev</button>
+            <span class="cwo-picker-info"><t t-esc="state.userPicker.halaman"/> / <t t-esc="userTotalHalaman"/></span>
+            <button class="cwo-picker-navbtn" t-on-click="userNext"
+                t-att-disabled="state.userPicker.halaman >= userTotalHalaman">Next ›</button>
+        </div>
+    </div>
+</t>
+
+</templates>

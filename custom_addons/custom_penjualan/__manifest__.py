@@ -7,6 +7,8 @@
     'author': 'Custom',
     'depends': ['sale'],
     'data': [
+        'security/penjualan_groups.xml',
+        'security/ir.model.access.csv',
         'views/penjualan_menus.xml',
     ],
     'assets': {

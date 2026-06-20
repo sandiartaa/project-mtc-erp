@@ -8,7 +8,8 @@
 
     <menuitem id="menu_spk_root"
         name="SPK"
-        sequence="15"/>
+        sequence="15"
+        groups="custom_spk.group_spk_user"/>
 
     <menuitem id="menu_spk_daftar"
         name="Daftar SPK"

@@ -1,0 +1,34 @@
+# -*- coding: utf-8 -*-
+{
+    'name': 'Work Orders',
+    'version': '1.0',
+    'category': 'Custom',
+    'summary': 'Manajemen Work Order: Product Details, InCharge, Timeline',
+    'description': """
+Work Orders
+===========
+Tabel work order dengan 3 kelompok kolom:
+- Product Details: Name, Code, Brand, Details
+- InCharge: user pengerjaan (hanya user yang punya akses modul Work Orders)
+- Timeline: Barcode, Deadline, Request, Process (WIP/DONE/ON HOLD), Approval
+Akses dikelola lewat grup (bisa diatur dari Master User).
+""",
+    'author': 'Custom',
+    'license': 'LGPL-3',
+    'depends': ['base'],
+    'data': [
+        'security/work_orders_groups.xml',
+        'security/ir.model.access.csv',
+        'data/sequence.xml',
+        'views/work_orders_menus.xml',
+    ],
+    'assets': {
+        'web.assets_backend': [
+            'custom_work_orders/static/src/css/style.css',
+            'custom_work_orders/static/src/xml/wo_template.xml',
+            'custom_work_orders/static/src/js/wo_app.js',
+        ],
+    },
+    'application': True,
+    'installable': True,
+}

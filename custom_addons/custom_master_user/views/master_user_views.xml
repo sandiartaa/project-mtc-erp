@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tampilan Master User berupa OWL client action (tema sama seperti SPK) -->
+    <record id="action_mu_app" model="ir.actions.client">
+        <field name="name">Master User</field>
+        <field name="tag">mu_app</field>
+    </record>
+
+    <!-- Menu khusus Administrator (base.group_system) -->
+    <menuitem id="menu_mu_root" name="Master User" sequence="48"
+              groups="base.group_system"/>
+    <menuitem id="menu_mu_user" name="Daftar User"
+              parent="menu_mu_root" action="action_mu_app"
+              groups="base.group_system" sequence="10"/>
+</odoo>

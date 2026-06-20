@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Nomor otomatis Work Order: WO00001, WO00002, ... -->
+    <data noupdate="1">
+        <record id="seq_wo_work_order" model="ir.sequence">
+            <field name="name">Work Order Number</field>
+            <field name="code">wo.work.order</field>
+            <field name="prefix">WO</field>
+            <field name="padding">5</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>

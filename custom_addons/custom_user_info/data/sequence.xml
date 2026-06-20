@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sequence kode user: KR0001, KR0002, ...
+         noupdate="1" agar nomor berjalan tidak ter-reset saat update modul. -->
+    <data noupdate="1">
+        <record id="seq_cui_user_info" model="ir.sequence">
+            <field name="name">Kode User Info</field>
+            <field name="code">cui.user.info</field>
+            <field name="prefix">KR</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+    </data>
+</odoo>

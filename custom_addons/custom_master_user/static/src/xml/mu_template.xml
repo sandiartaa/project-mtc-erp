@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_master_user.MuApp">
+    <div class="cmu-wrapper">
+
+        <!-- HEADER -->
+        <div class="cmu-header">
+            <div class="cmu-header-lingkaran cmu-ling-1"/>
+            <div class="cmu-header-lingkaran cmu-ling-2"/>
+            <div class="cmu-header-konten">
+                <div class="cmu-header-judul">
+                    <div class="cmu-header-ikon">👥</div>
+                    <div>
+                        <h1>Master User</h1>
+                        <p>Kelola data user — kode, divisi, subdivisi</p>
+                    </div>
+                </div>
+                <button class="cmu-btn-tambah" t-on-click="bukaFormTambah">
+                    + Tambah User
+                </button>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="cmu-filterbar">
+            <div class="cmu-filter-grup">
+                <input type="text" class="cmu-filter-input cmu-filter-cari"
+                    placeholder="Cari nama atau kode..."
+                    t-att-value="state.cari"
+                    t-on-input="(ev) => state.cari = ev.target.value"
+                    t-on-keydown="handleKeydown"/>
+                <button class="cmu-btn-cari" t-on-click="cariData">Cari</button>
+            </div>
+            <button class="cmu-btn-reset" t-on-click="resetCari">Reset</button>
+        </div>
+
+        <!-- LOADING -->
+        <t t-if="state.memuat">
+            <div class="cmu-loading">
+                <div class="cmu-spinner"/>
+                <p>Memuat data...</p>
+            </div>
+        </t>
+
+        <t t-else="">
+            <!-- EMPTY -->
+            <t t-if="state.list.length === 0">
+                <div class="cmu-kosong">
+                    <div class="cmu-kosong-ikon">📭</div>
+                    <h3>Belum ada data user</h3>
+                    <p>Klik tombol di bawah untuk menambah data user</p>
+                    <button class="cmu-btn-tambah cmu-btn-tambah-kosong"
+                        t-on-click="bukaFormTambah">+ Tambah User</button>
+                </div>
+            </t>
+
+            <!-- TABEL -->
+            <t t-else="">
+                <div class="cmu-tabel-wrapper">
+                    <table class="cmu-tabel">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama</th>
+                                <th>Divisi</th>
+                                <th>Subdivisi</th>
+                                <th>Akses Modul</th>
+                                <th class="cmu-tengah">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                                <tr>
+                                    <td>
+                                        <span class="cmu-badge-kode">
+                                            <t t-esc="rec.kode"/>
+                                        </span>
+                                    </td>
+                                    <td><b><t t-esc="rec.user_id ? rec.user_id[1] : '-'"/></b></td>
+                                    <td>
+                                        <t t-if="rec.divisi">
+                                            <span class="cmu-badge-divisi">
+                                                <t t-esc="labelDivisi(rec.divisi)"/>
+                                            </span>
+                                        </t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </td>
+                                    <td>
+                                        <t t-if="rec.subdivisi">
+                                            <span class="cmu-badge-sub">
+                                                <t t-esc="labelSubdivisi(rec.subdivisi)"/>
+                                            </span>
+                                        </t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </td>
+                                    <td>
+                                        <t t-if="rec.akses and rec.akses.length">
+                                            <t t-foreach="rec.akses" t-as="a" t-key="a">
+                                                <span class="cmu-badge-akses"><t t-esc="a"/></span>
+                                            </t>
+                                        </t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </td>
+                                    <td class="cmu-tengah">
+                                        <div class="cmu-aksi-grup">
+                                            <button class="cmu-btn-history"
+                                                t-on-click="() => this.bukaRiwayat(rec)">History</button>
+                                            <button class="cmu-btn-edit"
+                                                t-on-click="() => this.bukaFormEdit(rec)">Edit</button>
+                                            <button class="cmu-btn-hapus"
+                                                t-on-click="() => this.konfirmasiHapus(rec)">Hapus</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+        </t>
+
+        <!-- ══════════ MODAL FORM TAMBAH/EDIT ══════════ -->
+        <t t-if="state.form.buka">
+            <div class="cmu-overlay">
+                <div class="cmu-modal" t-on-click.stop="">
+                    <div class="cmu-modal-kepala">
+                        <div class="cmu-modal-judul">
+                            <h2><t t-esc="state.form.mode === 'edit' ? '✏️ Edit User' : '➕ Tambah User'"/></h2>
+                            <p class="cmu-subkepala">Data tidak mengubah akun login Odoo</p>
+                        </div>
+                        <button class="cmu-tombol-tutup" t-on-click="tutupForm">✕</button>
+                    </div>
+                    <div class="cmu-modal-isi">
+                        <div class="cmu-form-grup">
+                            <label class="cmu-form-label">Nama User <span class="cmu-wajib">*</span></label>
+                            <select class="cmu-form-input" t-on-change="pilihUserForm">
+                                <option value="">-- Pilih User --</option>
+                                <t t-foreach="userTersedia" t-as="u" t-key="u.id">
+                                    <option t-att-value="u.id"
+                                        t-att-selected="u.id == state.form.user_id">
+                                        <t t-esc="u.name"/> (<t t-esc="labelTipe(u)"/>)
+                                    </option>
+                                </t>
+                            </select>
+                        </div>
+
+                        <!-- Tipe User: Internal/Portal (bisa diubah admin di sini) -->
+                        <div class="cmu-form-grup">
+                            <label class="cmu-form-label">Tipe User</label>
+                            <div class="cmu-tipe-toggle">
+                                <button type="button"
+                                    t-attf-class="cmu-tipe-btn #{state.form.internal ? 'cmu-tipe-aktif' : ''}"
+                                    t-on-click="() => this.setTipe(true)">Internal User</button>
+                                <button type="button"
+                                    t-attf-class="cmu-tipe-btn #{!state.form.internal ? 'cmu-tipe-aktif' : ''}"
+                                    t-on-click="() => this.setTipe(false)">Portal</button>
+                            </div>
+                            <span class="cmu-form-hint">Internal = bisa membuka modul backend. Portal = user eksternal (tidak bisa akses modul).</span>
+                        </div>
+
+                        <div class="cmu-form-grup">
+                            <label class="cmu-form-label">Kode</label>
+                            <input type="text" class="cmu-form-input" disabled="disabled"
+                                t-att-value="state.form.mode === 'edit' ? state.form.kode : 'Otomatis (KR0001, ...)'"/>
+                        </div>
+
+                        <div class="cmu-form-baris-2">
+                            <div class="cmu-form-grup">
+                                <label class="cmu-form-label">Divisi</label>
+                                <select class="cmu-form-input"
+                                    t-on-change="(ev) => state.form.divisi = ev.target.value">
+                                    <option value="">-- Pilih Divisi --</option>
+                                    <t t-foreach="divisiPilihan" t-as="d" t-key="d.value">
+                                        <option t-att-value="d.value"
+                                            t-att-selected="d.value === state.form.divisi">
+                                            <t t-esc="d.label"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                            <div class="cmu-form-grup">
+                                <label class="cmu-form-label">Subdivisi</label>
+                                <select class="cmu-form-input"
+                                    t-on-change="(ev) => state.form.subdivisi = ev.target.value">
+                                    <option value="">-- Pilih Subdivisi --</option>
+                                    <t t-foreach="subdivisiPilihan" t-as="s" t-key="s.value">
+                                        <option t-att-value="s.value"
+                                            t-att-selected="s.value === state.form.subdivisi">
+                                            <t t-esc="s.label"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Akses Modul: centang app yang boleh dilihat user (hanya Internal) -->
+                        <div class="cmu-form-grup" t-if="state.modulTersedia.length">
+                            <label class="cmu-form-label">Akses Modul</label>
+                            <t t-if="state.form.internal">
+                                <div class="cmu-akses-list">
+                                    <t t-foreach="state.modulTersedia" t-as="m" t-key="m.id">
+                                        <label class="cmu-akses-item">
+                                            <input type="checkbox"
+                                                t-att-checked="state.form.modulAkses[m.id]"
+                                                t-on-change="(ev) => state.form.modulAkses[m.id] = ev.target.checked"/>
+                                            <span><t t-esc="m.label"/></span>
+                                        </label>
+                                    </t>
+                                </div>
+                                <span class="cmu-form-hint">Modul yang dicentang muncul sebagai tombol app setelah user login.</span>
+                            </t>
+                            <t t-else="">
+                                <div class="cmu-akses-nonaktif">User Portal tidak bisa diberi akses modul backend. Ubah ke Internal dulu.</div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cmu-modal-footer">
+                        <button class="cmu-tombol-sekunder"
+                            t-att-disabled="state.form.menyimpan"
+                            t-on-click="tutupForm">Batal</button>
+                        <button class="cmu-tombol-utama"
+                            t-att-disabled="state.form.menyimpan"
+                            t-on-click="simpan">
+                            <t t-if="state.form.menyimpan">
+                                <span class="cmu-spinner-tombol"/>Menyimpan...
+                            </t>
+                            <t t-else="">Simpan</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL HISTORY ══════════ -->
+        <t t-if="state.riwayat.buka">
+            <div class="cmu-overlay" t-on-click="tutupRiwayat">
+                <div class="cmu-modal cmu-modal-riwayat" t-on-click.stop="">
+                    <div class="cmu-modal-kepala">
+                        <div class="cmu-modal-judul">
+                            <h2>🕘 History</h2>
+                            <p class="cmu-subkepala"><t t-esc="state.riwayat.judul"/></p>
+                        </div>
+                        <button class="cmu-tombol-tutup" t-on-click="tutupRiwayat">✕</button>
+                    </div>
+                    <div class="cmu-modal-isi">
+                        <t t-if="state.riwayat.memuat">
+                            <div class="cmu-loading"><div class="cmu-spinner"/><p>Memuat...</p></div>
+                        </t>
+                        <t t-elif="state.riwayat.daftar.length === 0">
+                            <div class="cmu-riwayat-kosong">Belum ada riwayat.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cmu-timeline">
+                                <t t-foreach="state.riwayat.daftar" t-as="r" t-key="r.id">
+                                    <div class="cmu-timeline-item">
+                                        <span t-attf-class="cmu-badge-aksi #{r.aksi === 'create' ? 'cmu-aksi-create' : 'cmu-aksi-edit'}">
+                                            <t t-esc="labelAksi(r.aksi)"/>
+                                        </span>
+                                        <div class="cmu-timeline-isi">
+                                            <div class="cmu-timeline-ket"><t t-esc="r.keterangan"/></div>
+                                            <div class="cmu-timeline-meta">
+                                                <t t-esc="r.user_id ? r.user_id[1] : '-'"/>
+                                                <span class="cmu-dot">•</span>
+                                                <t t-esc="formatWaktu(r.waktu)"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ DIALOG KONFIRMASI ══════════ -->
+        <t t-if="state.konfirmasi.buka">
+            <div class="cmu-overlay cmu-overlay-konfirmasi">
+                <div class="cmu-modal-konfirmasi" t-on-click.stop="">
+                    <h3><t t-esc="state.konfirmasi.judul"/></h3>
+                    <p t-out="konfirmasiPesan"/>
+                    <div class="cmu-konfirmasi-aksi">
+                        <button class="cmu-tombol-sekunder" t-on-click="tutupKonfirmasi">Batal</button>
+                        <button t-attf-class="cmu-tombol-konfirmasi #{state.konfirmasi.warnaYa === 'merah' ? 'cmu-konfirmasi-merah' : 'cmu-konfirmasi-biru'}"
+                            t-on-click="jalankanKonfirmasi">
+                            <t t-esc="state.konfirmasi.labelYa"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+</templates>
