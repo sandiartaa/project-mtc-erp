@@ -16,9 +16,12 @@
                         <p>Product · IN CHARGE · Requestor · Timeline · Approval</p>
                     </div>
                 </div>
-                <div class="cwo-header-aksi">
+                <div class="cwo-header-aksi" t-if="state.bisaUbah">
                     <button class="cwo-btn-import" t-on-click="bukaImpor">⬆ Import</button>
                     <button class="cwo-btn-tambah" t-on-click="bukaFormTambah">+ Tambah Work Order</button>
+                </div>
+                <div class="cwo-header-aksi" t-else="">
+                    <span class="cwo-badge-ro">👁 Read-only</span>
                 </div>
             </div>
         </div>
@@ -54,8 +57,8 @@
                 <div class="cwo-kosong">
                     <div class="cwo-kosong-ikon">📭</div>
                     <h3>Belum ada Work Order</h3>
-                    <p>Klik tombol di bawah untuk menambah</p>
-                    <button class="cwo-btn-tambah cwo-btn-tambah-kosong"
+                    <p t-if="state.bisaUbah">Klik tombol di bawah untuk menambah</p>
+                    <button t-if="state.bisaUbah" class="cwo-btn-tambah cwo-btn-tambah-kosong"
                         t-on-click="bukaFormTambah">+ Tambah Work Order</button>
                 </div>
             </t>
@@ -67,17 +70,19 @@
                             <tr class="cwo-grup-row">
                                 <th rowspan="2" class="cwo-tengah cwo-col-no">No.</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-status">Status</th>
-                                <th colspan="5" class="cwo-grup cwo-grup-pd">Product</th>
+                                <th colspan="6" class="cwo-grup cwo-grup-pd">Product</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-req">Requestor</th>
                                 <th colspan="3" class="cwo-grup cwo-grup-tl">Timeline</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-ap">Approval</th>
-                                <th rowspan="2" class="cwo-tengah cwo-col-aksi">Action</th>
+                                <th rowspan="2" class="cwo-tengah cwo-col-apr">Ready Approval</th>
+                                <th rowspan="2" class="cwo-tengah cwo-col-aksi" t-if="state.bisaUbah">Action</th>
                             </tr>
                             <tr class="cwo-sub-row">
                                 <th>Name</th>
                                 <th>Code</th>
                                 <th>Brand</th>
+                                <th>Job Type</th>
                                 <th>Details</th>
                                 <th class="cwo-tengah">Image</th>
                                 <th>Designer 2D/3D</th>
@@ -92,36 +97,47 @@
                         <tbody>
                             <t t-foreach="state.list" t-as="rec" t-key="rec.id">
                                 <tr>
-                                    <td class="cwo-tengah"><span class="cwo-badge-no"><t t-esc="rec.wo_number"/></span></td>
-                                    <td class="cwo-tengah">
+                                    <td class="cwo-tengah" data-label="No."><span class="cwo-badge-no"><t t-esc="rec.wo_number"/></span></td>
+                                    <td class="cwo-tengah" data-label="Status">
                                         <span t-attf-class="cwo-badge-st #{kelasStatus(rec.status)}">
                                             <t t-esc="labelStatus(rec.status)"/>
                                         </span>
                                     </td>
-                                    <td><b><t t-esc="rec.name"/></b></td>
-                                    <td><t t-esc="rec.code or '—'"/></td>
-                                    <td><t t-esc="rec.brand or '—'"/></td>
-                                    <td class="cwo-sel-details"><t t-esc="rec.details or '—'"/></td>
-                                    <td class="cwo-tengah">
-                                        <t t-if="rec.image_ada">
-                                            <img class="cwo-thumb" t-att-src="'/web/image/wo.work.order/' + rec.id + '/image'"/>
+                                    <td data-label="Name"><b><t t-esc="rec.name"/></b></td>
+                                    <td data-label="Code"><t t-esc="rec.code or '—'"/></td>
+                                    <td data-label="Brand"><t t-esc="rec.brand_id ? rec.brand_id[1] : '—'"/></td>
+                                    <td class="cwo-tengah" data-label="Job Type">
+                                        <t t-if="rec.job_type_id">
+                                            <span class="cwo-badge-jt"><t t-esc="rec.job_type_id[1]"/></span>
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td><t t-esc="rec.incharge_id ? rec.incharge_id[1] : '—'"/></td>
-                                    <td class="cwo-tengah">
+                                    <td class="cwo-sel-details" data-label="Details"><t t-esc="rec.details or '—'"/></td>
+                                    <td class="cwo-tengah" data-label="Image">
+                                        <t t-if="rec.image_ada">
+                                            <img class="cwo-thumb cwo-thumb-klik" title="Klik untuk perbesar"
+                                                t-att-src="'/web/image/wo.work.order/' + rec.id + '/image'"
+                                                t-on-click="() => this.bukaImgPopup(rec)"/>
+                                        </t>
+                                        <t t-else=""><span class="cwo-sel-kosong">—</span></t>
+                                    </td>
+                                    <td data-label="Designer 2D/3D"><t t-esc="rec.incharge_id ? rec.incharge_id[1] : '—'"/></td>
+                                    <td class="cwo-tengah" data-label="Lokal/RRC">
                                         <t t-if="rec.lokal_rrc">
                                             <span class="cwo-badge-lr"><t t-esc="labelLokalRrc(rec.lokal_rrc)"/></span>
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></td>
-                                    <td><t t-esc="formatTanggal(rec.request_date)"/></td>
-                                    <td><t t-esc="formatTanggal(rec.target_date)"/></td>
-                                    <td><t t-esc="formatTanggal(rec.finish_date)"/></td>
-                                    <td><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
-                                    <td><t t-esc="formatTanggal(rec.approval_date)"/></td>
-                                    <td class="cwo-tengah">
+                                    <td data-label="Requestor"><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></td>
+                                    <td data-label="Req Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
+                                    <td data-label="Target"><t t-esc="formatTanggal(rec.target_date)"/></td>
+                                    <td data-label="Finish Date"><t t-esc="formatTanggal(rec.finish_date)"/></td>
+                                    <td data-label="Approver"><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
+                                    <td data-label="Approval Date"><t t-esc="formatTanggal(rec.approval_date)"/></td>
+                                    <td class="cwo-tengah" data-label="Ready Approval">
+                                        <t t-call="custom_work_orders.ApprovalCtrl"/>
+                                    </td>
+                                    <td class="cwo-tengah cwo-sel-aksi" data-label="Action" t-if="state.bisaUbah">
                                         <div class="cwo-aksi-grup">
                                             <button class="cwo-ico cwo-ico-edit" title="Edit"
                                                 t-on-click="() => this.bukaFormEdit(rec)">
@@ -137,6 +153,78 @@
                             </t>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- ══════════ KARTU (tampilan mobile) ══════════ -->
+                <div class="cwo-kartu-list">
+                    <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                        <div t-attf-class="cwo-kartu #{state.kartuTerbuka[rec.id] ? 'cwo-kartu-buka' : ''}">
+                            <!-- KEPALA (selalu tampil, bisa ditekan untuk buka/tutup) -->
+                            <div class="cwo-kartu-kepala" t-on-click="() => this.toggleKartu(rec.id)">
+                                <div class="cwo-kartu-atas">
+                                    <span class="cwo-badge-no"><t t-esc="rec.wo_number"/></span>
+                                    <span t-if="rec.approval_state != 'draft'"
+                                        t-attf-class="cwo-badge-apr cwo-badge-apr-mini #{kelasApproval(rec.approval_state)}">
+                                        <t t-esc="labelApproval(rec.approval_state)"/>
+                                    </span>
+                                    <span t-attf-class="cwo-badge-st #{kelasStatus(rec.status)}">
+                                        <t t-esc="labelStatus(rec.status)"/>
+                                    </span>
+                                    <span class="cwo-kartu-chevron">▾</span>
+                                </div>
+                                <div class="cwo-kartu-nama"><t t-esc="rec.name"/></div>
+                                <div class="cwo-kartu-sub"><t t-esc="barisProduk(rec)"/></div>
+                            </div>
+
+                            <!-- ISI (muncul saat kartu dibuka) -->
+                            <div class="cwo-kartu-isi" t-if="state.kartuTerbuka[rec.id]">
+                                <!-- Gambar inline ke bawah -->
+                                <div class="cwo-kartu-gambar" t-if="rec.image_ada">
+                                    <img t-att-src="urlGambar(rec)"/>
+                                </div>
+                                <div class="cwo-kartu-baris" t-else="">
+                                    <span class="cwo-kartu-label">Image</span>
+                                    <span class="cwo-sel-kosong">Tidak ada gambar</span>
+                                </div>
+                                <!-- Details (jika ada) -->
+                                <div class="cwo-kartu-detail" t-if="rec.details">
+                                    <t t-esc="rec.details"/>
+                                </div>
+                                <!-- Designer - Lokal/RRC -->
+                                <div class="cwo-kartu-baris">
+                                    <span class="cwo-kartu-label">Designer</span>
+                                    <span><t t-esc="barisDesigner(rec)"/></span>
+                                </div>
+                                <!-- Requestor - Req Date -->
+                                <div class="cwo-kartu-baris">
+                                    <span class="cwo-kartu-label">Requestor</span>
+                                    <span><t t-esc="barisRequestor(rec)"/></span>
+                                </div>
+                                <!-- Target / Finish (jika ada) -->
+                                <div class="cwo-kartu-baris" t-if="rec.target_date or rec.finish_date">
+                                    <span class="cwo-kartu-label">Target/Finish</span>
+                                    <span><t t-esc="formatTanggal(rec.target_date)"/> · <t t-esc="formatTanggal(rec.finish_date)"/></span>
+                                </div>
+                                <!-- Approver - Approval Date (paling bawah) -->
+                                <div class="cwo-kartu-baris">
+                                    <span class="cwo-kartu-label">Approver</span>
+                                    <span><t t-esc="barisApprover(rec)"/></span>
+                                </div>
+                                <!-- Alur approval: Ready / Cancel / Approve / Tolak -->
+                                <div class="cwo-kartu-baris cwo-kartu-baris-apr">
+                                    <span class="cwo-kartu-label">Approval</span>
+                                    <span><t t-call="custom_work_orders.ApprovalCtrl"/></span>
+                                </div>
+                                <!-- Aksi (hanya untuk akses Full) -->
+                                <div class="cwo-kartu-aksi" t-if="state.bisaUbah">
+                                    <button class="cwo-ico cwo-ico-edit" title="Edit"
+                                        t-on-click="() => this.bukaFormEdit(rec)"><i class="fa fa-pencil"/></button>
+                                    <button class="cwo-ico cwo-ico-hapus" title="Hapus"
+                                        t-on-click="() => this.konfirmasiHapus(rec)"><i class="fa fa-trash-o"/></button>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
                 </div>
             </t>
         </t>
@@ -194,9 +282,35 @@
                             </div>
                             <div class="cwo-form-grup">
                                 <label class="cwo-form-label">Brand</label>
-                                <input type="text" class="cwo-form-input"
-                                    t-att-value="state.form.brand"
-                                    t-on-input="(ev) => state.form.brand = ev.target.value"/>
+                                <div class="cwo-jt-baris">
+                                    <div class="cwo-picker">
+                                        <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                            placeholder="-- Pilih Brand --"
+                                            t-att-value="fieldNama('brand')"
+                                            t-on-click="() => this.bukaFieldPicker('brand')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'brand'">
+                                            <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwo-btn-kelola-jt" title="Kelola pilihan Brand"
+                                        t-on-click="bukaBrandMgr">⚙ Kelola</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Job Type</label>
+                            <div class="cwo-jt-baris">
+                                <div class="cwo-picker">
+                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                        placeholder="-- Pilih Job Type --"
+                                        t-att-value="fieldNama('job_type')"
+                                        t-on-click="() => this.bukaFieldPicker('job_type')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'job_type'">
+                                        <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                    </t>
+                                </div>
+                                <button type="button" class="cwo-btn-kelola-jt" title="Kelola pilihan Job Type"
+                                    t-on-click="bukaJobTypeMgr">⚙ Kelola</button>
                             </div>
                         </div>
                         <div class="cwo-form-grup">
@@ -241,16 +355,15 @@
                             </div>
                             <div class="cwo-form-grup">
                                 <label class="cwo-form-label">Lokal/RRC</label>
-                                <select class="cwo-form-input"
-                                    t-on-change="(ev) => state.form.lokal_rrc = ev.target.value">
-                                    <option value="">-- Pilih --</option>
-                                    <t t-foreach="lokalRrcPilihan" t-as="lr" t-key="lr.value">
-                                        <option t-att-value="lr.value"
-                                            t-att-selected="lr.value === state.form.lokal_rrc">
-                                            <t t-esc="lr.label"/>
-                                        </option>
+                                <div class="cwo-picker">
+                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                        placeholder="-- Pilih --"
+                                        t-att-value="fieldNama('lokal_rrc')"
+                                        t-on-click="() => this.bukaFieldPicker('lokal_rrc')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'lokal_rrc'">
+                                        <t t-call="custom_work_orders.FieldPickerPanel"/>
                                     </t>
-                                </select>
+                                </div>
                             </div>
                         </div>
 
@@ -258,14 +371,18 @@
                         <div class="cwo-seksi-judul cwo-sj-rq">Requestor</div>
                         <div class="cwo-form-grup">
                             <label class="cwo-form-label">Requestor</label>
-                            <div class="cwo-picker">
-                                <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
-                                    placeholder="-- Pilih User --"
-                                    t-att-value="state.form.requestor_nama"
-                                    t-on-click="() => this.bukaUserPicker('requestor')"/>
-                                <t t-if="state.userPicker.buka and state.userPicker.target === 'requestor'">
-                                    <t t-call="custom_work_orders.UserPickerPanel"/>
-                                </t>
+                            <div class="cwo-jt-baris">
+                                <div class="cwo-picker">
+                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                        placeholder="-- Pilih Requestor --"
+                                        t-att-value="fieldNama('requestor')"
+                                        t-on-click="() => this.bukaFieldPicker('requestor')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'requestor'">
+                                        <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                    </t>
+                                </div>
+                                <button type="button" class="cwo-btn-kelola-jt" title="Kelola daftar Requestor/Approver"
+                                    t-on-click="bukaPersonMgr">⚙ Kelola</button>
                             </div>
                         </div>
 
@@ -297,14 +414,18 @@
                         <div class="cwo-form-baris-2">
                             <div class="cwo-form-grup">
                                 <label class="cwo-form-label">Approver</label>
-                                <div class="cwo-picker">
-                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
-                                        placeholder="-- Pilih User --"
-                                        t-att-value="state.form.approver_nama"
-                                        t-on-click="() => this.bukaUserPicker('approver')"/>
-                                    <t t-if="state.userPicker.buka and state.userPicker.target === 'approver'">
-                                        <t t-call="custom_work_orders.UserPickerPanel"/>
-                                    </t>
+                                <div class="cwo-jt-baris">
+                                    <div class="cwo-picker">
+                                        <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                            placeholder="-- Pilih Approver --"
+                                            t-att-value="fieldNama('approver')"
+                                            t-on-click="() => this.bukaFieldPicker('approver')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'approver'">
+                                            <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwo-btn-kelola-jt" title="Kelola daftar Requestor/Approver"
+                                        t-on-click="bukaPersonMgr">⚙ Kelola</button>
                                 </div>
                             </div>
                             <div class="cwo-form-grup">
@@ -339,10 +460,12 @@
                     <div class="cwo-modal-isi">
                         <div class="cwo-impor-info">
                             <p>Kolom CSV (baris pertama = header):</p>
-                            <code class="cwo-impor-kode">Name, Code, Brand, Details, Designer 2D/3D, Lokal/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status, Image</code>
+                            <code class="cwo-impor-kode">Name, Code, Brand, Job Type, Details, Designer 2D/3D, Lokal/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status, Image</code>
                             <ul class="cwo-impor-tips">
                                 <li><b>Name</b> wajib. <b>No.</b> dibuat otomatis (tidak perlu di CSV).</li>
-                                <li><b>Designer/Requestor/Approver</b> diisi nama user; dicocokkan dengan user akses Work Orders.</li>
+                                <li><b>Designer 2D/3D</b> diisi nama user; dicocokkan dengan user akses Work Orders.</li>
+                                <li><b>Requestor/Approver</b> diisi nama (mis. P. Setiadi); kalau belum ada otomatis dibuat pilihan baru.</li>
+                                <li><b>Job Type</b> diisi nama (mis. Box, Layer); kalau belum ada otomatis dibuat pilihan baru.</li>
                                 <li><b>Lokal/RRC</b>: Lokal / RRC. <b>Status</b>: Ongoing / Finished. <b>Tanggal</b>: YYYY-MM-DD atau DD/MM/YYYY.</li>
                                 <li><b>Image</b>: teks base64 (gambar tempelan Excel tidak ikut ke CSV — pakai upload di form).</li>
                                 <li>Impor <b>menambah</b> data — data lama tidak terhapus.</li>
@@ -380,6 +503,184 @@
             </div>
         </t>
 
+        <!-- ══════════ MODAL KELOLA BRAND ══════════ -->
+        <t t-if="state.brandMgr.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jt" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⚙ Kelola Brand</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupBrandMgr">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <!-- Tambah baru -->
+                        <div class="cwo-jt-tambah">
+                            <input type="text" class="cwo-form-input" placeholder="Nama Brand baru..."
+                                t-att-value="state.brandMgr.baru"
+                                t-on-input="(ev) => state.brandMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahBrand()"/>
+                            <button class="cwo-tombol-utama" t-att-disabled="state.brandMgr.proses"
+                                t-on-click="tambahBrand">+ Tambah</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwo-jt-daftar">
+                            <t t-if="state.daftarBrand.length === 0">
+                                <div class="cwo-picker-kosong">Belum ada Brand.</div>
+                            </t>
+                            <t t-foreach="state.daftarBrand" t-as="b" t-key="b.id">
+                                <div class="cwo-jt-item">
+                                    <t t-if="state.brandMgr.editId === b.id">
+                                        <input type="text" class="cwo-form-input cwo-jt-edit-input"
+                                            t-att-value="state.brandMgr.editNama"
+                                            t-on-input="(ev) => state.brandMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditBrand()"/>
+                                        <button class="cwo-ico cwo-ico-simpan" title="Simpan"
+                                            t-on-click="simpanEditBrand"><i class="fa fa-check"/></button>
+                                        <button class="cwo-ico" title="Batal"
+                                            t-on-click="batalEditBrand"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwo-jt-nama"><t t-esc="b.name"/></span>
+                                        <button class="cwo-ico cwo-ico-edit" title="Ubah"
+                                            t-on-click="() => this.mulaiEditBrand(b)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwo-ico cwo-ico-hapus" title="Hapus"
+                                            t-on-click="() => this.konfirmasiHapusBrand(b)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupBrandMgr">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA JOB TYPE ══════════ -->
+        <t t-if="state.jobTypeMgr.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jt" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⚙ Kelola Job Type</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupJobTypeMgr">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <!-- Tambah baru -->
+                        <div class="cwo-jt-tambah">
+                            <input type="text" class="cwo-form-input" placeholder="Nama Job Type baru..."
+                                t-att-value="state.jobTypeMgr.baru"
+                                t-on-input="(ev) => state.jobTypeMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahJobType()"/>
+                            <button class="cwo-tombol-utama" t-att-disabled="state.jobTypeMgr.proses"
+                                t-on-click="tambahJobType">+ Tambah</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwo-jt-daftar">
+                            <t t-if="state.daftarJobType.length === 0">
+                                <div class="cwo-picker-kosong">Belum ada Job Type.</div>
+                            </t>
+                            <t t-foreach="state.daftarJobType" t-as="jt" t-key="jt.id">
+                                <div class="cwo-jt-item">
+                                    <t t-if="state.jobTypeMgr.editId === jt.id">
+                                        <input type="text" class="cwo-form-input cwo-jt-edit-input"
+                                            t-att-value="state.jobTypeMgr.editNama"
+                                            t-on-input="(ev) => state.jobTypeMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditJobType()"/>
+                                        <button class="cwo-ico cwo-ico-simpan" title="Simpan"
+                                            t-on-click="simpanEditJobType"><i class="fa fa-check"/></button>
+                                        <button class="cwo-ico" title="Batal"
+                                            t-on-click="batalEditJobType"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwo-jt-nama"><t t-esc="jt.name"/></span>
+                                        <button class="cwo-ico cwo-ico-edit" title="Ubah"
+                                            t-on-click="() => this.mulaiEditJobType(jt)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwo-ico cwo-ico-hapus" title="Hapus"
+                                            t-on-click="() => this.konfirmasiHapusJobType(jt)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupJobTypeMgr">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA REQUESTOR / APPROVER ══════════ -->
+        <t t-if="state.personMgr.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jt" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⚙ Kelola Requestor / Approver</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupPersonMgr">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <p class="cwo-form-hint" style="margin: 0 0 12px;">Daftar ini dipakai bersama untuk Requestor dan Approver.</p>
+                        <!-- Tambah baru -->
+                        <div class="cwo-jt-tambah">
+                            <input type="text" class="cwo-form-input" placeholder="Nama baru..."
+                                t-att-value="state.personMgr.baru"
+                                t-on-input="(ev) => state.personMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahPerson()"/>
+                            <button class="cwo-tombol-utama" t-att-disabled="state.personMgr.proses"
+                                t-on-click="tambahPerson">+ Tambah</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwo-jt-daftar">
+                            <t t-if="state.daftarPerson.length === 0">
+                                <div class="cwo-picker-kosong">Belum ada nama.</div>
+                            </t>
+                            <t t-foreach="state.daftarPerson" t-as="p" t-key="p.id">
+                                <div class="cwo-jt-item">
+                                    <t t-if="state.personMgr.editId === p.id">
+                                        <input type="text" class="cwo-form-input cwo-jt-edit-input"
+                                            t-att-value="state.personMgr.editNama"
+                                            t-on-input="(ev) => state.personMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditPerson()"/>
+                                        <button class="cwo-ico cwo-ico-simpan" title="Simpan"
+                                            t-on-click="simpanEditPerson"><i class="fa fa-check"/></button>
+                                        <button class="cwo-ico" title="Batal"
+                                            t-on-click="batalEditPerson"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwo-jt-nama"><t t-esc="p.name"/></span>
+                                        <button class="cwo-ico cwo-ico-edit" title="Ubah"
+                                            t-on-click="() => this.mulaiEditPerson(p)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwo-ico cwo-ico-hapus" title="Hapus"
+                                            t-on-click="() => this.konfirmasiHapusPerson(p)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupPersonMgr">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP LIHAT GAMBAR ══════════ -->
+        <t t-if="state.imgPopup.buka">
+            <div class="cwo-overlay cwo-img-overlay" t-on-click="tutupImgPopup">
+                <div class="cwo-img-popup" t-on-click.stop="">
+                    <div class="cwo-img-popup-kepala">
+                        <span class="cwo-img-popup-judul"><t t-esc="state.imgPopup.judul"/></span>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupImgPopup">✕</button>
+                    </div>
+                    <div class="cwo-img-popup-isi">
+                        <img t-att-src="state.imgPopup.url"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+
         <!-- ══════════ KONFIRMASI ══════════ -->
         <t t-if="state.konfirmasi.buka">
             <div class="cwo-overlay cwo-overlay-konfirmasi">
@@ -400,7 +701,54 @@
     </div>
 </t>
 
-<!-- Panel picker user (dipakai untuk Designer/Requestor/Approver) -->
+<!-- Kontrol alur approval (dipakai di tabel desktop & kartu mobile).
+     'rec' diambil dari scope pemanggil (t-foreach). -->
+<t t-name="custom_work_orders.ApprovalCtrl">
+    <div class="cwo-apr">
+        <span t-attf-class="cwo-badge-apr #{kelasApproval(rec.approval_state)}">
+            <t t-esc="labelApproval(rec.approval_state)"/>
+        </span>
+        <div class="cwo-apr-aksi">
+            <button t-if="showReady(rec)" class="cwo-apr-btn cwo-apr-btn-ready"
+                t-on-click="() => this.setReady(rec)">Ready for Approval</button>
+            <button t-if="showCancel(rec)" class="cwo-apr-btn cwo-apr-btn-cancel"
+                t-on-click="() => this.cancelReady(rec)">Cancel</button>
+            <button t-if="showApprove(rec)" class="cwo-apr-btn cwo-apr-btn-approve"
+                t-on-click="() => this.approve(rec)">Approve</button>
+            <button t-if="showTolak(rec)" class="cwo-apr-btn cwo-apr-btn-tolak"
+                t-on-click="() => this.reject(rec)">Tolak</button>
+        </div>
+    </div>
+</t>
+
+<!-- Panel picker field generik (Job Type / Lokal-RRC / Requestor / Approver):
+     search + maks 5 + prev/next -->
+<t t-name="custom_work_orders.FieldPickerPanel">
+    <div class="cwo-picker-panel">
+        <input type="text" class="cwo-picker-cari" placeholder="Cari..."
+            t-att-value="state.fieldPicker.cari" t-on-input="fieldInput"/>
+        <div class="cwo-picker-item cwo-picker-clear" t-on-click="() => this.pilihFieldItem(false)">— Kosongkan —</div>
+        <t t-if="fieldHalaman.length === 0">
+            <div class="cwo-picker-kosong">Tidak ada pilihan.</div>
+        </t>
+        <t t-else="">
+            <t t-foreach="fieldHalaman" t-as="it" t-key="it.key">
+                <div class="cwo-picker-item" t-on-click="() => this.pilihFieldItem(it)">
+                    <t t-esc="it.label"/>
+                </div>
+            </t>
+        </t>
+        <div class="cwo-picker-nav" t-if="fieldTotalHalaman > 1">
+            <button class="cwo-picker-navbtn" t-on-click="fieldPrev"
+                t-att-disabled="state.fieldPicker.halaman &lt;= 1">‹ Prev</button>
+            <span class="cwo-picker-info"><t t-esc="state.fieldPicker.halaman"/> / <t t-esc="fieldTotalHalaman"/></span>
+            <button class="cwo-picker-navbtn" t-on-click="fieldNext"
+                t-att-disabled="state.fieldPicker.halaman >= fieldTotalHalaman">Next ›</button>
+        </div>
+    </div>
+</t>
+
+<!-- Panel picker user (dipakai untuk Designer) -->
 <t t-name="custom_work_orders.UserPickerPanel">
     <div class="cwo-picker-panel">
         <input type="text" class="cwo-picker-cari" placeholder="Cari user..."

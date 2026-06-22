@@ -1,7 +1,9 @@
 import base64
+import mimetypes
 from datetime import datetime
 
 from odoo import models, fields, api
+from odoo.exceptions import AccessError
 
 
 class WoWorkOrder(models.Model):
@@ -19,7 +21,10 @@ class WoWorkOrder(models.Model):
     # ── Product ──
     name = fields.Char('Name', required=True, index=True)
     code = fields.Char('Code', index=True)
-    brand = fields.Char('Brand')
+    # Brand — dropdown ke model custom wo.brand (isinya bisa di-CRUD).
+    brand_id = fields.Many2one('wo.brand', 'Brand', ondelete='set null')
+    # Job Type — dropdown ke model custom wo.job.type (isinya bisa di-CRUD).
+    job_type_id = fields.Many2one('wo.job.type', 'Job Type', ondelete='set null')
     details = fields.Text('Details')
     image = fields.Binary('Image', attachment=True)
     # Penanda ada/tidak gambar (untuk thumbnail di daftar tanpa menarik data besar)
@@ -34,22 +39,32 @@ class WoWorkOrder(models.Model):
         [('lokal', 'Lokal'), ('rrc', 'RRC')], string='Lokal/RRC'
     )
 
-    # ── Requestor ──
-    requestor_id = fields.Many2one('res.users', 'Requestor', ondelete='set null')
+    # ── Requestor ── (daftar custom wo.person, bukan res.users)
+    requestor_id = fields.Many2one('wo.person', 'Requestor', ondelete='set null')
 
     # ── Timeline ──
     request_date = fields.Date('Req Date')
     target_date = fields.Date('Target')
     finish_date = fields.Date('Finish Date')
 
-    # ── Approval ──
-    approver_id = fields.Many2one('res.users', 'Approver', ondelete='set null')
+    # ── Approval ── (daftar custom wo.person, bukan res.users)
+    approver_id = fields.Many2one('wo.person', 'Approver', ondelete='set null')
     approval_date = fields.Date('Approval Date')
 
     # ── Status keseluruhan + filter ──
     status = fields.Selection(
         [('ongoing', 'Ongoing'), ('finished', 'Finished')],
         string='Status', default='ongoing', index=True
+    )
+
+    # ── Alur pengajuan approval ──
+    # draft  : belum diajukan (default)
+    # ready  : Designer menekan "Ready for Approval" → menunggu approval user Full
+    # approved: user Full menyetujui
+    approval_state = fields.Selection(
+        [('draft', 'Belum Diajukan'), ('ready', 'Menunggu Approval'),
+         ('approved', 'Disetujui')],
+        string='Status Approval', default='draft', index=True, copy=False
     )
 
     # Penanda batch impor — agar data hasil 1x impor bisa dihapus terpisah.
@@ -60,6 +75,45 @@ class WoWorkOrder(models.Model):
         for rec in self:
             rec.image_ada = bool(rec.image)
 
+    # Nama channel bus untuk siaran perubahan ke semua klien yang sedang membuka app.
+    _BUS_CHANNEL = 'wo_work_order'
+    _BUS_TYPE = 'wo_work_order/changed'
+
+    def _notify_changed(self):
+        """Siarkan sinyal 'data berubah' lewat bus Odoo agar semua klien yang
+        sedang membuka Work Orders memuat ulang daftarnya (real-time, tanpa refresh).
+        Payload sengaja kosong — hanya pemicu reload, tidak membawa data."""
+        self.env['bus.bus']._sendone(self._BUS_CHANNEL, self._BUS_TYPE, {})
+
+    # Ekstensi file gambar yang umum (untuk penamaan saat unduh).
+    _IMG_EXT = {
+        'image/png': '.png', 'image/jpeg': '.jpg', 'image/jpg': '.jpg',
+        'image/gif': '.gif', 'image/webp': '.webp', 'image/bmp': '.bmp',
+        'image/svg+xml': '.svg',
+    }
+
+    def _rename_image_attachment(self):
+        """Beri nama file gambar sesuai No. Work Order (mis. 'WO00016.png').
+        Gambar disimpan sebagai ir.attachment (filestore); yang diubah adalah
+        nama file-nya — terlihat saat gambar diunduh."""
+        Att = self.env['ir.attachment'].sudo()
+        for rec in self:
+            if not rec.image:
+                continue
+            att = Att.search([
+                ('res_model', '=', 'wo.work.order'),
+                ('res_field', '=', 'image'),
+                ('res_id', '=', rec.id),
+            ], limit=1)
+            if not att:
+                continue
+            ext = self._IMG_EXT.get(
+                att.mimetype, mimetypes.guess_extension(att.mimetype or '') or '.png'
+            )
+            nama = (rec.wo_number or 'WO') + ext
+            if att.name != nama:
+                att.name = nama
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -67,18 +121,85 @@ class WoWorkOrder(models.Model):
                 vals['wo_number'] = (
                     self.env['ir.sequence'].next_by_code('wo.work.order') or 'New'
                 )
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records._rename_image_attachment()
+        records._notify_changed()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'image' in vals:
+            self._rename_image_attachment()
+        self._notify_changed()
+        return res
+
+    def unlink(self):
+        res = super().unlink()
+        self._notify_changed()
+        return res
+
+    @api.model
+    def boleh_ubah(self):
+        """True jika user boleh Create/Update/Delete (anggota grup Full).
+        User read-only akan mendapat False sehingga tombol aksi disembunyikan."""
+        return self.env.user.has_group('custom_work_orders.group_work_orders_user')
+
+    # ─── ALUR APPROVAL ───────────────────────────────────────────────────────
+    def _cek_designer_atau_full(self):
+        """Hanya Designer 2D/3D dari WO ini, atau user Full, yang boleh
+        mengajukan/membatalkan pengajuan."""
+        user = self.env.user
+        if user.has_group('custom_work_orders.group_work_orders_user'):
+            return
+        for rec in self:
+            if rec.incharge_id.id != user.id:
+                raise AccessError(
+                    "Hanya Designer 2D/3D dari Work Order ini yang boleh mengajukan/membatalkan."
+                )
+
+    def _cek_full(self):
+        if not self.env.user.has_group('custom_work_orders.group_work_orders_user'):
+            raise AccessError("Hanya user akses Full yang boleh menyetujui/menolak.")
+
+    def action_set_ready(self):
+        """Designer mengajukan WO untuk approval (draft → ready).
+        Pakai sudo agar Designer ber-akses read-only tetap bisa mengubah state-nya
+        sendiri, namun dibatasi oleh _cek_designer_atau_full di atas."""
+        self._cek_designer_atau_full()
+        self.sudo().write({'approval_state': 'ready'})
+        return True
+
+    def action_cancel_ready(self):
+        """Designer membatalkan pengajuan (ready → draft) — penjaga dari salah ajukan."""
+        self._cek_designer_atau_full()
+        self.sudo().write({'approval_state': 'draft'})
+        return True
+
+    def action_approve(self):
+        """User Full menyetujui WO yang sudah ready (ready → approved)."""
+        self._cek_full()
+        self.write({'approval_state': 'approved'})
+        return True
+
+    def action_reject(self):
+        """User Full menolak pengajuan (kembali ke draft)."""
+        self._cek_full()
+        self.write({'approval_state': 'draft'})
+        return True
 
     @api.model
     def users_incharge(self):
-        """Daftar user yang punya akses modul Work Orders (untuk Designer,
-        Requestor, Approver)."""
-        grp = self.env.ref(
-            'custom_work_orders.group_work_orders_user', raise_if_not_found=False
-        )
-        if not grp:
-            return []
-        users = grp.all_user_ids.filtered(lambda u: u.active)
+        """Semua user yang punya akses modul Work Orders — baik Full maupun
+        Read-only — untuk dropdown Designer 2D/3D."""
+        users = self.env['res.users'].browse()
+        for xmlid in (
+            'custom_work_orders.group_work_orders_user',
+            'custom_work_orders.group_work_orders_readonly',
+        ):
+            grp = self.env.ref(xmlid, raise_if_not_found=False)
+            if grp:
+                users |= grp.all_user_ids
+        users = users.filtered(lambda u: u.active)
         return [{'id': u.id, 'name': u.name} for u in users.sorted('name')]
 
     # ─── IMPOR CSV ───────────────────────────────────────────────────────────
@@ -142,6 +263,45 @@ class WoWorkOrder(models.Model):
         def user_id(nama):
             return users.get(nama.lower(), False) if nama else False
 
+        # Cache job type: nama(lower) -> id. Buat baru bila belum ada.
+        JobType = self.env['wo.job.type']
+        job_types = {(jt['name'] or '').strip().lower(): jt['id']
+                     for jt in JobType.daftar_job_type()}
+
+        def job_type_id(nama):
+            if not nama:
+                return False
+            key = nama.lower()
+            if key not in job_types:
+                job_types[key] = JobType.create({'name': nama}).id
+            return job_types[key]
+
+        # Cache brand: nama(lower) -> id. Buat baru bila belum ada.
+        Brand = self.env['wo.brand']
+        brands = {(b['name'] or '').strip().lower(): b['id']
+                  for b in Brand.daftar_brand()}
+
+        def brand_id(nama):
+            if not nama:
+                return False
+            key = nama.lower()
+            if key not in brands:
+                brands[key] = Brand.create({'name': nama}).id
+            return brands[key]
+
+        # Cache person (Requestor/Approver): nama(lower) -> id. Buat baru bila belum ada.
+        Person = self.env['wo.person']
+        persons = {(p['name'] or '').strip().lower(): p['id']
+                   for p in Person.daftar_person()}
+
+        def person_id(nama):
+            if not nama:
+                return False
+            key = nama.lower()
+            if key not in persons:
+                persons[key] = Person.create({'name': nama}).id
+            return persons[key]
+
         vals_list = []
         for r in rows:
             name = ambil(r, 'Name', 'name', 'Nama', 'NAMA')
@@ -155,16 +315,17 @@ class WoWorkOrder(models.Model):
             vals_list.append({
                 'name': name,
                 'code': ambil(r, 'Code', 'code') or False,
-                'brand': ambil(r, 'Brand', 'brand') or False,
+                'brand_id': brand_id(ambil(r, 'Brand', 'brand', 'Merek')),
+                'job_type_id': job_type_id(ambil(r, 'Job Type', 'JobType', 'job_type', 'Tipe')),
                 'details': ambil(r, 'Details', 'details') or False,
                 'image': self._parse_image(ambil(r, 'Image', 'image', 'Gambar')),
                 'incharge_id': user_id(designer),
                 'lokal_rrc': lr_map.get(lr, False),
-                'requestor_id': user_id(requestor),
+                'requestor_id': person_id(requestor),
                 'request_date': self._parse_tanggal(ambil(r, 'Req Date', 'Request', 'request', 'Req')),
                 'target_date': self._parse_tanggal(ambil(r, 'Target', 'target', 'Deadline')),
                 'finish_date': self._parse_tanggal(ambil(r, 'Finish Date', 'Finish', 'finish_date')),
-                'approver_id': user_id(approver),
+                'approver_id': person_id(approver),
                 'approval_date': self._parse_tanggal(ambil(r, 'Approval Date', 'Date', 'Approval', 'approval')),
                 'status': stat_map.get(stat, 'ongoing'),
                 'import_batch': batch,

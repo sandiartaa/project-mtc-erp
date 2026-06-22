@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Work Orders',
-    'version': '1.0',
+    'version': '1.1.0',
     'category': 'Custom',
     'summary': 'Manajemen Work Order: Product Details, InCharge, Timeline',
     'description': """
@@ -15,11 +15,14 @@ Akses dikelola lewat grup (bisa diatur dari Master User).
 """,
     'author': 'Custom',
     'license': 'LGPL-3',
-    'depends': ['base'],
+    'depends': ['base', 'bus'],
     'data': [
         'security/work_orders_groups.xml',
         'security/ir.model.access.csv',
+        'security/work_orders_rules.xml',
         'data/sequence.xml',
+        'data/job_types.xml',
+        'data/persons.xml',
         'views/work_orders_menus.xml',
     ],
     'assets': {

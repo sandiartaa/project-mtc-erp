@@ -6,7 +6,10 @@ from odoo.exceptions import AccessError
 MODUL_AKSES = [
     ('custom_penjualan.group_penjualan_user', 'Penjualan'),
     ('custom_spk.group_spk_user', 'SPK'),
-    ('custom_work_orders.group_work_orders_user', 'Work Orders'),
+    # Work Orders punya 2 level: Full (CRUD) dan Read-only (lihat saja).
+    # Admin pilih salah satu untuk tiap user.
+    ('custom_work_orders.group_work_orders_user', 'Work Orders (Full)'),
+    ('custom_work_orders.group_work_orders_readonly', 'Work Orders (Read-only)'),
 ]
 
 

@@ -3,6 +3,14 @@
     <!-- Grup akses modul Work Orders.
          - implied base.group_user: pemilik grup otomatis Internal User.
          - admin dimasukkan agar tetap bisa melihat & mengelola. -->
+    <!-- Read-only: hanya boleh melihat (View/Read). Tidak bisa tambah/edit/hapus. -->
+    <record id="group_work_orders_readonly" model="res.groups">
+        <field name="name">Akses Work Orders (Read-only)</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <!-- Full: boleh Create/View/Update/Delete. Ditentukan admin lewat Master User.
+         Independen dari grup read-only (admin pilih salah satu di Master User). -->
     <record id="group_work_orders_user" model="res.groups">
         <field name="name">Akses Work Orders</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>

@@ -47,13 +47,13 @@ class SpkApp extends Component {
                 qty: 0,
                 harga: 0,
                 pic_id: "",
-                gudang_asal: "",
+                gudang_id: "", gudang_nama: "",
                 keterangan: "",
             },
             pickerBahan: {
                 cari: "",
                 halaman: 1,
-                perHalaman: 10,
+                perHalaman: 5,
                 daftarSemua: [],
                 memuat: false,
             },
@@ -69,7 +69,7 @@ class SpkApp extends Component {
                 menyimpan: false,
                 tanggal_kirim: "",
                 hasil_produksi: 0,
-                gudang_penerima: "",
+                gudang_id: "", gudang_nama: "",
             },
 
             // SBH (Status Barang Kembali) per bahan baku
@@ -84,7 +84,7 @@ class SpkApp extends Component {
                 namaBahan: "",
                 menyimpan: false,
                 barang_sisa: 0,
-                gudang_penerima: "",
+                gudang_id: "", gudang_nama: "",
                 kategori: "",
             },
 
@@ -132,6 +132,25 @@ class SpkApp extends Component {
             popupBarang: {
                 buka: false,
                 cari: "",
+            },
+
+            // Popup Master Gudang (daftar besar + CRUD + klik → history)
+            daftarGudangMaster: [],
+            popupGudang: {
+                buka: false,
+                cari: "",
+                baru: "",
+                editId: null,
+                editNama: "",
+                proses: false,
+            },
+            // Detail/history satu gudang (barang masuk & keluar)
+            popupGudangDetail: {
+                buka: false,
+                gudang: null,     // {id, name}
+                masuk: [],
+                keluar: [],
+                memuat: false,
             },
 
             // Popup Detail Barang (klik baris barang → tampil detail + tab formulasi)
@@ -183,6 +202,7 @@ class SpkApp extends Component {
                 buka: false,
                 target: "",      // 'formTambah' | 'formEdit'
                 cari: "",
+                halaman: 1,
             },
 
             // Form barang (tambah/edit) ke tabel spk.barang
@@ -243,6 +263,8 @@ class SpkApp extends Component {
                 buka: false,
                 memuat: false,
                 spkName: "",
+                dibuatOleh: "", dibuatTanggal: "",
+                diubahOleh: "", diubahTanggal: "",
                 daftar: [],   // [{aksi, keterangan, user_id, create_date}]
             },
 
@@ -496,14 +518,93 @@ class SpkApp extends Component {
         }
     }
 
-    // ─── PICKER FIELD GENERIK (form Tambah Barang) ───────────────────────────
+    // ─── PICKER FIELD GENERIK (semua dropdown form tambah/edit) ──────────────
+    // Opsi statis (dibungkus jadi bentuk {id, name} agar seragam dgn master data)
+    get _statusOpsi() {
+        return [{ id: "open", name: "Open" }, { id: "closed", name: "Closed" }];
+    }
+    get _unitOpsi() {
+        return this.unitPilihan.map(u => ({ id: u.value, name: u.label }));
+    }
+    get _perSatuanOpsi() {
+        return [
+            { id: "pcs", name: "Per Pcs" },
+            { id: "layer", name: "Per Layer" },
+            { id: "karton", name: "Per Karton" },
+        ];
+    }
+    // Cari nama dari daftar {id,name} berdasarkan id (untuk label picker)
+    _namaDari(daftar, id) {
+        if (!id) return "";
+        const x = (daftar || []).find(o => String(o.id) === String(id));
+        return x ? x.name : "";
+    }
+
+    // Registry konfigurasi tiap target picker:
+    //   sumber() → daftar [{id,name}], get() → nama terpilih, set(opt) → simpan pilihan
+    _fieldCfg(target) {
+        const S = this.state;
+        const cfg = {
+            // Form Tambah/Edit Barang (master barang)
+            satuan: { sumber: () => S.daftarSatuan, get: () => S.formBarang.satuan_nama,
+                set: o => { S.formBarang.satuan_id = o ? String(o.id) : ""; S.formBarang.satuan_nama = o ? o.name : ""; } },
+            pic: { sumber: () => S.daftarPic, get: () => S.formBarang.pic_nama,
+                set: o => { S.formBarang.pic_id = o ? String(o.id) : ""; S.formBarang.pic_nama = o ? o.name : ""; } },
+            kategori: { sumber: () => S.daftarKategori, get: () => S.formBarang.kategori_nama,
+                set: o => { S.formBarang.kategori_id = o ? String(o.id) : ""; S.formBarang.kategori_nama = o ? o.name : ""; } },
+            gudang: { sumber: () => S.daftarGudang, get: () => S.formBarang.gudang_nama,
+                set: o => { S.formBarang.gudang_id = o ? String(o.id) : ""; S.formBarang.gudang_nama = o ? o.name : ""; } },
+
+            // Form Tambah SPK
+            ft_branch: { sumber: () => S.daftarCabang, get: () => this._namaDari(S.daftarCabang, S.formTambah.branch_id),
+                set: o => { S.formTambah.branch_id = o ? String(o.id) : ""; } },
+            ft_pic: { sumber: () => S.daftarPic, get: () => this._namaDari(S.daftarPic, S.formTambah.pic_id),
+                set: o => { S.formTambah.pic_id = o ? String(o.id) : ""; } },
+            ft_status: { sumber: () => this._statusOpsi, get: () => this._namaDari(this._statusOpsi, S.formTambah.status),
+                set: o => { S.formTambah.status = o ? o.id : ""; } },
+
+            // Form Edit SPK
+            fe_branch: { sumber: () => S.daftarCabang, get: () => this._namaDari(S.daftarCabang, S.formEdit.branch_id),
+                set: o => { S.formEdit.branch_id = o ? String(o.id) : ""; } },
+            fe_pic: { sumber: () => S.daftarPic, get: () => this._namaDari(S.daftarPic, S.formEdit.pic_id),
+                set: o => { S.formEdit.pic_id = o ? String(o.id) : ""; } },
+            fe_unit: { sumber: () => this._unitOpsi, get: () => this._namaDari(this._unitOpsi, S.formEdit.unit),
+                set: o => { S.formEdit.unit = o ? o.id : ""; } },
+            fe_status: { sumber: () => this._statusOpsi, get: () => this._namaDari(this._statusOpsi, S.formEdit.status),
+                set: o => { S.formEdit.status = o ? o.id : ""; } },
+
+            // Form Bahan Baku
+            fb_pic: { sumber: () => S.daftarPic, get: () => this._namaDari(S.daftarPic, S.formBahan.pic_id),
+                set: o => { S.formBahan.pic_id = o ? String(o.id) : ""; } },
+            fb_gudang: { sumber: () => S.daftarGudang, get: () => S.formBahan.gudang_nama,
+                set: o => { S.formBahan.gudang_id = o ? String(o.id) : ""; S.formBahan.gudang_nama = o ? o.name : ""; } },
+
+            // Form HPR (gudang penerima)
+            hpr_gudang: { sumber: () => S.daftarGudang, get: () => S.formHpr.gudang_nama,
+                set: o => { S.formHpr.gudang_id = o ? String(o.id) : ""; S.formHpr.gudang_nama = o ? o.name : ""; } },
+
+            // Form SBH (gudang penerima)
+            sbh_gudang: { sumber: () => S.daftarGudang, get: () => S.formSbh.gudang_nama,
+                set: o => { S.formSbh.gudang_id = o ? String(o.id) : ""; S.formSbh.gudang_nama = o ? o.name : ""; } },
+
+            // Form Formulasi (SPK)
+            ff_bahan: { sumber: () => this.bahanTersediaUntukFormulasi.map(b => ({ id: b.nama_bahan, name: b.nama_bahan })),
+                get: () => S.formFormulasi.nama_bahan || "",
+                set: o => { S.formFormulasi.nama_bahan = o ? o.id : ""; } },
+            ff_satuan: { sumber: () => this._perSatuanOpsi, get: () => this._namaDari(this._perSatuanOpsi, S.formFormulasi.satuan_hitung),
+                set: o => { S.formFormulasi.satuan_hitung = o ? o.id : "pcs"; } },
+
+            // Form Formulasi (master barang)
+            fbf_satuan: { sumber: () => this._perSatuanOpsi, get: () => this._namaDari(this._perSatuanOpsi, S.formBarangFormulasi.satuan_hitung),
+                set: o => { S.formBarangFormulasi.satuan_hitung = o ? o.id : "pcs"; } },
+        };
+        return cfg[target] || null;
+    }
+
     // Sumber data untuk picker yang sedang terbuka
     get _pickerFieldSource() {
-        const map = {
-            satuan: "daftarSatuan", pic: "daftarPic",
-            kategori: "daftarKategori", gudang: "daftarGudang",
-        };
-        return this.state[map[this.state.pickerField.target]] || [];
+        const c = this._fieldCfg(this.state.pickerField.target);
+        return c ? (c.sumber() || []) : [];
     }
 
     // Hasil filter sesuai kata kunci (untuk hitung total halaman)
@@ -556,13 +657,14 @@ class SpkApp extends Component {
 
     // Label terpilih untuk ditampilkan di input picker
     pickerNama(target) {
-        return this.state.formBarang[target + "_nama"] || "";
+        const c = this._fieldCfg(target);
+        return c ? (c.get() || "") : "";
     }
 
+    // Pilih satu opsi (item null/false = kosongkan)
     pilihField(item) {
-        const t = this.state.pickerField.target;
-        this.state.formBarang[t + "_id"] = String(item.id);
-        this.state.formBarang[t + "_nama"] = item.name || "";
+        const c = this._fieldCfg(this.state.pickerField.target);
+        if (c) c.set(item || null);
         this.tutupPickerField();
     }
 
@@ -577,6 +679,7 @@ class SpkApp extends Component {
         p.buka = true;
         p.target = target;
         p.cari = "";
+        p.halaman = 1;
     }
 
     tutupPickerBarang() {
@@ -585,16 +688,36 @@ class SpkApp extends Component {
 
     pickerBarangInput(ev) {
         this.state.pickerBarang.cari = ev.target.value;
+        this.state.pickerBarang.halaman = 1;
     }
 
-    // 5 barang teratas (berurut abjad) sesuai kata kunci pencarian
-    get pickerBarangTerfilter() {
+    // Daftar barang tersaring sesuai kata kunci (berurut abjad)
+    get _pickerBarangTersaring() {
         const cari = (this.state.pickerBarang.cari || "").trim().toLowerCase();
-        const hasil = cari
+        return cari
             ? this.state.daftarBarang.filter(b =>
                 (b.name || "").toLowerCase().includes(cari))
             : this.state.daftarBarang;
-        return hasil.slice(0, 5);
+    }
+
+    // Maks 5 barang pada halaman aktif
+    get pickerBarangTerfilter() {
+        const mulai = (this.state.pickerBarang.halaman - 1) * 5;
+        return this._pickerBarangTersaring.slice(mulai, mulai + 5);
+    }
+
+    get pickerBarangTotalHalaman() {
+        return Math.max(1, Math.ceil(this._pickerBarangTersaring.length / 5));
+    }
+
+    pickerBarangNext() {
+        const p = this.state.pickerBarang;
+        if (p.halaman < this.pickerBarangTotalHalaman) p.halaman++;
+    }
+
+    pickerBarangPrev() {
+        const p = this.state.pickerBarang;
+        if (p.halaman > 1) p.halaman--;
     }
 
     // Pilih barang dari picker → set ke form target sebagai nama SPK
@@ -650,6 +773,118 @@ class SpkApp extends Component {
             (b.name || "").toLowerCase().includes(cari) ||
             (b.kode || "").toLowerCase().includes(cari)
         );
+    }
+
+    // ─── MASTER GUDANG (popup besar: daftar + CRUD + history) ────────────────
+    async bukaPopupGudang() {
+        this.state.popupGudang.buka = true;
+        this.state.popupGudang.cari = "";
+        this.state.popupGudang.baru = "";
+        this.state.popupGudang.editId = null;
+        this.state.popupGudang.editNama = "";
+        await this.muatGudangMaster();
+    }
+    tutupPopupGudang() { this.state.popupGudang.buka = false; }
+
+    async muatGudangMaster() {
+        try {
+            this.state.daftarGudangMaster = await this.orm.searchRead(
+                "spk.gudang", [["active", "=", true]], ["id", "name"], { order: "name asc" }
+            );
+        } catch (e) {
+            console.error("Gagal memuat master gudang:", e);
+        }
+    }
+
+    get gudangMasterTersaring() {
+        const cari = (this.state.popupGudang.cari || "").trim().toLowerCase();
+        const src = this.state.daftarGudangMaster;
+        return cari ? src.filter(g => (g.name || "").toLowerCase().includes(cari)) : src;
+    }
+
+    async tambahGudangMaster() {
+        const p = this.state.popupGudang;
+        const nama = (p.baru || "").trim();
+        if (!nama) { this.notification.add("Nama gudang kosong.", { type: "warning" }); return; }
+        p.proses = true;
+        try {
+            await this.orm.create("spk.gudang", [{ name: nama }]);
+            p.baru = "";
+            await Promise.all([this.muatGudangMaster(), this.muatMasterList("gudang")]);
+            this.notification.add("Gudang ditambahkan.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah gudang:", e);
+            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        p.proses = false;
+    }
+    mulaiEditGudang(g) {
+        this.state.popupGudang.editId = g.id;
+        this.state.popupGudang.editNama = g.name;
+    }
+    batalEditGudang() {
+        this.state.popupGudang.editId = null;
+        this.state.popupGudang.editNama = "";
+    }
+    async simpanEditGudang() {
+        const p = this.state.popupGudang;
+        const nama = (p.editNama || "").trim();
+        if (!nama) { this.notification.add("Nama gudang kosong.", { type: "warning" }); return; }
+        p.proses = true;
+        try {
+            await this.orm.write("spk.gudang", [p.editId], { name: nama });
+            p.editId = null; p.editNama = "";
+            await Promise.all([this.muatGudangMaster(), this.muatMasterList("gudang")]);
+            this.notification.add("Gudang diperbarui.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah gudang:", e);
+            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        p.proses = false;
+    }
+    konfirmasiHapusGudang(g) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Gudang",
+            pesan: "Hapus gudang <b>" + g.name + "</b>? Data SPK yang memakainya akan dikosongkan kolom gudangnya.",
+            labelYa: "Ya, Hapus", warnaYa: "merah",
+            aksi: () => this.lakukanHapusGudang(g),
+        });
+    }
+    async lakukanHapusGudang(g) {
+        try {
+            await this.orm.unlink("spk.gudang", [g.id]);
+            await Promise.all([this.muatGudangMaster(), this.muatMasterList("gudang")]);
+            this.notification.add("Gudang dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus gudang:", e);
+            this.notification.add("Gagal menghapus gudang.", { type: "danger" });
+        }
+    }
+
+    // Klik satu gudang → tampilkan history barang masuk & keluar
+    async bukaDetailGudang(g) {
+        const d = this.state.popupGudangDetail;
+        d.buka = true;
+        d.gudang = { id: g.id, name: g.name };
+        d.masuk = [];
+        d.keluar = [];
+        d.memuat = true;
+        try {
+            const res = await this.orm.call("spk.gudang", "histori_gudang", [g.id]);
+            d.masuk = res.masuk || [];
+            d.keluar = res.keluar || [];
+        } catch (e) {
+            console.error("Gagal memuat history gudang:", e);
+            this.notification.add("Gagal memuat history gudang.", { type: "danger" });
+        }
+        d.memuat = false;
+    }
+    tutupDetailGudang() {
+        const d = this.state.popupGudangDetail;
+        d.buka = false;
+        d.gudang = null;
+        d.masuk = [];
+        d.keluar = [];
     }
 
     // ─── FORM BARANG (tambah/edit) ───────────────────────────────────────────
@@ -846,6 +1081,7 @@ class SpkApp extends Component {
         f.qty = 1;
         f.satuan_hitung = 'pcs';
         f.keterangan = "";
+        this.tutupPickerField();
     }
 
     bukaFormEditBarangFormulasi(formula) {
@@ -858,6 +1094,7 @@ class SpkApp extends Component {
         f.qty = formula.qty || 1;
         f.satuan_hitung = formula.satuan_hitung || 'pcs';
         f.keterangan = formula.keterangan || "";
+        this.tutupPickerField();
     }
 
     tutupFormBarangFormulasi() {
@@ -1263,6 +1500,7 @@ class SpkApp extends Component {
         f.status = "open";
         f.tgl_selesai = "";
         this.tutupPickerBarang();
+        this.tutupPickerField();
     }
 
     tutupFormTambah() {
@@ -1333,6 +1571,8 @@ class SpkApp extends Component {
         f.custom_number = spk.custom_number || "";
         f.status = spk.status || "open";
         f.tgl_selesai = spk.tgl_selesai || "";
+        this.tutupPickerBarang();
+        this.tutupPickerField();
     }
 
     tutupFormEdit() {
@@ -1442,6 +1682,10 @@ class SpkApp extends Component {
         r.buka = true;
         r.memuat = true;
         r.spkName = spk.name;
+        r.dibuatOleh = spk.create_uid ? spk.create_uid[1] : "";
+        r.dibuatTanggal = spk.create_date || "";
+        r.diubahOleh = spk.write_uid ? spk.write_uid[1] : "";
+        r.diubahTanggal = spk.write_date || "";
         r.daftar = [];
         try {
             r.daftar = await this.orm.searchRead(
@@ -1471,7 +1715,7 @@ class SpkApp extends Component {
                 this.orm.searchRead(
                     "spk.bahan.baku",
                     [["spk_id", "=", spkId]],
-                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "pic_id", "gudang_asal", "keterangan"],
+                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "pic_id", "gudang_id", "keterangan"],
                     { order: "id asc" }
                 ),
             ]);
@@ -1498,12 +1742,13 @@ class SpkApp extends Component {
         f.qty = 0;
         f.harga = 0;
         f.pic_id = "";
-        f.gudang_asal = "";
+        f.gudang_id = ""; f.gudang_nama = "";
         f.keterangan = "";
         // Reset picker
         const p = this.state.pickerBahan;
         p.cari = "";
         p.halaman = 1;
+        this.tutupPickerField();
         await this.muatSemuaBahanPicker();
     }
 
@@ -1514,7 +1759,7 @@ class SpkApp extends Component {
             const semua = await this.orm.searchRead(
                 'spk.bahan.baku',
                 [],
-                ['kode_barang', 'nama_bahan', 'harga', 'pic_id', 'gudang_asal', 'keterangan'],
+                ['kode_barang', 'nama_bahan', 'harga', 'pic_id', 'gudang_id', 'keterangan'],
                 { order: 'nama_bahan asc', limit: 0 }
             );
             // Deduplikasi berdasarkan nama_bahan (ambil data paling lengkap)
@@ -1580,7 +1825,8 @@ class SpkApp extends Component {
         f.nama_bahan = item.nama_bahan || "";
         f.harga = item.harga || 0;
         f.pic_id = item.pic_id ? String(item.pic_id[0]) : "";
-        f.gudang_asal = item.gudang_asal || "";
+        f.gudang_id = item.gudang_id ? String(item.gudang_id[0]) : "";
+        f.gudang_nama = item.gudang_id ? item.gudang_id[1] : "";
         f.keterangan = item.keterangan || "";
         f.langkah = 'isi';
     }
@@ -1591,6 +1837,7 @@ class SpkApp extends Component {
 
     bukaFormEditBahan(bahan) {
         const f = this.state.formBahan;
+        this.tutupPickerField();
         f.buka = true;
         f.langkah = 'isi';
         f.mode = 'edit';
@@ -1602,7 +1849,8 @@ class SpkApp extends Component {
         f.qty = bahan.qty || 0;
         f.harga = bahan.harga || 0;
         f.pic_id = bahan.pic_id ? String(bahan.pic_id[0]) : "";
-        f.gudang_asal = bahan.gudang_asal || "";
+        f.gudang_id = bahan.gudang_id ? String(bahan.gudang_id[0]) : "";
+        f.gudang_nama = bahan.gudang_id ? bahan.gudang_id[1] : "";
         f.keterangan = bahan.keterangan || "";
     }
 
@@ -1634,7 +1882,7 @@ class SpkApp extends Component {
                 harga: parseFloat(f.harga) || 0,
                 ...(f.kode_barang ? { kode_barang: f.kode_barang.trim() } : { kode_barang: false }),
                 ...(f.pic_id ? { pic_id: parseInt(f.pic_id) } : { pic_id: false }),
-                ...(f.gudang_asal ? { gudang_asal: f.gudang_asal.trim() } : { gudang_asal: false }),
+                gudang_id: f.gudang_id ? parseInt(f.gudang_id) : false,
                 ...(f.keterangan ? { keterangan: f.keterangan.trim() } : { keterangan: false }),
             };
             if (f.mode === 'tambah') {
@@ -1872,6 +2120,7 @@ class SpkApp extends Component {
         f.is_pengganti = false;
         f.boleh_ubah_qty = true;
         f.boleh_hapus = true;
+        this.tutupPickerField();
     }
 
     bukaFormEditFormulasi(formula) {
@@ -1886,6 +2135,7 @@ class SpkApp extends Component {
         f.is_pengganti = !!formula.is_pengganti;
         f.boleh_ubah_qty = formula.boleh_ubah_qty !== false;
         f.boleh_hapus = formula.boleh_hapus !== false;
+        this.tutupPickerField();
     }
 
     tutupFormFormulasi() {
@@ -1959,7 +2209,7 @@ class SpkApp extends Component {
             const hpr = await this.orm.searchRead(
                 "spk.hpr",
                 [["spk_id", "=", spkId]],
-                ["id", "tanggal_kirim", "hasil_produksi", "gudang_penerima"],
+                ["id", "tanggal_kirim", "hasil_produksi", "gudang_id"],
                 { order: "tanggal_kirim asc, id asc" }
             );
             this.state.daftarHpr = hpr;
@@ -2043,7 +2293,8 @@ class SpkApp extends Component {
         f.menyimpan = false;
         f.tanggal_kirim = new Date().toISOString().slice(0, 10);
         f.hasil_produksi = 0;
-        f.gudang_penerima = "";
+        f.gudang_id = ""; f.gudang_nama = "";
+        this.tutupPickerField();
     }
 
     // Buka form edit catatan produksi
@@ -2055,7 +2306,9 @@ class SpkApp extends Component {
         f.menyimpan = false;
         f.tanggal_kirim = entry.tanggal_kirim || "";
         f.hasil_produksi = entry.hasil_produksi || 0;
-        f.gudang_penerima = entry.gudang_penerima || "";
+        f.gudang_id = entry.gudang_id ? String(entry.gudang_id[0]) : "";
+        f.gudang_nama = entry.gudang_id ? entry.gudang_id[1] : "";
+        this.tutupPickerField();
     }
 
     tutupFormHpr() {
@@ -2073,7 +2326,7 @@ class SpkApp extends Component {
             const vals = {
                 hasil_produksi: parseFloat(f.hasil_produksi) || 0,
                 tanggal_kirim: f.tanggal_kirim || false,
-                gudang_penerima: f.gudang_penerima ? f.gudang_penerima.trim() : false,
+                gudang_id: f.gudang_id ? parseInt(f.gudang_id) : false,
             };
             if (f.mode === 'tambah') {
                 await this.orm.create("spk.hpr", [{ spk_id: this.state.spkId, ...vals }]);
@@ -2147,7 +2400,7 @@ class SpkApp extends Component {
             const sbh = await this.orm.searchRead(
                 "spk.sbh",
                 [["bahan_id.spk_id", "=", spkId]],
-                ["id", "bahan_id", "barang_sisa", "gudang_penerima", "kategori"],
+                ["id", "bahan_id", "barang_sisa", "gudang_id", "kategori"],
                 { order: "id asc" }
             );
             this.state.daftarSbh = sbh;
@@ -2349,7 +2602,8 @@ class SpkApp extends Component {
             f.mode = 'edit';
             f.sbhId = sbh.id;
             f.barang_sisa = sbh.barang_sisa || 0;
-            f.gudang_penerima = sbh.gudang_penerima || "";
+            f.gudang_id = sbh.gudang_id ? String(sbh.gudang_id[0]) : "";
+            f.gudang_nama = sbh.gudang_id ? sbh.gudang_id[1] : "";
             f.kategori = sbh.kategori || "";
         } else {
             f.mode = 'tambah';
@@ -2358,9 +2612,10 @@ class SpkApp extends Component {
             // user tinggal menyesuaikan bila ada yang hilang.
             const sisa = this.sisaSbh(bahan);
             f.barang_sisa = (sisa !== null && sisa > 0) ? sisa : 0;
-            f.gudang_penerima = "";
+            f.gudang_id = ""; f.gudang_nama = "";
             f.kategori = "";
         }
+        this.tutupPickerField();
     }
 
     tutupFormSbh() {
@@ -2400,7 +2655,7 @@ class SpkApp extends Component {
         try {
             const vals = {
                 barang_sisa: parseFloat(f.barang_sisa) || 0,
-                gudang_penerima: f.gudang_penerima ? f.gudang_penerima.trim() : false,
+                gudang_id: f.gudang_id ? parseInt(f.gudang_id) : false,
                 kategori: f.kategori ? f.kategori.trim() : false,
             };
             if (f.mode === 'tambah') {

@@ -5,10 +5,14 @@ venv\Scripts\activate
 python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev
 
 -Setelah buat database baru, harus jalankan ini vv
-python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev -i base
 
+python odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev -i base
 -Setelah buat modul baru dari prompt harus run ulang 
 odoo nya jangan cuma refresh
 
 LANJUTIN CLAUDE
 claude --resume 9d4208f4-6c8f-483b-8d8e-c02588db7ff0
+claude --resume 3661b85e-7d05-425b-8963-4d3ce2cf613b
+
+
+python.exe odoo-19.0/odoo-bin -c odoo.conf -d odoo_dev -u custom_work_orders --stop-after-init

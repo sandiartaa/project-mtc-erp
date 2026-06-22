@@ -14,7 +14,8 @@ class SpkBahanBaku(models.Model):
     is_qty_custom = fields.Boolean('Qty Custom', default=False)
     harga = fields.Float('Harga (Rp)', default=0.0, digits=(16, 0))
     pic_id = fields.Many2one('res.users', 'PIC Bahan', domain=[('active', '=', True)])
-    gudang_asal = fields.Char('Gudang Asal')
+    # Gudang asal — relasi ke master gudang (spk.gudang)
+    gudang_id = fields.Many2one('spk.gudang', 'Gudang Asal', ondelete='set null')
     keterangan = fields.Char('Keterangan')
 
     def write(self, vals):

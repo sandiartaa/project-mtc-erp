@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Pilihan awal Job Type. noupdate="1" agar user bebas CRUD
+         (rename/hapus/tambah) tanpa ditimpa saat update modul. -->
+    <data noupdate="1">
+        <record id="job_type_layer" model="wo.job.type">
+            <field name="name">Layer</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="job_type_hanger" model="wo.job.type">
+            <field name="name">Hanger</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="job_type_opp" model="wo.job.type">
+            <field name="name">OPP</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="job_type_kartu" model="wo.job.type">
+            <field name="name">Kartu</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="job_type_displaybox" model="wo.job.type">
+            <field name="name">Displaybox</field>
+            <field name="sequence">50</field>
+        </record>
+        <record id="job_type_box" model="wo.job.type">
+            <field name="name">Box</field>
+            <field name="sequence">60</field>
+        </record>
+        <record id="job_type_inner" model="wo.job.type">
+            <field name="name">Inner</field>
+            <field name="sequence">70</field>
+        </record>
+        <record id="job_type_shrink" model="wo.job.type">
+            <field name="name">Shrink</field>
+            <field name="sequence">80</field>
+        </record>
+        <record id="job_type_karton" model="wo.job.type">
+            <field name="name">Karton</field>
+            <field name="sequence">90</field>
+        </record>
+        <record id="job_type_sablon" model="wo.job.type">
+            <field name="name">Sablon</field>
+            <field name="sequence">100</field>
+        </record>
+        <record id="job_type_uv" model="wo.job.type">
+            <field name="name">UV</field>
+            <field name="sequence">110</field>
+        </record>
+        <record id="job_type_spray" model="wo.job.type">
+            <field name="name">Spray</field>
+            <field name="sequence">120</field>
+        </record>
+        <record id="job_type_sticker" model="wo.job.type">
+            <field name="name">Sticker</field>
+            <field name="sequence">130</field>
+        </record>
+    </data>
+</odoo>

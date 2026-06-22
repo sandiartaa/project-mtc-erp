@@ -2173,6 +2173,11 @@
     transition: background 0.12s;
 }
 .cspk-picker-item:hover { background: #eff6ff; color: #2563eb; }
+.cspk-picker-clear {
+    color: #94a3b8;
+    font-style: italic;
+    border-bottom: 1px solid #f1f5f9;
+}
 .cspk-picker-kosong {
     padding: 14px 12px;
     text-align: center;
@@ -2282,3 +2287,23 @@
 @media (max-width: 640px) {
     .cspk-detail-info-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Tombol aksi ikon (edit/hapus/history) ---- */
+.cspk-ico {
+    width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid #cbd5e1; background: #fff; border-radius: 8px;
+    cursor: pointer; font-size: 14px; color: #64748b; transition: all 0.15s; padding: 0;
+}
+.cspk-ico:hover { background: #f8fafc; }
+.cspk-ico-edit { color: #2563eb; border-color: #bfdbfe; }
+.cspk-ico-edit:hover { background: #eff6ff; }
+.cspk-ico-hapus { color: #dc2626; border-color: #fecaca; }
+.cspk-ico-hapus:hover { background: #fef2f2; }
+.cspk-ico-history { color: #7c3aed; border-color: #ddd6fe; }
+.cspk-ico-history:hover { background: #f5f3ff; }
+
+/* ---- Master Gudang: judul seksi history ---- */
+.cspk-gd-judul { font-size: 14px; font-weight: 800; margin: 18px 0 10px; padding: 6px 12px; border-radius: 8px; display: inline-block; }
+.cspk-gd-judul:first-child { margin-top: 0; }
+.cspk-gd-masuk { background: #dcfce7; color: #15803d; }
+.cspk-gd-keluar { background: #fee2e2; color: #b91c1c; }

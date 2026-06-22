@@ -1,8 +1,9 @@
 /** @odoo-module **/
 
-import { Component, useState, onMounted, markup } from "@odoo/owl";
+import { Component, useState, onMounted, onWillUnmount, markup } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
+import { user } from "@web/core/user";
 
 class WoApp extends Component {
     static template = "custom_work_orders.WoApp";
@@ -11,6 +12,13 @@ class WoApp extends Component {
     setup() {
         this.orm = useService("orm");
         this.notification = useService("notification");
+        this.bus = useService("bus_service");
+
+        // Channel & handler real-time: tiap ada perubahan Work Order dari user mana pun,
+        // server menyiarkan sinyal lewat bus → daftar dimuat ulang otomatis tanpa refresh.
+        this._WO_CHANNEL = "wo_work_order";
+        this._WO_TYPE = "wo_work_order/changed";
+        this._onWoChanged = () => this.muatData();
 
         this._aksiKonfirmasi = null;
         this._konfirmasiPesan = markup("");
@@ -27,12 +35,26 @@ class WoApp extends Component {
         this.state = useState({
             list: [],
             memuat: true,
+            bisaUbah: false,   // true = grup Full (boleh CRUD); false = read-only
             cari: "",
             filterStatus: "",
-            daftarUser: [],   // user (akses Work Orders) untuk Designer/Requestor/Approver
+            daftarUser: [],   // user (akses Work Orders) untuk Designer
+            daftarJobType: [], // pilihan Job Type (model wo.job.type, bisa di-CRUD)
+            daftarPerson: [],  // pilihan Requestor/Approver (model wo.person, bisa di-CRUD)
+            daftarBrand: [],   // pilihan Brand (model wo.brand, bisa di-CRUD)
 
-            // Picker user generik (target: incharge | requestor | approver)
+            // Pengelola Job Type (CRUD daftar dropdown)
+            jobTypeMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
+            // Pengelola Person/Requestor-Approver (CRUD daftar dropdown)
+            personMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
+            // Pengelola Brand (CRUD daftar dropdown)
+            brandMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
+
+            // Picker user generik (target: incharge)
             userPicker: { buka: false, target: "", cari: "", halaman: 1 },
+
+            // Picker field generik untuk dropdown form (job_type | lokal_rrc | requestor | approver)
+            fieldPicker: { buka: false, target: "", cari: "", halaman: 1 },
 
             form: {
                 buka: false,
@@ -43,7 +65,8 @@ class WoApp extends Component {
                 // Product
                 name: "",
                 code: "",
-                brand: "",
+                brand_id: "", brand_nama: "",
+                job_type_id: "", job_type_nama: "",
                 details: "",
                 // IN CHARGE
                 incharge_id: "", incharge_nama: "",
@@ -65,10 +88,25 @@ class WoApp extends Component {
 
             impor: { buka: false, file: null, namaFile: "", proses: false, batch: [] },
             konfirmasi: { buka: false, judul: "", labelYa: "Ya", warnaYa: "merah" },
+            // Kartu mobile yang sedang dibuka (accordion). Key = id work order → true.
+            kartuTerbuka: {},
+            // Popup lihat gambar (dipicu dari thumbnail tabel desktop)
+            imgPopup: { buka: false, url: "", judul: "" },
         });
 
         onMounted(async () => {
-            await Promise.all([this.muatData(), this.muatUser()]);
+            // Daftarkan diri ke channel bus & mulai dengarkan sinyal perubahan.
+            this.bus.addChannel(this._WO_CHANNEL);
+            this.bus.subscribe(this._WO_TYPE, this._onWoChanged);
+            await Promise.all([
+                this.muatHakAkses(), this.muatData(), this.muatUser(),
+                this.muatJobType(), this.muatPerson(), this.muatBrand(),
+            ]);
+        });
+
+        onWillUnmount(() => {
+            this.bus.unsubscribe(this._WO_TYPE, this._onWoChanged);
+            this.bus.deleteChannel(this._WO_CHANNEL);
         });
     }
 
@@ -92,10 +130,10 @@ class WoApp extends Component {
             this.state.list = await this.orm.searchRead(
                 "wo.work.order",
                 domain,
-                ["id", "wo_number", "name", "code", "brand", "details", "image_ada",
+                ["id", "wo_number", "name", "code", "brand_id", "job_type_id", "details", "image_ada",
                  "incharge_id", "lokal_rrc", "requestor_id",
                  "request_date", "target_date", "finish_date",
-                 "approver_id", "approval_date", "status"],
+                 "approver_id", "approval_date", "status", "approval_state"],
                 { order: "id desc" }
             );
         } catch (e) {
@@ -115,6 +153,45 @@ class WoApp extends Component {
         }
     }
 
+    async muatHakAkses() {
+        try {
+            this.state.bisaUbah = await this.orm.call("wo.work.order", "boleh_ubah", []);
+        } catch (e) {
+            console.error("Gagal cek hak akses:", e);
+            this.state.bisaUbah = false;
+        }
+    }
+
+    async muatJobType() {
+        try {
+            this.state.daftarJobType = await this.orm.call(
+                "wo.job.type", "daftar_job_type", []
+            );
+        } catch (e) {
+            console.error("Gagal memuat Job Type:", e);
+        }
+    }
+
+    async muatPerson() {
+        try {
+            this.state.daftarPerson = await this.orm.call(
+                "wo.person", "daftar_person", []
+            );
+        } catch (e) {
+            console.error("Gagal memuat Requestor/Approver:", e);
+        }
+    }
+
+    async muatBrand() {
+        try {
+            this.state.daftarBrand = await this.orm.call(
+                "wo.brand", "daftar_brand", []
+            );
+        } catch (e) {
+            console.error("Gagal memuat Brand:", e);
+        }
+    }
+
     cariData() { this.muatData(); }
     handleKeydown(ev) { if (ev.key === "Enter") this.muatData(); }
     resetCari() { this.state.cari = ""; this.state.filterStatus = ""; this.muatData(); }
@@ -131,11 +208,109 @@ class WoApp extends Component {
         const f = this.lokalRrcPilihan.find((x) => x.value === v);
         return f ? f.label : "—";
     }
+
+    // ─── ALUR APPROVAL (Ready / Cancel / Approve / Tolak) ────────────────────
+    labelApproval(s) {
+        return { draft: "Belum Diajukan", ready: "Menunggu Approval", approved: "Disetujui" }[s] || "—";
+    }
+    kelasApproval(s) {
+        return { draft: "cwo-apr-draft", ready: "cwo-apr-ready", approved: "cwo-apr-approved" }[s] || "";
+    }
+    // Apakah user yang login adalah Designer 2D/3D dari WO ini
+    isDesigner(rec) {
+        return !!(rec.incharge_id && rec.incharge_id[0] === user.userId);
+    }
+    showReady(rec) { return this.isDesigner(rec) && rec.approval_state === "draft"; }
+    showCancel(rec) { return this.isDesigner(rec) && rec.approval_state === "ready"; }
+    showApprove(rec) { return this.state.bisaUbah && rec.approval_state === "ready"; }
+    showTolak(rec) { return this.state.bisaUbah && rec.approval_state === "ready"; }
+
+    async _aksiApproval(rec, method, pesanOk) {
+        try {
+            await this.orm.call("wo.work.order", method, [[rec.id]]);
+            this.notification.add(pesanOk, { type: "success" });
+            await this.muatData();
+        } catch (e) {
+            console.error("Gagal aksi approval:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Coba lagi.";
+            this.notification.add("Gagal. " + msg, { type: "danger" });
+        }
+    }
+    setReady(rec) { this._aksiApproval(rec, "action_set_ready", "Work Order diajukan untuk approval."); }
+    cancelReady(rec) { this._aksiApproval(rec, "action_cancel_ready", "Pengajuan dibatalkan."); }
+    approve(rec) {
+        this.tampilKonfirmasi({
+            judul: "Approve Work Order",
+            pesan: `Setujui Work Order <b>${rec.wo_number}</b> (${rec.name})?`,
+            labelYa: "Ya, Approve", warnaYa: "merah",
+            aksi: () => this._aksiApproval(rec, "action_approve", "Work Order di-approve."),
+        });
+    }
+    reject(rec) {
+        this.tampilKonfirmasi({
+            judul: "Tolak Pengajuan",
+            pesan: `Tolak pengajuan Work Order <b>${rec.wo_number}</b>? Status kembali ke draft.`,
+            labelYa: "Ya, Tolak", warnaYa: "merah",
+            aksi: () => this._aksiApproval(rec, "action_reject", "Pengajuan ditolak."),
+        });
+    }
     formatTanggal(d) {
         if (!d) return "—";
         const dt = new Date(d + "T00:00:00");
         if (isNaN(dt)) return d;
         return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+    }
+
+    // ─── Buka/tutup kartu (accordion mobile) ─────────────────────────────────
+    toggleKartu(id) {
+        if (this.state.kartuTerbuka[id]) {
+            delete this.state.kartuTerbuka[id];
+        } else {
+            this.state.kartuTerbuka[id] = true;
+        }
+    }
+    urlGambar(rec) { return "/web/image/wo.work.order/" + rec.id + "/image"; }
+
+    // ─── Popup lihat gambar (desktop) ────────────────────────────────────────
+    bukaImgPopup(rec) {
+        this.state.imgPopup.buka = true;
+        this.state.imgPopup.url = this.urlGambar(rec);
+        this.state.imgPopup.judul = rec.wo_number + (rec.name ? " — " + rec.name : "");
+    }
+    tutupImgPopup() { this.state.imgPopup.buka = false; }
+
+    // ─── Gabungan baris untuk tampilan kartu (mobile) ────────────────────────
+    _gabung(parts) {
+        return parts.filter((p) => p !== false && p !== null && p !== undefined && p !== "").join(" - ") || "—";
+    }
+    // Code - Brand - Job Type  (mis. "WT016 - STAR RIDER - Layer")
+    barisProduk(rec) {
+        return this._gabung([
+            rec.code,
+            rec.brand_id ? rec.brand_id[1] : null,
+            rec.job_type_id ? rec.job_type_id[1] : null,
+        ]);
+    }
+    // Designer - Lokal/RRC  (mis. "Izza - Lokal")
+    barisDesigner(rec) {
+        return this._gabung([
+            rec.incharge_id ? rec.incharge_id[1] : null,
+            rec.lokal_rrc ? this.labelLokalRrc(rec.lokal_rrc) : null,
+        ]);
+    }
+    // Requestor - Req Date  (mis. "P. Apin - 20 Jun 2026")
+    barisRequestor(rec) {
+        return this._gabung([
+            rec.requestor_id ? rec.requestor_id[1] : null,
+            rec.request_date ? this.formatTanggal(rec.request_date) : null,
+        ]);
+    }
+    // Approver - Approval Date
+    barisApprover(rec) {
+        return this._gabung([
+            rec.approver_id ? rec.approver_id[1] : null,
+            rec.approval_date ? this.formatTanggal(rec.approval_date) : null,
+        ]);
     }
 
     // ─── PICKER USER GENERIK (Designer/Requestor/Approver) ───────────────────
@@ -144,14 +319,15 @@ class WoApp extends Component {
         const src = this.state.daftarUser;
         return cari ? src.filter((u) => (u.name || "").toLowerCase().includes(cari)) : src;
     }
-    get userTotalHalaman() { return Math.max(1, Math.ceil(this.userTerfilter.length / 10)); }
+    get userTotalHalaman() { return Math.max(1, Math.ceil(this.userTerfilter.length / 5)); }
     get userHalaman() {
-        const mulai = (this.state.userPicker.halaman - 1) * 10;
-        return this.userTerfilter.slice(mulai, mulai + 10);
+        const mulai = (this.state.userPicker.halaman - 1) * 5;
+        return this.userTerfilter.slice(mulai, mulai + 5);
     }
     bukaUserPicker(target) {
         const p = this.state.userPicker;
         if (p.buka && p.target === target) { p.buka = false; return; }
+        this.tutupFieldPicker();
         p.buka = true; p.target = target; p.cari = ""; p.halaman = 1;
     }
     tutupUserPicker() { this.state.userPicker.buka = false; }
@@ -166,12 +342,89 @@ class WoApp extends Component {
         this.tutupUserPicker();
     }
 
+    // ─── PICKER FIELD GENERIK (Job Type / Lokal-RRC / Requestor / Approver) ──
+    // Config tiap target: sumber daftar [{key,label}], get nama terpilih, set pilihan
+    _fieldCfg(target) {
+        const f = this.state.form;
+        const cfg = {
+            brand: {
+                sumber: () => this.state.daftarBrand.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.brand_nama,
+                set: (it) => { f.brand_id = it ? String(it.key) : ""; f.brand_nama = it ? it.label : ""; },
+            },
+            job_type: {
+                sumber: () => this.state.daftarJobType.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.job_type_nama,
+                set: (it) => { f.job_type_id = it ? String(it.key) : ""; f.job_type_nama = it ? it.label : ""; },
+            },
+            lokal_rrc: {
+                sumber: () => this.lokalRrcPilihan.map(x => ({ key: x.value, label: x.label })),
+                nama: () => this.labelLokalRrcNama(),
+                set: (it) => { f.lokal_rrc = it ? it.key : ""; },
+            },
+            requestor: {
+                sumber: () => this.state.daftarPerson.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.requestor_nama,
+                set: (it) => { f.requestor_id = it ? String(it.key) : ""; f.requestor_nama = it ? it.label : ""; },
+            },
+            approver: {
+                sumber: () => this.state.daftarPerson.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.approver_nama,
+                set: (it) => { f.approver_id = it ? String(it.key) : ""; f.approver_nama = it ? it.label : ""; },
+            },
+        };
+        return cfg[target] || null;
+    }
+
+    labelLokalRrcNama() {
+        const x = this.lokalRrcPilihan.find(o => o.value === this.state.form.lokal_rrc);
+        return x ? x.label : "";
+    }
+
+    fieldNama(target) {
+        const c = this._fieldCfg(target);
+        return c ? (c.nama() || "") : "";
+    }
+
+    get _fieldSource() {
+        const c = this._fieldCfg(this.state.fieldPicker.target);
+        return c ? (c.sumber() || []) : [];
+    }
+    get fieldTersaring() {
+        const cari = (this.state.fieldPicker.cari || "").trim().toLowerCase();
+        const src = this._fieldSource;
+        return cari ? src.filter(x => (x.label || "").toLowerCase().includes(cari)) : src;
+    }
+    get fieldHalaman() {
+        const mulai = (this.state.fieldPicker.halaman - 1) * 5;
+        return this.fieldTersaring.slice(mulai, mulai + 5);
+    }
+    get fieldTotalHalaman() { return Math.max(1, Math.ceil(this.fieldTersaring.length / 5)); }
+
+    bukaFieldPicker(target) {
+        const p = this.state.fieldPicker;
+        if (p.buka && p.target === target) { p.buka = false; return; }
+        this.tutupUserPicker();
+        p.buka = true; p.target = target; p.cari = ""; p.halaman = 1;
+    }
+    tutupFieldPicker() { this.state.fieldPicker.buka = false; }
+    fieldInput(ev) { this.state.fieldPicker.cari = ev.target.value; this.state.fieldPicker.halaman = 1; }
+    fieldNext() { const p = this.state.fieldPicker; if (p.halaman < this.fieldTotalHalaman) p.halaman++; }
+    fieldPrev() { const p = this.state.fieldPicker; if (p.halaman > 1) p.halaman--; }
+    pilihFieldItem(item) {
+        const c = this._fieldCfg(this.state.fieldPicker.target);
+        if (c) c.set(item || null);
+        this.tutupFieldPicker();
+    }
+
     // ─── FORM ────────────────────────────────────────────────────────────────
     async bukaFormTambah() {
         const f = this.state.form;
         f.buka = true; f.mode = "tambah"; f.id = null; f.menyimpan = false;
         f.wo_number = "";
-        f.name = ""; f.code = ""; f.brand = ""; f.details = "";
+        f.name = ""; f.code = "";
+        f.brand_id = ""; f.brand_nama = "";
+        f.job_type_id = ""; f.job_type_nama = ""; f.details = "";
         f.incharge_id = ""; f.incharge_nama = ""; f.lokal_rrc = "";
         f.requestor_id = ""; f.requestor_nama = "";
         f.request_date = ""; f.target_date = ""; f.finish_date = "";
@@ -179,7 +432,8 @@ class WoApp extends Component {
         f.status = "ongoing";
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false; f.image_ada = false;
         this.tutupUserPicker();
-        await this.muatUser();
+        this.tutupFieldPicker();
+        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand()]);
     }
 
     async bukaFormEdit(rec) {
@@ -188,7 +442,10 @@ class WoApp extends Component {
         f.wo_number = rec.wo_number || "";
         f.name = rec.name || "";
         f.code = rec.code || "";
-        f.brand = rec.brand || "";
+        f.brand_id = rec.brand_id ? String(rec.brand_id[0]) : "";
+        f.brand_nama = rec.brand_id ? rec.brand_id[1] : "";
+        f.job_type_id = rec.job_type_id ? String(rec.job_type_id[0]) : "";
+        f.job_type_nama = rec.job_type_id ? rec.job_type_id[1] : "";
         f.details = rec.details || "";
         f.incharge_id = rec.incharge_id ? String(rec.incharge_id[0]) : "";
         f.incharge_nama = rec.incharge_id ? rec.incharge_id[1] : "";
@@ -205,10 +462,11 @@ class WoApp extends Component {
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false;
         f.image_ada = !!rec.image_ada;
         this.tutupUserPicker();
-        await this.muatUser();
+        this.tutupFieldPicker();
+        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand()]);
     }
 
-    tutupForm() { this.state.form.buka = false; this.tutupUserPicker(); }
+    tutupForm() { this.state.form.buka = false; this.tutupUserPicker(); this.tutupFieldPicker(); }
 
     // ── Gambar ──
     onPilihGambar(ev) {
@@ -242,7 +500,8 @@ class WoApp extends Component {
             const vals = {
                 name: f.name.trim(),
                 code: f.code ? f.code.trim() : false,
-                brand: f.brand ? f.brand.trim() : false,
+                brand_id: f.brand_id ? parseInt(f.brand_id) : false,
+                job_type_id: f.job_type_id ? parseInt(f.job_type_id) : false,
                 details: f.details ? f.details.trim() : false,
                 incharge_id: f.incharge_id ? parseInt(f.incharge_id) : false,
                 lokal_rrc: f.lokal_rrc || false,
@@ -273,6 +532,208 @@ class WoApp extends Component {
             this.notification.add("Gagal menyimpan Work Order.", { type: "danger" });
         }
         f.menyimpan = false;
+    }
+
+    // ─── BRAND (dropdown CRUD) ───────────────────────────────────────────────
+    bukaBrandMgr() {
+        const m = this.state.brandMgr;
+        m.buka = true; m.baru = ""; m.editId = null; m.editNama = ""; m.proses = false;
+    }
+    tutupBrandMgr() { this.state.brandMgr.buka = false; }
+    async tambahBrand() {
+        const m = this.state.brandMgr;
+        const nama = (m.baru || "").trim();
+        if (!nama) { this.notification.add("Nama Brand kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.create("wo.brand", [{ name: nama }]);
+            m.baru = "";
+            await this.muatBrand();
+            this.notification.add("Brand ditambahkan.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah Brand:", e);
+            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    mulaiEditBrand(b) {
+        const m = this.state.brandMgr;
+        m.editId = b.id; m.editNama = b.name;
+    }
+    batalEditBrand() {
+        const m = this.state.brandMgr;
+        m.editId = null; m.editNama = "";
+    }
+    async simpanEditBrand() {
+        const m = this.state.brandMgr;
+        const nama = (m.editNama || "").trim();
+        if (!nama) { this.notification.add("Nama Brand kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.write("wo.brand", [m.editId], { name: nama });
+            m.editId = null; m.editNama = "";
+            await Promise.all([this.muatBrand(), this.muatData()]);
+            this.notification.add("Brand diperbarui.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah Brand:", e);
+            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    konfirmasiHapusBrand(b) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Brand",
+            pesan: `Hapus Brand <b>${b.name}</b>?<br/>Work Order yang memakainya akan dikosongkan kolom Brand-nya.`,
+            labelYa: "Ya, Hapus", warnaYa: "merah",
+            aksi: () => this.lakukanHapusBrand(b),
+        });
+    }
+    async lakukanHapusBrand(b) {
+        try {
+            await this.orm.unlink("wo.brand", [b.id]);
+            const f = this.state.form;
+            if (String(f.brand_id) === String(b.id)) { f.brand_id = ""; f.brand_nama = ""; }
+            await Promise.all([this.muatBrand(), this.muatData()]);
+            this.notification.add("Brand dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus Brand:", e);
+            this.notification.add("Gagal menghapus Brand.", { type: "danger" });
+        }
+    }
+
+    // ─── JOB TYPE (dropdown CRUD) ────────────────────────────────────────────
+    bukaJobTypeMgr() {
+        const m = this.state.jobTypeMgr;
+        m.buka = true; m.baru = ""; m.editId = null; m.editNama = ""; m.proses = false;
+    }
+    tutupJobTypeMgr() { this.state.jobTypeMgr.buka = false; }
+    async tambahJobType() {
+        const m = this.state.jobTypeMgr;
+        const nama = (m.baru || "").trim();
+        if (!nama) { this.notification.add("Nama Job Type kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.create("wo.job.type", [{ name: nama }]);
+            m.baru = "";
+            await this.muatJobType();
+            this.notification.add("Job Type ditambahkan.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah Job Type:", e);
+            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    mulaiEditJobType(jt) {
+        const m = this.state.jobTypeMgr;
+        m.editId = jt.id; m.editNama = jt.name;
+    }
+    batalEditJobType() {
+        const m = this.state.jobTypeMgr;
+        m.editId = null; m.editNama = "";
+    }
+    async simpanEditJobType() {
+        const m = this.state.jobTypeMgr;
+        const nama = (m.editNama || "").trim();
+        if (!nama) { this.notification.add("Nama Job Type kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.write("wo.job.type", [m.editId], { name: nama });
+            m.editId = null; m.editNama = "";
+            await Promise.all([this.muatJobType(), this.muatData()]);
+            this.notification.add("Job Type diperbarui.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah Job Type:", e);
+            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    konfirmasiHapusJobType(jt) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Job Type",
+            pesan: `Hapus Job Type <b>${jt.name}</b>?<br/>Work Order yang memakainya akan dikosongkan kolom Job Type-nya.`,
+            labelYa: "Ya, Hapus", warnaYa: "merah",
+            aksi: () => this.lakukanHapusJobType(jt),
+        });
+    }
+    async lakukanHapusJobType(jt) {
+        try {
+            await this.orm.unlink("wo.job.type", [jt.id]);
+            const f = this.state.form;
+            if (String(f.job_type_id) === String(jt.id)) { f.job_type_id = ""; f.job_type_nama = ""; }
+            await Promise.all([this.muatJobType(), this.muatData()]);
+            this.notification.add("Job Type dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus Job Type:", e);
+            this.notification.add("Gagal menghapus Job Type.", { type: "danger" });
+        }
+    }
+
+    // ─── REQUESTOR / APPROVER (daftar wo.person, dropdown CRUD) ──────────────
+    bukaPersonMgr() {
+        const m = this.state.personMgr;
+        m.buka = true; m.baru = ""; m.editId = null; m.editNama = ""; m.proses = false;
+    }
+    tutupPersonMgr() { this.state.personMgr.buka = false; }
+    async tambahPerson() {
+        const m = this.state.personMgr;
+        const nama = (m.baru || "").trim();
+        if (!nama) { this.notification.add("Nama kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.create("wo.person", [{ name: nama }]);
+            m.baru = "";
+            await this.muatPerson();
+            this.notification.add("Nama ditambahkan.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah person:", e);
+            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    mulaiEditPerson(p) {
+        const m = this.state.personMgr;
+        m.editId = p.id; m.editNama = p.name;
+    }
+    batalEditPerson() {
+        const m = this.state.personMgr;
+        m.editId = null; m.editNama = "";
+    }
+    async simpanEditPerson() {
+        const m = this.state.personMgr;
+        const nama = (m.editNama || "").trim();
+        if (!nama) { this.notification.add("Nama kosong.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.write("wo.person", [m.editId], { name: nama });
+            m.editId = null; m.editNama = "";
+            await Promise.all([this.muatPerson(), this.muatData()]);
+            this.notification.add("Nama diperbarui.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah person:", e);
+            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    konfirmasiHapusPerson(p) {
+        this.tampilKonfirmasi({
+            judul: "Hapus Nama",
+            pesan: `Hapus <b>${p.name}</b>?<br/>Work Order yang memakainya (Requestor/Approver) akan dikosongkan.`,
+            labelYa: "Ya, Hapus", warnaYa: "merah",
+            aksi: () => this.lakukanHapusPerson(p),
+        });
+    }
+    async lakukanHapusPerson(p) {
+        try {
+            await this.orm.unlink("wo.person", [p.id]);
+            const f = this.state.form;
+            if (String(f.requestor_id) === String(p.id)) { f.requestor_id = ""; f.requestor_nama = ""; }
+            if (String(f.approver_id) === String(p.id)) { f.approver_id = ""; f.approver_nama = ""; }
+            await Promise.all([this.muatPerson(), this.muatData()]);
+            this.notification.add("Nama dihapus.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus person:", e);
+            this.notification.add("Gagal menghapus.", { type: "danger" });
+        }
     }
 
     // ─── HAPUS ───────────────────────────────────────────────────────────────
@@ -391,10 +852,10 @@ class WoApp extends Component {
         }
     }
     unduhTemplate() {
-        const headers = ["Name", "Code", "Brand", "Details", "Designer 2D/3D", "Lokal/RRC",
+        const headers = ["Name", "Code", "Brand", "Job Type", "Details", "Designer 2D/3D", "Lokal/RRC",
                          "Requestor", "Req Date", "Target", "Finish Date",
                          "Approver", "Approval Date", "Status", "Image"];
-        const contoh = ["Contoh WO", "WO-001", "BrandX", "Catatan baris 1", "Administrator", "Lokal",
+        const contoh = ["Contoh WO", "WO-001", "BrandX", "Box", "Catatan baris 1", "Administrator", "Lokal",
                         "Administrator", "2026-06-20", "2026-07-01", "",
                         "Administrator", "", "Ongoing", ""];
         const cell = (v) => {

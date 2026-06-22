@@ -14,8 +14,8 @@ class SpkSbh(models.Model):
     # Barang sisa = gabungan barang kembali (bagus + rusak) yang diinput user.
     # Nilai default 0; barang hilang & stock akhir dihitung di frontend.
     barang_sisa = fields.Float('Barang Sisa', digits=(16, 2), default=0.0)
-    # Tujuan barang kembali: nama gudang penerima atau PIC penerima
-    gudang_penerima = fields.Char('Gudang Penerima / PIC')
+    # Tujuan barang kembali: gudang penerima (relasi master gudang spk.gudang)
+    gudang_id = fields.Many2one('spk.gudang', 'Gudang Penerima', ondelete='set null')
     # Kategori manual (text). Bahan dengan kategori sama dianggap 1 kesatuan
     # (mis. Corong merah/biru/kuning → kategori "Corong"), beda warna saja.
     kategori = fields.Char('Kategori')
