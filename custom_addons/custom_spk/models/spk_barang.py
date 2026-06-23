@@ -14,7 +14,7 @@ class SpkBarang(models.Model):
 
     kode = fields.Char('Kode Barang')
     name = fields.Char('Nama Barang', required=True, index=True)
-    harga = fields.Float('Harga (Rp)', default=0.0, digits=(16, 0))
+    harga = fields.Float('Harga (Rp)', default=0.0, digits=(16, 4))
     # Satuan harga — master sendiri (spk.satuan) agar bisa tambah/edit/hapus
     satuan_id = fields.Many2one('spk.satuan', 'Satuan', ondelete='set null')
     pic_id = fields.Many2one('res.users', 'PIC', domain=[('active', '=', True)])

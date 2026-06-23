@@ -3,7 +3,9 @@ access_wo_work_order_user,wo.work.order akses,model_wo_work_order,custom_work_or
 access_wo_job_type_user,wo.job.type akses,model_wo_job_type,custom_work_orders.group_work_orders_user,1,1,1,1
 access_wo_person_user,wo.person akses,model_wo_person,custom_work_orders.group_work_orders_user,1,1,1,1
 access_wo_brand_user,wo.brand akses,model_wo_brand,custom_work_orders.group_work_orders_user,1,1,1,1
+access_wo_revision_user,wo.revision akses,model_wo_revision,custom_work_orders.group_work_orders_user,1,1,1,1
 access_wo_work_order_ro,wo.work.order read-only,model_wo_work_order,custom_work_orders.group_work_orders_readonly,1,0,0,0
 access_wo_job_type_ro,wo.job.type read-only,model_wo_job_type,custom_work_orders.group_work_orders_readonly,1,0,0,0
 access_wo_person_ro,wo.person read-only,model_wo_person,custom_work_orders.group_work_orders_readonly,1,0,0,0
 access_wo_brand_ro,wo.brand read-only,model_wo_brand,custom_work_orders.group_work_orders_readonly,1,0,0,0
+access_wo_revision_ro,wo.revision read-only,model_wo_revision,custom_work_orders.group_work_orders_readonly,1,0,0,0

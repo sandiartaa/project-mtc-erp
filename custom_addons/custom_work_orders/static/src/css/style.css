@@ -160,6 +160,29 @@
 .cwo-apr-btn-approve:hover { background: #15803d; }
 .cwo-apr-btn-tolak { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 .cwo-apr-btn-tolak:hover { background: #fee2e2; }
+.cwo-apr-btn-revisi { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.cwo-apr-btn-revisi:hover { background: #ede9fe; }
+
+/* Modal Reject — Detail Revision */
+.cwo-modal-revisi { max-width: 540px; }
+.cwo-revisi-info { margin: 0 0 14px; font-size: 13.5px; color: #475569; line-height: 1.55; }
+.cwo-revisi-label { display: block; margin-bottom: 6px; }
+.cwo-revisi-textarea { width: 100%; resize: vertical; min-height: 130px; font-size: 14px; line-height: 1.5; }
+
+/* Popup daftar Revisions */
+.cwo-modal-revisi-list { max-width: 600px; }
+.cwo-revisi-daftar { display: flex; flex-direction: column; gap: 12px; }
+.cwo-revisi-item {
+    border: 1.5px solid #ede9fe; border-left: 4px solid #7c3aed;
+    border-radius: 10px; padding: 12px 14px; background: #faf9ff;
+}
+.cwo-revisi-meta {
+    display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px;
+    font-size: 12px; color: #6b7280;
+}
+.cwo-revisi-oleh { font-weight: 700; color: #4c1d95; }
+.cwo-revisi-tgl { color: #6b7280; }
+.cwo-revisi-teks { font-size: 14px; color: #1e293b; line-height: 1.55; white-space: pre-wrap; }
 
 /* Toggle status di form */
 .cwo-status-toggle { display: inline-flex; border: 1.5px solid #e2e8f0; border-radius: 9px; overflow: hidden; }

@@ -26,7 +26,14 @@ Odoo aktif (default sudah aktif saat menjalankan odoo-bin).
 ## Model/tabel baru
 - `wo.work.order` — tabel custom (tidak menyentuh tabel bawaan Odoo).
 - `wo.job.type` — daftar pilihan Job Type (dropdown CRUD).
+- `wo.brand` — daftar pilihan Brand (dropdown CRUD).
 - `wo.person` — daftar nama untuk Requestor & Approver (dropdown CRUD).
+- `wo.revision` — riwayat revisi tiap Work Order (dibuat saat pengajuan approval ditolak; mencatat isi revisi, oleh siapa, kapan).
+
+## Logika Approval & Revisi
+- **Approve** → `approval_state` jadi *Approved* dan **status keseluruhan otomatis jadi Finished**. Status *Finished* juga tetap bisa diset manual dari toggle Status di form.
+- **Reject** → muncul dialog dengan textarea besar **Revision Detail** (wajib diisi). Saat dikirim, status approval kembali ke draft dan catatan revisi tersimpan sebagai record `wo.revision`.
+- Tombol **Revisions** ada di tiap Work Order (desktop & mobile) → membuka popup berisi daftar revisi: isi revisi, oleh siapa, dan kapan. Jumlah revisi tampil di label tombol.
 
 ## Akses (2 level, diatur admin via Master User)
 - **Work Orders (Full)** — `group_work_orders_user`: boleh Create / View / Update / Delete. Tombol Tambah, Import, Edit, Hapus, dan ⚙ Kelola muncul.

@@ -3,7 +3,7 @@ import mimetypes
 from datetime import datetime
 
 from odoo import models, fields, api
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, ValidationError
 
 
 class WoWorkOrder(models.Model):
@@ -70,10 +70,19 @@ class WoWorkOrder(models.Model):
     # Penanda batch impor — agar data hasil 1x impor bisa dihapus terpisah.
     import_batch = fields.Char('Batch Impor', index=True, copy=False)
 
+    # ── Riwayat revisi ── (dibuat saat pengajuan approval ditolak)
+    revisi_ids = fields.One2many('wo.revision', 'work_order_id', 'Revisions')
+    revisi_count = fields.Integer('Jumlah Revisi', compute='_compute_revisi_count')
+
     @api.depends('image')
     def _compute_image_ada(self):
         for rec in self:
             rec.image_ada = bool(rec.image)
+
+    @api.depends('revisi_ids')
+    def _compute_revisi_count(self):
+        for rec in self:
+            rec.revisi_count = len(rec.revisi_ids)
 
     # Nama channel bus untuk siaran perubahan ke semua klien yang sedang membuka app.
     _BUS_CHANNEL = 'wo_work_order'
@@ -176,14 +185,24 @@ class WoWorkOrder(models.Model):
         return True
 
     def action_approve(self):
-        """User Full menyetujui WO yang sudah ready (ready → approved)."""
+        """User Full menyetujui WO yang sudah ready (ready → approved).
+        Approved otomatis menandai status keseluruhan menjadi Finished
+        (status Finished juga tetap bisa diatur manual dari form)."""
         self._cek_full()
-        self.write({'approval_state': 'approved'})
+        self.write({'approval_state': 'approved', 'status': 'finished'})
         return True
 
-    def action_reject(self):
-        """User Full menolak pengajuan (kembali ke draft)."""
+    def action_reject(self, detail=None):
+        """User Full menolak pengajuan (kembali ke draft) dengan catatan revisi.
+        Detail revisi wajib diisi dan disimpan sebagai record wo.revision
+        (riwayat: isi revisi, oleh siapa, kapan)."""
         self._cek_full()
+        teks = (detail or '').strip()
+        if not teks:
+            raise ValidationError("Detail Revision wajib diisi saat menolak.")
+        self.env['wo.revision'].create(
+            [{'work_order_id': rec.id, 'detail': teks} for rec in self]
+        )
         self.write({'approval_state': 'draft'})
         return True
 

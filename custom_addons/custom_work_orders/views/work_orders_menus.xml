@@ -8,7 +8,7 @@
     <!-- Menu top-level, untuk pemilik grup Akses Work Orders (Full ATAU Read-only). -->
     <menuitem id="menu_wo_root" name="Work Orders" sequence="16"
               groups="custom_work_orders.group_work_orders_user,custom_work_orders.group_work_orders_readonly"/>
-    <menuitem id="menu_wo_daftar" name="Daftar Work Order"
+    <menuitem id="menu_wo_daftar" name="Work Orders List"
               parent="menu_wo_root" action="action_wo_app" sequence="1"
               groups="custom_work_orders.group_work_orders_user,custom_work_orders.group_work_orders_readonly"/>
 </odoo>

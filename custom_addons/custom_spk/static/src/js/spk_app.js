@@ -45,6 +45,7 @@ class SpkApp extends Component {
                 nama_bahan: "",
                 is_qty_custom: false,
                 qty: 0,
+                is_harga_custom: false,
                 harga: 0,
                 pic_id: "",
                 gudang_id: "", gudang_nama: "",
@@ -595,6 +596,22 @@ class SpkApp extends Component {
                 set: o => { S.formFormulasi.satuan_hitung = o ? o.id : "pcs"; } },
 
             // Form Formulasi (master barang)
+            // Bahan dipilih dari master barang; satuan otomatis ikut satuan barang.
+            fbf_barang: {
+                sumber: () => S.daftarBarangMaster.map(b => ({ id: b.id, name: b.name })),
+                get: () => S.formBarangFormulasi.nama_bahan,
+                set: o => {
+                    if (o) {
+                        const b = S.daftarBarangMaster.find(x => x.id === o.id);
+                        S.formBarangFormulasi.nama_bahan = b ? b.name : o.name;
+                        const satNama = b && b.satuan_id ? b.satuan_id[1] : "";
+                        S.formBarangFormulasi.satuan_hitung = this._satuanHitungDariNama(satNama);
+                    } else {
+                        S.formBarangFormulasi.nama_bahan = "";
+                        S.formBarangFormulasi.satuan_hitung = "pcs";
+                    }
+                },
+            },
             fbf_satuan: { sumber: () => this._perSatuanOpsi, get: () => this._namaDari(this._perSatuanOpsi, S.formBarangFormulasi.satuan_hitung),
                 set: o => { S.formBarangFormulasi.satuan_hitung = o ? o.id : "pcs"; } },
         };
@@ -1082,6 +1099,10 @@ class SpkApp extends Component {
         f.satuan_hitung = 'pcs';
         f.keterangan = "";
         this.tutupPickerField();
+        // Pastikan daftar barang master tersedia untuk picker bahan.
+        if (!this.state.daftarBarangMaster || !this.state.daftarBarangMaster.length) {
+            this.muatBarangMaster();
+        }
     }
 
     bukaFormEditBarangFormulasi(formula) {
@@ -1107,7 +1128,7 @@ class SpkApp extends Component {
             ? this.state.popupBarangDetail.barang.id : null;
         if (!barangId) return;
         if (!f.nama_bahan.trim()) {
-            this.notification.add("Nama Bahan wajib diisi!", { type: "warning" });
+            this.notification.add("Pilih barang dulu untuk formulasi!", { type: "warning" });
             return;
         }
         if (parseFloat(f.qty) <= 0) {
@@ -1656,6 +1677,12 @@ class SpkApp extends Component {
         };
         this.state.halaman = 'detail';
         await this.muatMaster();
+        // Bahan baku otomatis dibuat/disamakan dari formulasi produk sebelum dimuat.
+        try {
+            await this.orm.call("spk.spk", "sinkron_bahan_baku", [[id]]);
+        } catch (e) {
+            console.error("Gagal sinkron bahan baku dari formulasi:", e);
+        }
         await Promise.all([
             this.muatBahan(id),
             this.muatFormulasi(id),
@@ -1715,7 +1742,7 @@ class SpkApp extends Component {
                 this.orm.searchRead(
                     "spk.bahan.baku",
                     [["spk_id", "=", spkId]],
-                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "pic_id", "gudang_id", "keterangan"],
+                    ["id", "kode_barang", "nama_bahan", "qty", "is_qty_custom", "harga", "is_harga_custom", "pic_id", "gudang_id", "keterangan"],
                     { order: "id asc" }
                 ),
             ]);
@@ -1740,6 +1767,7 @@ class SpkApp extends Component {
         f.nama_bahan = "";
         f.is_qty_custom = false;
         f.qty = 0;
+        f.is_harga_custom = false;
         f.harga = 0;
         f.pic_id = "";
         f.gudang_id = ""; f.gudang_nama = "";
@@ -1847,6 +1875,7 @@ class SpkApp extends Component {
         f.nama_bahan = bahan.nama_bahan || "";
         f.is_qty_custom = !!bahan.is_qty_custom;
         f.qty = bahan.qty || 0;
+        f.is_harga_custom = !!bahan.is_harga_custom;
         f.harga = bahan.harga || 0;
         f.pic_id = bahan.pic_id ? String(bahan.pic_id[0]) : "";
         f.gudang_id = bahan.gudang_id ? String(bahan.gudang_id[0]) : "";
@@ -1880,6 +1909,7 @@ class SpkApp extends Component {
                 qty: qtyVal,
                 is_qty_custom: f.is_qty_custom,
                 harga: parseFloat(f.harga) || 0,
+                is_harga_custom: f.is_harga_custom,
                 ...(f.kode_barang ? { kode_barang: f.kode_barang.trim() } : { kode_barang: false }),
                 ...(f.pic_id ? { pic_id: parseInt(f.pic_id) } : { pic_id: false }),
                 gudang_id: f.gudang_id ? parseInt(f.gudang_id) : false,
@@ -1893,9 +1923,16 @@ class SpkApp extends Component {
                 this.notification.add("Bahan baku berhasil diperbarui!", { type: "success" });
             }
             this.tutupFormBahan();
+            // Sinkron ulang: kode & harga non-custom kembali ke default master barang,
+            // sedangkan qty/harga yang di-custom tetap dipertahankan.
+            try {
+                await this.orm.call("spk.spk", "sinkron_bahan_baku", [[spkId]]);
+            } catch (e) {
+                console.error("Gagal sinkron bahan baku:", e);
+            }
             await Promise.all([
                 this.muatBahan(spkId),
-                f.mode === 'edit' ? this.muatFormulasi(spkId) : Promise.resolve(),
+                this.muatFormulasi(spkId),
             ]);
         } catch (e) {
             console.error("Gagal simpan bahan:", e);
@@ -1938,8 +1975,8 @@ class SpkApp extends Component {
     async syncHargaStandar() {
         const s = this.state.spkDipilih;
         if (!s || s.is_harga_standar_custom) return;
-        const total = Math.round(this.totalHargaBahan || 0);
-        if (Math.round(s.standard_price || 0) === total) return;  // sudah sama
+        const total = this._round4(this.totalHargaBahan || 0);
+        if (this._round4(s.standard_price || 0) === total) return;  // sudah sama
         s.standard_price = total;
         try {
             // skip_riwayat: perubahan otomatis tidak dicatat sebagai edit manual
@@ -2004,19 +2041,17 @@ class SpkApp extends Component {
         return (parseFloat(f.harga_satuan) || 0) * (parseFloat(f.qty) || 0);
     }
 
+    // Kebutuhan bahan = qty formulasi × qty SPK (datar, mengikuti satuan produk).
     hitungKebutuhanFormulasi(formula) {
-        const satuan = formula.satuan_hitung || 'pcs';
-        const qty = formula.qty || 0;
-        if (satuan === 'pcs') return qty * this.totalPcs;
-        if (satuan === 'layer') return qty * this.totalLayer;
-        if (satuan === 'karton') return qty * this.totalKarton;
-        return 0;
+        const s = this.state.spkDipilih;
+        const qtySpk = s ? (s.qty || 0) : 0;
+        return (formula.qty || 0) * qtySpk;
     }
 
     hitungKebutuhanBahan(bahan) {
         const formula = this.state.daftarFormulasi.find(f => f.nama_bahan === bahan.nama_bahan);
         if (!formula) return null;
-        return Math.ceil(this.hitungKebutuhanFormulasi(formula));
+        return this._round4(this.hitungKebutuhanFormulasi(formula));
     }
 
     // Qty efektif bahan: pakai nilai custom bila di-override, selain itu dari formulasi (boleh null)
@@ -2035,11 +2070,8 @@ class SpkApp extends Component {
     hitungPreviewFormulasi() {
         const f = this.state.formFormulasi;
         const qty = parseFloat(f.qty) || 0;
-        const satuan = f.satuan_hitung || 'pcs';
-        if (satuan === 'pcs') return qty * this.totalPcs;
-        if (satuan === 'layer') return qty * this.totalLayer;
-        if (satuan === 'karton') return qty * this.totalKarton;
-        return 0;
+        const s = this.state.spkDipilih;
+        return qty * (s ? (s.qty || 0) : 0);
     }
 
     get bahanTersediaUntukFormulasi() {
@@ -2064,11 +2096,10 @@ class SpkApp extends Component {
         return this.cekSbhBelumLengkap().length > 0;
     }
 
-    // Kembalikan daftar bahan yang belum memiliki data SBH sama sekali
+    // Barang sisa SBH kini auto-terisi default (= sisa), jadi tidak ada lagi
+    // yang "belum lengkap" — tab Gaji tidak dikunci. User cukup edit bila perlu.
     cekSbhBelumLengkap() {
-        return this.state.daftarBahan
-            .filter(b => !this.getSbhForBahan(b.id))
-            .map(b => ({ nama_bahan: b.nama_bahan, kode_barang: b.kode_barang || '-' }));
+        return [];
     }
 
     tutupPopupSbhKurang() {
@@ -2092,13 +2123,20 @@ class SpkApp extends Component {
         if (!spkId) return;
         this.state.memuatFormulasi = true;
         try {
-            const formulasi = await this.orm.searchRead(
-                "spk.formulasi",
-                [["spk_id", "=", spkId]],
-                ["id", "nama_bahan", "qty", "satuan_hitung", "is_pengganti", "boleh_ubah_qty", "boleh_hapus", "write_date"],
-                { order: "id asc" }
-            );
-            this.state.daftarFormulasi = formulasi;
+            // Formulasi diambil LANGSUNG dari master barang/produk yang dipilih.
+            // Kalau produk punya formulasi → tampil; kalau tidak / belum ada produk → kosong.
+            // Formulasi hanya bisa dikelola di Master Barang (read-only di detail SPK).
+            const barang = this.state.spkDipilih && this.state.spkDipilih.barang_id;
+            if (barang && barang[0]) {
+                this.state.daftarFormulasi = await this.orm.searchRead(
+                    "spk.barang.formulasi",
+                    [["barang_id", "=", barang[0]]],
+                    ["id", "nama_bahan", "qty", "satuan_hitung", "keterangan"],
+                    { order: "id asc" }
+                );
+            } else {
+                this.state.daftarFormulasi = [];
+            }
         } catch (e) {
             console.error("Gagal memuat formulasi:", e);
             this.notification.add("Gagal memuat formulasi.", { type: "danger" });
@@ -2235,15 +2273,18 @@ class SpkApp extends Component {
         return pcs;
     }
 
-    // Bahan terpakai = formulasi.qty × (TOTAL hasil produksi semua catatan, dikonversi ke satuan formulasi)
-    // Akumulatif: tiap catatan produksi mengurangi kebutuhan bahan sesuai porsi & formulasinya
+    // Qty Barang Kembali (terpakai) = Qty SPK (kolom di HPR) × proporsi produksi.
+    // Diturunkan dari Qty SPK efektif (menghormati custom qty), BUKAN langsung dari
+    // qty formulasi. Proporsi = total hasil produksi ÷ target qty SPK.
     konsumsiBahanHpr(bahan) {
-        const formula = this.state.daftarFormulasi.find(f => f.nama_bahan === bahan.nama_bahan);
-        if (!formula) return null;
+        const qtySpk = this.qtyEfektifBahan(bahan);   // kebutuhan penuh (custom / formulasi)
+        if (qtySpk === null) return null;
         const totalHp = this.totalHasilProduksiHpr;
         if (totalHp <= 0) return 0;
-        const basis = this.konversiSatuanSpk(totalHp, formula.satuan_hitung || 'pcs');
-        return Math.ceil((formula.qty || 0) * basis);
+        const s = this.state.spkDipilih;
+        const target = s ? (s.qty || 0) : 0;
+        if (target <= 0) return 0;
+        return this._round4(qtySpk * (totalHp / target));
     }
 
     // Sisa qty kebutuhan = qty kebutuhan total − bahan terpakai (berkurang sesuai hasil produksi)
@@ -2420,10 +2461,14 @@ class SpkApp extends Component {
         return this.konsumsiBahanHpr(bahan);
     }
 
-    // Barang sisa = jumlah barang kembali (gabungan bagus + rusak) yang diinput user
+    // Barang sisa: bila user sudah mengisi (ada entri SBH) → pakai nilai itu.
+    // Bila belum → default OTOMATIS ke "sisa" (Qty SPK − Total Kembali HPR),
+    // jadi langsung terisi tanpa perlu buka form. User bisa edit bila ada yang kurang.
     barangSisaSbh(bahan) {
         const sbh = this.getSbhForBahan(bahan.id);
-        return sbh ? (sbh.barang_sisa || 0) : 0;
+        if (sbh) return sbh.barang_sisa || 0;
+        const sisa = this.sisaSbh(bahan);
+        return (sisa !== null && sisa > 0) ? sisa : 0;
     }
 
     // Sisa = Qty SPK − Total Kembali (porsi yang seharusnya jadi barang sisa/hilang)
@@ -2554,10 +2599,15 @@ class SpkApp extends Component {
         return this.totalHasilProduksiHpr;
     }
 
-    // Harga per satuan = harga standar SPK saat ini (otomatis, bukan input manual)
+    // Harga per 1 satuan = Harga Standar SPK ÷ Qty SPK.
+    // (standard_price adalah total bahan baku untuk SELURUH target qty, jadi
+    //  dibagi qty agar jadi harga per 1 karton/layer/pcs.)
     get gajiNominal() {
         const s = this.state.spkDipilih;
-        return s ? (s.standard_price || 0) : 0;
+        if (!s) return 0;
+        const qty = s.qty || 0;
+        if (qty <= 0) return 0;
+        return (s.standard_price || 0) / qty;
     }
 
     // Total kotor = total karton × harga standar SPK
@@ -2699,22 +2749,40 @@ class SpkApp extends Component {
 
     // ─── HELPER DISPLAY ───────────────────────────────────────────────────────
 
+    // Pembulatan ke maksimal 4 angka di belakang koma.
+    _round4(n) {
+        return Math.round((Number(n) || 0) * 10000) / 10000;
+    }
+
     formatRupiah(jumlah) {
         return new Intl.NumberFormat("id-ID", {
             style: "currency",
             currency: "IDR",
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(jumlah);
+            maximumFractionDigits: 4,
+        }).format(this._round4(jumlah));
     }
 
     formatAngka(n) {
-        return new Intl.NumberFormat("id-ID").format(Math.round(n));
+        return new Intl.NumberFormat("id-ID", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 4,
+        }).format(this._round4(n));
     }
 
     labelSatuan(satuan) {
         const m = { pcs: 'Per Pcs', layer: 'Per Layer', karton: 'Per Karton' };
         return m[satuan] || satuan || '-';
+    }
+
+    // Petakan nama satuan master barang (Pcs/Layer/Karton/…) ke nilai "Per Satuan"
+    // formulasi (pcs/layer/karton). Bila tak cocok (mis. RGK), default 'pcs'.
+    _satuanHitungDariNama(namaSatuan) {
+        const n = (namaSatuan || "").trim().toLowerCase();
+        if (n === "karton") return "karton";
+        if (n === "layer") return "layer";
+        if (n === "pcs") return "pcs";
+        return "pcs";
     }
 
     formatTanggal(tgl) {

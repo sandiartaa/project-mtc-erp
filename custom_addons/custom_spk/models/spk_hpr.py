@@ -12,6 +12,6 @@ class SpkHpr(models.Model):
         'spk.spk', 'SPK', required=True, ondelete='cascade', index=True
     )
     tanggal_kirim = fields.Date('Tanggal Kirim')
-    hasil_produksi = fields.Float('Hasil Produksi', digits=(16, 2), default=0.0)
+    hasil_produksi = fields.Float('Hasil Produksi', digits=(16, 4), default=0.0)
     # Tujuan hasil produksi: gudang penerima (relasi master gudang spk.gudang)
     gudang_id = fields.Many2one('spk.gudang', 'Gudang Penerima', ondelete='set null')

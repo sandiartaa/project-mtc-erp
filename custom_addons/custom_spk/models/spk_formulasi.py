@@ -8,7 +8,7 @@ class SpkFormulasi(models.Model):
 
     spk_id = fields.Many2one('spk.spk', 'SPK', required=True, ondelete='cascade', index=True)
     nama_bahan = fields.Char('Nama Bahan', required=True)
-    qty = fields.Float('Qty', default=1.0, digits=(16, 2))
+    qty = fields.Float('Qty', default=1.0, digits=(16, 4))
     satuan_hitung = fields.Selection([
         ('pcs', 'Per Pcs'),
         ('layer', 'Per Layer'),

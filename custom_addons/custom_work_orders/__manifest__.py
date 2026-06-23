@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Work Orders',
-    'version': '1.1.0',
+    'version': '1.2.0',
     'category': 'Custom',
     'summary': 'Manajemen Work Order: Product Details, InCharge, Timeline',
     'description': """

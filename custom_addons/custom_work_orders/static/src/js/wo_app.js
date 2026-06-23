@@ -28,7 +28,7 @@ class WoApp extends Component {
             { value: "finished", label: "Finished" },
         ];
         this.lokalRrcPilihan = [
-            { value: "lokal", label: "Lokal" },
+            { value: "lokal", label: "Local" },
             { value: "rrc", label: "RRC" },
         ];
 
@@ -92,6 +92,10 @@ class WoApp extends Component {
             kartuTerbuka: {},
             // Popup lihat gambar (dipicu dari thumbnail tabel desktop)
             imgPopup: { buka: false, url: "", judul: "" },
+            // Form Reject + isi Detail Revision (textarea besar)
+            revisiForm: { buka: false, rec: null, detail: "", proses: false },
+            // Popup daftar Revisions tiap Work Order
+            revisiList: { buka: false, judul: "", items: [], memuat: false },
         });
 
         onMounted(async () => {
@@ -133,12 +137,12 @@ class WoApp extends Component {
                 ["id", "wo_number", "name", "code", "brand_id", "job_type_id", "details", "image_ada",
                  "incharge_id", "lokal_rrc", "requestor_id",
                  "request_date", "target_date", "finish_date",
-                 "approver_id", "approval_date", "status", "approval_state"],
+                 "approver_id", "approval_date", "status", "approval_state", "revisi_count"],
                 { order: "id desc" }
             );
         } catch (e) {
             console.error("Gagal memuat work order:", e);
-            this.notification.add("Gagal memuat data Work Order.", { type: "danger" });
+            this.notification.add("Failed to load Work Order data.", { type: "danger" });
         }
         this.state.memuat = false;
     }
@@ -211,7 +215,7 @@ class WoApp extends Component {
 
     // ─── ALUR APPROVAL (Ready / Cancel / Approve / Tolak) ────────────────────
     labelApproval(s) {
-        return { draft: "Belum Diajukan", ready: "Menunggu Approval", approved: "Disetujui" }[s] || "—";
+        return { draft: "Not Submitted", ready: "Awaiting Approval", approved: "Approved" }[s] || "—";
     }
     kelasApproval(s) {
         return { draft: "cwo-apr-draft", ready: "cwo-apr-ready", approved: "cwo-apr-approved" }[s] || "";
@@ -232,33 +236,70 @@ class WoApp extends Component {
             await this.muatData();
         } catch (e) {
             console.error("Gagal aksi approval:", e);
-            const msg = e && e.data && e.data.message ? e.data.message : "Coba lagi.";
-            this.notification.add("Gagal. " + msg, { type: "danger" });
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
         }
     }
-    setReady(rec) { this._aksiApproval(rec, "action_set_ready", "Work Order diajukan untuk approval."); }
-    cancelReady(rec) { this._aksiApproval(rec, "action_cancel_ready", "Pengajuan dibatalkan."); }
+    setReady(rec) { this._aksiApproval(rec, "action_set_ready", "Work Order submitted for approval."); }
+    cancelReady(rec) { this._aksiApproval(rec, "action_cancel_ready", "Submission cancelled."); }
     approve(rec) {
         this.tampilKonfirmasi({
             judul: "Approve Work Order",
-            pesan: `Setujui Work Order <b>${rec.wo_number}</b> (${rec.name})?`,
-            labelYa: "Ya, Approve", warnaYa: "merah",
-            aksi: () => this._aksiApproval(rec, "action_approve", "Work Order di-approve."),
+            pesan: `Approve Work Order <b>${rec.wo_number}</b> (${rec.name})?`,
+            labelYa: "Yes, Approve", warnaYa: "merah",
+            aksi: () => this._aksiApproval(rec, "action_approve", "Work Order approved."),
         });
     }
+    // Reject membuka form Detail Revision (textarea besar) — bukan konfirmasi biasa.
     reject(rec) {
-        this.tampilKonfirmasi({
-            judul: "Tolak Pengajuan",
-            pesan: `Tolak pengajuan Work Order <b>${rec.wo_number}</b>? Status kembali ke draft.`,
-            labelYa: "Ya, Tolak", warnaYa: "merah",
-            aksi: () => this._aksiApproval(rec, "action_reject", "Pengajuan ditolak."),
-        });
+        const rf = this.state.revisiForm;
+        rf.buka = true; rf.rec = rec; rf.detail = ""; rf.proses = false;
     }
+    tutupRevisiForm() {
+        const rf = this.state.revisiForm;
+        rf.buka = false; rf.rec = null; rf.detail = "";
+    }
+    async kirimRevisi() {
+        const rf = this.state.revisiForm;
+        const detail = (rf.detail || "").trim();
+        if (!detail) {
+            this.notification.add("Revision Detail is required.", { type: "warning" });
+            return;
+        }
+        rf.proses = true;
+        try {
+            await this.orm.call("wo.work.order", "action_reject", [[rf.rec.id], detail]);
+            this.notification.add("Submission rejected. Revision saved.", { type: "success" });
+            this.tutupRevisiForm();
+            await this.muatData();
+        } catch (e) {
+            console.error("Gagal tolak/revisi:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
+        }
+        rf.proses = false;
+    }
+
+    // ─── DAFTAR REVISIONS (popup per Work Order) ─────────────────────────────
+    async bukaRevisiList(rec) {
+        const rl = this.state.revisiList;
+        rl.buka = true;
+        rl.judul = rec.wo_number + (rec.name ? " — " + rec.name : "");
+        rl.items = []; rl.memuat = true;
+        try {
+            rl.items = await this.orm.call("wo.revision", "revisi_wo", [rec.id]);
+        } catch (e) {
+            console.error("Gagal memuat revisi:", e);
+            this.notification.add("Failed to load revisions.", { type: "danger" });
+        }
+        rl.memuat = false;
+    }
+    tutupRevisiList() { this.state.revisiList.buka = false; }
     formatTanggal(d) {
         if (!d) return "—";
         const dt = new Date(d + "T00:00:00");
         if (isNaN(dt)) return d;
-        return dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+        return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     }
 
     // ─── Buka/tutup kartu (accordion mobile) ─────────────────────────────────
@@ -492,7 +533,7 @@ class WoApp extends Component {
     async simpan() {
         const f = this.state.form;
         if (!f.name.trim()) {
-            this.notification.add("Name wajib diisi!", { type: "warning" });
+            this.notification.add("Name is required!", { type: "warning" });
             return;
         }
         f.menyimpan = true;
@@ -520,16 +561,16 @@ class WoApp extends Component {
             }
             if (f.mode === "edit") {
                 await this.orm.write("wo.work.order", [f.id], vals);
-                this.notification.add("Work Order diperbarui.", { type: "success" });
+                this.notification.add("Work Order updated.", { type: "success" });
             } else {
                 await this.orm.create("wo.work.order", [vals]);
-                this.notification.add("Work Order ditambahkan.", { type: "success" });
+                this.notification.add("Work Order added.", { type: "success" });
             }
             this.tutupForm();
             await this.muatData();
         } catch (e) {
             console.error("Gagal simpan work order:", e);
-            this.notification.add("Gagal menyimpan Work Order.", { type: "danger" });
+            this.notification.add("Failed to save Work Order.", { type: "danger" });
         }
         f.menyimpan = false;
     }
@@ -543,16 +584,16 @@ class WoApp extends Component {
     async tambahBrand() {
         const m = this.state.brandMgr;
         const nama = (m.baru || "").trim();
-        if (!nama) { this.notification.add("Nama Brand kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Brand name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.create("wo.brand", [{ name: nama }]);
             m.baru = "";
             await this.muatBrand();
-            this.notification.add("Brand ditambahkan.", { type: "success" });
+            this.notification.add("Brand added.", { type: "success" });
         } catch (e) {
             console.error("Gagal tambah Brand:", e);
-            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to add (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
@@ -567,24 +608,24 @@ class WoApp extends Component {
     async simpanEditBrand() {
         const m = this.state.brandMgr;
         const nama = (m.editNama || "").trim();
-        if (!nama) { this.notification.add("Nama Brand kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Brand name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.write("wo.brand", [m.editId], { name: nama });
             m.editId = null; m.editNama = "";
             await Promise.all([this.muatBrand(), this.muatData()]);
-            this.notification.add("Brand diperbarui.", { type: "success" });
+            this.notification.add("Brand updated.", { type: "success" });
         } catch (e) {
             console.error("Gagal ubah Brand:", e);
-            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to update (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
     konfirmasiHapusBrand(b) {
         this.tampilKonfirmasi({
-            judul: "Hapus Brand",
-            pesan: `Hapus Brand <b>${b.name}</b>?<br/>Work Order yang memakainya akan dikosongkan kolom Brand-nya.`,
-            labelYa: "Ya, Hapus", warnaYa: "merah",
+            judul: "Delete Brand",
+            pesan: `Delete Brand <b>${b.name}</b>?<br/>Work Orders using it will have their Brand field cleared.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
             aksi: () => this.lakukanHapusBrand(b),
         });
     }
@@ -594,10 +635,10 @@ class WoApp extends Component {
             const f = this.state.form;
             if (String(f.brand_id) === String(b.id)) { f.brand_id = ""; f.brand_nama = ""; }
             await Promise.all([this.muatBrand(), this.muatData()]);
-            this.notification.add("Brand dihapus.", { type: "success" });
+            this.notification.add("Brand deleted.", { type: "success" });
         } catch (e) {
             console.error("Gagal hapus Brand:", e);
-            this.notification.add("Gagal menghapus Brand.", { type: "danger" });
+            this.notification.add("Failed to delete Brand.", { type: "danger" });
         }
     }
 
@@ -610,16 +651,16 @@ class WoApp extends Component {
     async tambahJobType() {
         const m = this.state.jobTypeMgr;
         const nama = (m.baru || "").trim();
-        if (!nama) { this.notification.add("Nama Job Type kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Job Type name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.create("wo.job.type", [{ name: nama }]);
             m.baru = "";
             await this.muatJobType();
-            this.notification.add("Job Type ditambahkan.", { type: "success" });
+            this.notification.add("Job Type added.", { type: "success" });
         } catch (e) {
             console.error("Gagal tambah Job Type:", e);
-            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to add (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
@@ -634,24 +675,24 @@ class WoApp extends Component {
     async simpanEditJobType() {
         const m = this.state.jobTypeMgr;
         const nama = (m.editNama || "").trim();
-        if (!nama) { this.notification.add("Nama Job Type kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Job Type name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.write("wo.job.type", [m.editId], { name: nama });
             m.editId = null; m.editNama = "";
             await Promise.all([this.muatJobType(), this.muatData()]);
-            this.notification.add("Job Type diperbarui.", { type: "success" });
+            this.notification.add("Job Type updated.", { type: "success" });
         } catch (e) {
             console.error("Gagal ubah Job Type:", e);
-            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to update (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
     konfirmasiHapusJobType(jt) {
         this.tampilKonfirmasi({
-            judul: "Hapus Job Type",
-            pesan: `Hapus Job Type <b>${jt.name}</b>?<br/>Work Order yang memakainya akan dikosongkan kolom Job Type-nya.`,
-            labelYa: "Ya, Hapus", warnaYa: "merah",
+            judul: "Delete Job Type",
+            pesan: `Delete Job Type <b>${jt.name}</b>?<br/>Work Orders using it will have their Job Type field cleared.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
             aksi: () => this.lakukanHapusJobType(jt),
         });
     }
@@ -661,10 +702,10 @@ class WoApp extends Component {
             const f = this.state.form;
             if (String(f.job_type_id) === String(jt.id)) { f.job_type_id = ""; f.job_type_nama = ""; }
             await Promise.all([this.muatJobType(), this.muatData()]);
-            this.notification.add("Job Type dihapus.", { type: "success" });
+            this.notification.add("Job Type deleted.", { type: "success" });
         } catch (e) {
             console.error("Gagal hapus Job Type:", e);
-            this.notification.add("Gagal menghapus Job Type.", { type: "danger" });
+            this.notification.add("Failed to delete Job Type.", { type: "danger" });
         }
     }
 
@@ -677,16 +718,16 @@ class WoApp extends Component {
     async tambahPerson() {
         const m = this.state.personMgr;
         const nama = (m.baru || "").trim();
-        if (!nama) { this.notification.add("Nama kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.create("wo.person", [{ name: nama }]);
             m.baru = "";
             await this.muatPerson();
-            this.notification.add("Nama ditambahkan.", { type: "success" });
+            this.notification.add("Name added.", { type: "success" });
         } catch (e) {
             console.error("Gagal tambah person:", e);
-            this.notification.add("Gagal menambah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to add (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
@@ -701,24 +742,24 @@ class WoApp extends Component {
     async simpanEditPerson() {
         const m = this.state.personMgr;
         const nama = (m.editNama || "").trim();
-        if (!nama) { this.notification.add("Nama kosong.", { type: "warning" }); return; }
+        if (!nama) { this.notification.add("Name is empty.", { type: "warning" }); return; }
         m.proses = true;
         try {
             await this.orm.write("wo.person", [m.editId], { name: nama });
             m.editId = null; m.editNama = "";
             await Promise.all([this.muatPerson(), this.muatData()]);
-            this.notification.add("Nama diperbarui.", { type: "success" });
+            this.notification.add("Name updated.", { type: "success" });
         } catch (e) {
             console.error("Gagal ubah person:", e);
-            this.notification.add("Gagal mengubah (mungkin nama sudah ada).", { type: "danger" });
+            this.notification.add("Failed to update (name may already exist).", { type: "danger" });
         }
         m.proses = false;
     }
     konfirmasiHapusPerson(p) {
         this.tampilKonfirmasi({
-            judul: "Hapus Nama",
-            pesan: `Hapus <b>${p.name}</b>?<br/>Work Order yang memakainya (Requestor/Approver) akan dikosongkan.`,
-            labelYa: "Ya, Hapus", warnaYa: "merah",
+            judul: "Delete Name",
+            pesan: `Delete <b>${p.name}</b>?<br/>Work Orders using it (Requestor/Approver) will be cleared.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
             aksi: () => this.lakukanHapusPerson(p),
         });
     }
@@ -729,19 +770,19 @@ class WoApp extends Component {
             if (String(f.requestor_id) === String(p.id)) { f.requestor_id = ""; f.requestor_nama = ""; }
             if (String(f.approver_id) === String(p.id)) { f.approver_id = ""; f.approver_nama = ""; }
             await Promise.all([this.muatPerson(), this.muatData()]);
-            this.notification.add("Nama dihapus.", { type: "success" });
+            this.notification.add("Name deleted.", { type: "success" });
         } catch (e) {
             console.error("Gagal hapus person:", e);
-            this.notification.add("Gagal menghapus.", { type: "danger" });
+            this.notification.add("Failed to delete.", { type: "danger" });
         }
     }
 
     // ─── HAPUS ───────────────────────────────────────────────────────────────
     konfirmasiHapus(rec) {
         this.tampilKonfirmasi({
-            judul: "Hapus Work Order",
-            pesan: `Hapus work order <b>${rec.wo_number || rec.name}</b>?`,
-            labelYa: "Ya, Hapus",
+            judul: "Delete Work Order",
+            pesan: `Delete work order <b>${rec.wo_number || rec.name}</b>?`,
+            labelYa: "Yes, Delete",
             warnaYa: "merah",
             aksi: () => this.lakukanHapus(rec),
         });
@@ -749,11 +790,11 @@ class WoApp extends Component {
     async lakukanHapus(rec) {
         try {
             await this.orm.unlink("wo.work.order", [rec.id]);
-            this.notification.add("Work Order dihapus.", { type: "success" });
+            this.notification.add("Work Order deleted.", { type: "success" });
             await this.muatData();
         } catch (e) {
             console.error("Gagal hapus:", e);
-            this.notification.add("Gagal menghapus.", { type: "danger" });
+            this.notification.add("Failed to delete.", { type: "danger" });
         }
     }
 
@@ -804,14 +845,14 @@ class WoApp extends Component {
     }
     async lakukanImpor() {
         const im = this.state.impor;
-        if (!im.file) { this.notification.add("Pilih file CSV dulu.", { type: "warning" }); return; }
+        if (!im.file) { this.notification.add("Please select a CSV file first.", { type: "warning" }); return; }
         im.proses = true;
         try {
             const text = await im.file.text();
             const delim = this._deteksiDelimiter(text);
             const matrix = this._parseCsv(text, delim);
             if (matrix.length < 2) {
-                this.notification.add("CSV kosong atau tidak ada baris data.", { type: "warning" });
+                this.notification.add("CSV is empty or has no data rows.", { type: "warning" });
                 im.proses = false; return;
             }
             const headers = matrix[0].map((h) => (h || "").trim());
@@ -824,38 +865,38 @@ class WoApp extends Component {
                 rows.push(obj);
             }
             const res = await this.orm.call("wo.work.order", "import_csv_rows", [rows]);
-            this.notification.add(`Berhasil impor ${res.created} baris. Data lama tetap aman.`, { type: "success" });
+            this.notification.add(`Successfully imported ${res.created} rows. Existing data is safe.`, { type: "success" });
             im.file = null; im.namaFile = "";
             await Promise.all([this.muatData(), this.muatBatch()]);
         } catch (e) {
             console.error("Gagal impor CSV:", e);
-            this.notification.add("Gagal membaca/impor CSV. Pastikan format kolom benar.", { type: "danger" });
+            this.notification.add("Failed to read/import CSV. Make sure the column format is correct.", { type: "danger" });
         }
         im.proses = false;
     }
     konfirmasiHapusBatch(b) {
         this.tampilKonfirmasi({
-            judul: "Hapus Hasil Impor",
-            pesan: `Hapus <b>${b.jumlah}</b> baris dari impor <b>${b.batch}</b>?<br/>Hanya data dari impor ini yang dihapus.`,
-            labelYa: "Ya, Hapus", warnaYa: "merah",
+            judul: "Delete Import Result",
+            pesan: `Delete <b>${b.jumlah}</b> rows from import <b>${b.batch}</b>?<br/>Only data from this import will be deleted.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
             aksi: () => this.lakukanHapusBatch(b),
         });
     }
     async lakukanHapusBatch(b) {
         try {
             const n = await this.orm.call("wo.work.order", "hapus_batch_impor", [b.batch]);
-            this.notification.add(`${n} baris hasil impor dihapus.`, { type: "success" });
+            this.notification.add(`${n} imported rows deleted.`, { type: "success" });
             await Promise.all([this.muatData(), this.muatBatch()]);
         } catch (e) {
             console.error("Gagal hapus batch:", e);
-            this.notification.add("Gagal menghapus hasil impor.", { type: "danger" });
+            this.notification.add("Failed to delete import result.", { type: "danger" });
         }
     }
     unduhTemplate() {
         const headers = ["Name", "Code", "Brand", "Job Type", "Details", "Designer 2D/3D", "Lokal/RRC",
                          "Requestor", "Req Date", "Target", "Finish Date",
                          "Approver", "Approval Date", "Status", "Image"];
-        const contoh = ["Contoh WO", "WO-001", "BrandX", "Box", "Catatan baris 1", "Administrator", "Lokal",
+        const contoh = ["Sample WO", "WO-001", "BrandX", "Box", "Note line 1", "Administrator", "Local",
                         "Administrator", "2026-06-20", "2026-07-01", "",
                         "Administrator", "", "Ongoing", ""];
         const cell = (v) => {

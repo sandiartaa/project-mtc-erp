@@ -26,7 +26,7 @@ class SpkSpk(models.Model):
     barang_id = fields.Many2one(
         'spk.barang', 'Produk', ondelete='restrict', index=True
     )
-    qty = fields.Float('Jumlah (Qty)', required=True, default=1.0, digits=(16, 2))
+    qty = fields.Float('Jumlah (Qty)', required=True, default=1.0, digits=(16, 4))
     unit = fields.Selection(
         [('karton', 'Karton'), ('layer', 'Layer'), ('pcs', 'Pcs')],
         string='Satuan', required=True
@@ -34,14 +34,14 @@ class SpkSpk(models.Model):
     layer_per_karton = fields.Integer('Layer per Karton', default=1)
     pcs_per_layer = fields.Integer('Pcs per Layer', default=1)
     # Harga per satuan (otomatis dari harga produk saat dipilih, bisa diubah manual)
-    harga_satuan = fields.Float('Harga per Satuan', digits=(16, 0), default=0.0)
+    harga_satuan = fields.Float('Harga per Satuan', digits=(16, 4), default=0.0)
     # Harga total = harga per satuan x qty (dihitung otomatis)
     harga_total = fields.Float(
-        'Harga Total', digits=(16, 0),
+        'Harga Total', digits=(16, 4),
         compute='_compute_harga_total', store=True
     )
     standard_price = fields.Float(
-        'Harga Standar', digits=(16, 0), default=0.0
+        'Harga Standar', digits=(16, 4), default=0.0
     )
     # True = harga standar diatur manual user; False = otomatis dari total bahan baku
     is_harga_standar_custom = fields.Boolean('Harga Standar Custom', default=False)
@@ -85,6 +85,57 @@ class SpkSpk(models.Model):
                 'keterangan': 'SPK dibuat',
             })
         return records
+
+    def sinkron_bahan_baku(self):
+        """Samakan daftar Bahan Baku dengan FORMULASI produk (master barang).
+
+        Bahan baku dibuat OTOMATIS dari formulasi — nama, harga, & kode ikut
+        master barang. Tidak ada penambahan manual. Bahan yang tidak lagi ada
+        di formulasi (atau bila produk tanpa formulasi) akan dihapus.
+        PIC, Gudang, & Keterangan per bahan tetap dipertahankan.
+        Qty & subtotal dihitung di frontend dari formulasi × jumlah produksi.
+        """
+        self.ensure_one()
+        Bahan = self.env['spk.bahan.baku']
+        Barang = self.env['spk.barang']
+        Formulasi = self.env['spk.barang.formulasi']
+        formulasi = (
+            Formulasi.search([('barang_id', '=', self.barang_id.id)], order='id asc')
+            if self.barang_id else Formulasi.browse()
+        )
+        nama_dipakai = []
+        for f in formulasi:
+            nama = (f.nama_bahan or '').strip()
+            if not nama or nama in nama_dipakai:
+                continue
+            nama_dipakai.append(nama)
+            # Ambil harga & kode dari master barang dengan nama sama (bila ada)
+            b = Barang.search([('name', '=', nama)], limit=1)
+            existing = Bahan.search(
+                [('spk_id', '=', self.id), ('nama_bahan', '=', nama)], limit=1)
+            if existing:
+                # Kode selalu ikut master. Harga HANYA disamakan bila tidak di-custom
+                # user. Qty & flag custom (qty/harga) tidak diutak-atik agar override
+                # user tetap dipakai di HPR/SBH/Gaji.
+                vals = {'kode_barang': (b.kode or False) if b else False}
+                if not existing.is_harga_custom:
+                    vals['harga'] = b.harga if b else 0.0
+                existing.write(vals)
+            else:
+                Bahan.create({
+                    'spk_id': self.id, 'nama_bahan': nama,
+                    'harga': b.harga if b else 0.0,
+                    'kode_barang': (b.kode or False) if b else False,
+                    'is_qty_custom': False,
+                    'is_harga_custom': False,
+                })
+        # Hapus bahan baku yang tidak ada dalam formulasi (atau semua bila kosong)
+        orphan = Bahan.search([('spk_id', '=', self.id)]).filtered(
+            lambda r: (r.nama_bahan or '').strip() not in nama_dipakai
+        )
+        if orphan:
+            orphan.unlink()
+        return True
 
     def write(self, vals):
         res = super().write(vals)
