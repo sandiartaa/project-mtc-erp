@@ -1,49 +1,64 @@
-# deploy/ — Alat Kirim Database ke Server
+# deploy/ — Alat Deployment Project Odoo ke Server
 
-Folder ini berisi script untuk mem-backup database Odoo lokal dan me-restore-nya
-ke server Docker. **Bukan modul Odoo**, hanya alat deployment.
+Folder ini berisi script & panduan untuk mengirim/meng-update project Odoo ke server Docker.
+**Bukan modul Odoo** — hanya alat deployment.
 
-Server tujuan: `root@5.223.95.218` — container `odoo19` (Odoo) & `odoo-postgres` (PostgreSQL 16).
+- Server: `root@5.223.95.218` · Repo GitHub: `sandiartaa/project-mtc-erp`
+- **PRODUKSI**: `:8069` · container `odoo19` · branch `main`
+- **SANDBOX** : `:8070` · container `odoo19-sandbox` · branch `dev`
 
-## Alur lengkap (Skenario kirim DATA dari local ke server)
+> Catatan: hanya **nama repo GitHub** yang di-rename jadi `project-mtc-erp`.
+> **Folder server tetap** `/opt/odoo/project-odoo-mtc` (tidak diubah).
 
-### 1. Backup di local (Git Bash)
+## 📚 Dokumen
+| File | Isi |
+|------|-----|
+| `PANDUAN-DEPLOY.md` | Panduan lengkap + daftar error & solusinya |
+| `ALUR-HARIAN.md` | Alur update **kode** harian: local → sandbox → production |
+| `sandbox/README.md` | Cara pakai, reset, & hapus sandbox |
+
+## 🧰 Script
+| Script | Fungsi | Dijalankan di |
+|--------|--------|---------------|
+| `backup.sh` | Backup database lokal (dump + filestore, auto-tambal PG18→16) | Lokal (Git Bash) |
+| `restore.sh` | Restore backup ke **sandbox** / **produksi** | Server |
+| `upgrade.sh` | Upgrade 1 modul di container lalu restart | Server |
+
+## Ada 2 jenis pekerjaan
+
+### A. Update KODE / modul (paling sering) → baca `ALUR-HARIAN.md`
+Ringkas: lokal (branch `dev`) → uji sandbox (`:8070`) → merge ke `main` → produksi (`:8069`).
 ```bash
-bash deploy/backup.sh
-```
-Hasil: file `odoo_dev_<tanggal>.tar.gz` di Desktop (sudah otomatis ditambal agar
-kompatibel PostgreSQL 16).
-
-### 2. Upload ke server (cmd / PowerShell, dari folder Desktop)
-```
-scp odoo_dev_<tanggal>.tar.gz root@5.223.95.218:/tmp/
-```
-
-### 3. Restore di server (SSH ke server dulu)
-```bash
-ssh root@5.223.95.218
-# salin restore.sh ke server bila belum ada, lalu:
-bash restore.sh /tmp/odoo_dev_<tanggal>.tar.gz
-```
-
-> ⚠️ `restore.sh` **menimpa** seluruh database `odoo_dev` di server. Pakai hanya
-> bila local memang sumber data yang benar.
-
-## Update KODE / modul custom (tidak perlu sentuh database)
-`custom_addons` di server di-mount dari host, jadi cukup:
-```bash
-# di server
+# Lokal
+git checkout dev   # edit modul, lalu:
+git add custom_addons/ && git commit -m "..." && git push
+# Server: uji sandbox
+cd /opt/odoo/sandbox-tree && git pull
+bash /opt/odoo/project-odoo-mtc/deploy/upgrade.sh odoo19-sandbox NAMA_MODUL
+# Lokal: promote
+git checkout main && git merge dev && git push && git checkout dev
+# Server: produksi
 cd /opt/odoo/project-odoo-mtc && git pull
-docker exec odoo19 odoo -u nama_modul -d odoo_dev --stop-after-init
-docker restart odoo19
+bash /opt/odoo/project-odoo-mtc/deploy/upgrade.sh odoo19 NAMA_MODUL
 ```
 
-## Catatan teknis (kenapa perlu tambalan)
-- **Local PostgreSQL 18**, **server PostgreSQL 16**. Dump dari PG18 memakai sintaks
-  `NOT NULL <kolom>` yang tidak dikenal PG16 → `backup.sh` otomatis menghapusnya.
-- Folder `lib/` di-`.gitignore`, sehingga modul seperti `phone_validation` kehilangan
-  folder `lib`-nya di server. Lihat catatan perbaikan permanen di bawah.
+### B. Kirim DATA (database) dari lokal → baca `PANDUAN-DEPLOY.md` Bagian 1
+```bash
+# Lokal
+bash deploy/backup.sh
+scp odoo_dev_<tanggal>.tar.gz root@5.223.95.218:/tmp/
+# Server: uji sandbox dulu, baru produksi
+cd /opt/odoo/project-odoo-mtc
+bash deploy/restore.sh sandbox    /tmp/odoo_dev_<tanggal>.tar.gz
+bash deploy/restore.sh production /tmp/odoo_dev_<tanggal>.tar.gz   # minta ketik 'YA'
+```
+> ⚠️ `restore.sh production` **menimpa** seluruh data produksi. Data asli sekarang ada di
+> produksi (dipakai harian), jadi pakai ini hanya kalau lokal memang sumber data yang benar.
 
-## Perbaikan permanen folder `lib` (server)
-Folder `lib` dipasang permanen lewat bind-mount di `docker-compose.yml` server,
-mengarah ke `deploy/odoo-libs/` di host. Jadi tidak hilang saat container dibuat ulang.
+## Catatan teknis
+- Lokal PostgreSQL **18**, server **16** → dump PG18 pakai sintaks `NOT NULL` yang tak dikenal
+  PG16; `backup.sh` otomatis menambalnya.
+- `.gitignore` mengabaikan folder `lib/`, jadi `phone_validation/lib` hilang di server.
+  Diperbaiki permanen lewat bind-mount (`deploy/odoo-libs/`) di compose produksi & sandbox.
+- Kode produksi & sandbox **terpisah penuh** (folder + branch beda) lewat `git worktree`
+  di `/opt/odoo/sandbox-tree` (branch `dev`).

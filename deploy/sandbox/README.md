@@ -7,6 +7,8 @@ Lingkungan uji coba terpisah dari produksi. Bebas dipakai coba-coba; tidak menye
 | Akses | http://5.223.95.218:**8069** | http://5.223.95.218:**8070** |
 | Container Odoo | `odoo19` | `odoo19-sandbox` |
 | Container DB | `odoo-postgres` | `odoo-postgres-sandbox` |
+| Folder kode (custom_addons) | `project-odoo-mtc/custom_addons` | `sandbox-tree/custom_addons` |
+| Branch git | `main` | `dev` |
 | Folder data/filestore | `odoo-data/` | `odoo-data-sandbox/` |
 | Project Docker | (default) | `odoo-sandbox` |
 
@@ -53,8 +55,11 @@ rm -rf /opt/odoo/project-odoo-mtc/odoo-data-sandbox
 Produksi tidak terpengaruh sama sekali.
 
 ## Catatan penting
-- Sandbox & produksi **berbagi folder `custom_addons` yang sama** (di-mount dari host).
-  Jadi perubahan kode modul akan terlihat di keduanya setelah restart. Yang **terpisah**
-  hanya **database & filestore**.
+- Sandbox & produksi punya **`custom_addons` TERPISAH** (sandbox baca branch `dev` dari
+  `/opt/odoo/sandbox-tree`, produksi baca branch `main`). Jadi **kode, database, dan
+  filestore semuanya terpisah penuh** — uji apa pun di sandbox tidak menyentuh produksi.
+  Alur update kode: lihat **`deploy/ALUR-HARIAN.md`**.
+- Untuk **mengisi data sandbox dari file backup lokal**, bisa juga:
+  `bash /opt/odoo/project-odoo-mtc/deploy/restore.sh sandbox <file.tar.gz>`
 - Folder `lib` (`phone_validation`) dipasang permanen via bind-mount di compose sandbox,
   jadi tidak akan crash lagi walau container dibuat ulang.
