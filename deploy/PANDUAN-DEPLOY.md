@@ -43,10 +43,16 @@ Di bagian akhir ada **daftar error yang sering muncul + cara mengatasinya**.
 
 # BAGIAN 1 — Kirim DATABASE dari Lokal ke Server
 
-Pakai ini saat kamu mau **isi server = isi lokal** (kirim seluruh data).
+Pakai ini saat kamu mau mengirim **seluruh data** dari lokal ke server.
 
-> ⚠️ Cara ini **menimpa** semua data di server. Kalau di server sudah ada data baru
-> dari pemakaian sehari-hari, data itu akan **hilang** dan diganti isi lokal.
+> ⚠️ **PENTING — arah data:** sekarang data asli ada di **PRODUKSI** (dipakai harian).
+> Restore dari lokal akan **MENIMPA** data tujuan. Maka:
+> - **Uji ke SANDBOX dulu** (`:8070`) — aman, tidak menyentuh produksi.
+> - Ke **PRODUKSI** (`:8069`) **hanya** kalau yakin lokal memang sumber data yang benar.
+>   `restore.sh` akan minta ketik **`YA`** dulu sebelum menimpa produksi.
+>
+> Kalau yang berubah cuma **kode/modul** (bukan data), JANGAN pakai Bagian 1 —
+> pakai **Bagian 2**.
 
 ### Langkah 1 — Buat backup di lokal
 Buka **Git Bash** di folder project, lalu ketik:
@@ -64,31 +70,32 @@ scp odoo_dev_20260624_120000.tar.gz root@5.223.95.218:/tmp/
 ```
 Ketik password root saat diminta. (Ganti nama file sesuai hasil Langkah 1.)
 
-### Langkah 3 — Restore di server
+### Langkah 3 — Restore di server (SANDBOX dulu)
 Masuk ke server:
 ```bash
 ssh root@5.223.95.218
+cd /opt/odoo/project-odoo-mtc
 ```
-Pastikan `restore.sh` ada di server (lihat catatan di bawah), lalu jalankan:
+Restore ke **sandbox** dulu untuk uji:
 ```bash
-bash restore.sh /tmp/odoo_dev_20260624_120000.tar.gz
+bash deploy/restore.sh sandbox /tmp/odoo_dev_20260624_120000.tar.gz
 ```
 Script otomatis: matikan Odoo → buat ulang database → import data → pasang filestore → nyalakan Odoo.
+Lalu cek di browser: **http://5.223.95.218:8070**
 
-> **Catatan:** agar `restore.sh` ada di server, salin sekali saja lewat git (`git pull`
-> di server) atau upload manual:
-> `scp deploy/restore.sh root@5.223.95.218:/opt/odoo/project-odoo-mtc/`
+### Langkah 4 — Kalau sandbox sudah benar, baru ke PRODUKSI
+```bash
+bash deploy/restore.sh production /tmp/odoo_dev_20260624_120000.tar.gz
+```
+Akan muncul peringatan — ketik **`YA`** untuk lanjut (selain itu otomatis batal).
+Lalu cek di browser: **http://5.223.95.218:8069** (login dengan user/password seperti lokal).
 
-### Langkah 4 — Cek hasil
-Buka browser:
-```
-http://5.223.95.218:8069
-```
-Login pakai user & password yang sama seperti di lokal. Datanya harus identik.
+> **Catatan:** `restore.sh` ada di server setelah `git pull` (sudah masuk folder `deploy/`).
 
 ### (Opsional) Pantau log kalau ragu
 ```bash
-docker logs -f --tail=50 odoo19
+docker logs -f --tail=50 odoo19-sandbox     # untuk sandbox
+docker logs -f --tail=50 odoo19             # untuk produksi
 ```
 Tunggu sampai muncul `Modules loaded` dan `HTTP service (werkzeug) running`.
 Tekan **Ctrl+C** untuk berhenti melihat log (Odoo tetap jalan).
