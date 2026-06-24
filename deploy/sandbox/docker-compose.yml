@@ -1,0 +1,47 @@
+# =============================================================================
+# Sandbox Odoo - lingkungan uji coba terpisah dari produksi.
+#
+# Akses : http://<IP-server>:8070   (produksi tetap di :8069)
+# Database : odoo_dev (di instance PostgreSQL TERPISAH, tidak menyentuh produksi)
+#
+# Jalankan dari folder ini (di server):
+#   docker compose -p odoo-sandbox up -d
+#
+# Catatan: pakai image hasil build produksi (project-odoo-mtc-odoo) supaya tidak
+# perlu build ulang. Folder 'lib' yang hilang dipasang permanen via bind-mount
+# (sekaligus perbaikan masalah phone_validation).
+# =============================================================================
+services:
+  postgres:
+    image: postgres:16
+    container_name: odoo-postgres-sandbox
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    volumes:
+      - postgres-data-sandbox:/var/lib/postgresql/data
+
+  odoo:
+    image: project-odoo-mtc-odoo        # pakai image produksi yang sudah ada
+    container_name: odoo19-sandbox
+    depends_on:
+      - postgres
+    ports:
+      - "8070:8069"                     # sandbox di port 8070
+    volumes:
+      - /opt/odoo/sandbox-tree/custom_addons:/opt/odoo/custom_addons
+      - /opt/odoo/project-odoo-mtc/odoo-data-sandbox:/var/lib/odoo
+      # perbaikan permanen folder lib (anti crash phone_validation):
+      - /opt/odoo/project-odoo-mtc/deploy/odoo-libs/phone_validation/lib:/opt/odoo/addons/phone_validation/lib:ro
+    command:
+      - python3
+      - odoo-bin
+      - --data-dir=/var/lib/odoo
+      - --db_host=postgres
+      - --db_user=odoo
+      - --db_password=odoo
+      - --addons-path=/opt/odoo/odoo/addons,/opt/odoo/custom_addons
+
+volumes:
+  postgres-data-sandbox:
