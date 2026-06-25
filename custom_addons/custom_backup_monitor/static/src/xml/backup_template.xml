@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_backup_monitor.BackupApp">
+    <div class="cbm-wrapper">
+
+        <!-- HEADER -->
+        <div class="cbm-header">
+            <div class="cbm-header-konten">
+                <div class="cbm-header-judul">
+                    <div class="cbm-header-ikon">💾</div>
+                    <div>
+                        <h1>Backup Monitor</h1>
+                        <p>Status backup · jam server · penyimpanan · kecepatan</p>
+                    </div>
+                </div>
+                <button class="cbm-btn-refresh" t-on-click="muat" t-att-disabled="state.memuat">
+                    <t t-if="state.memuat">⏳ Memuat...</t>
+                    <t t-else="">🔄 Refresh</t>
+                </button>
+            </div>
+        </div>
+
+        <!-- LOADING -->
+        <t t-if="state.memuat and !state.data.now_utc">
+            <div class="cbm-loading"><div class="cbm-spinner"/><p>Memuat data server...</p></div>
+        </t>
+
+        <t t-else="">
+            <div class="cbm-body">
+
+                <!-- STATUS BANNER -->
+                <div t-attf-class="cbm-status #{kelasStatus(state.data.status)}">
+                    <div class="cbm-status-ikon"><t t-esc="ikonStatus(state.data.status)"/></div>
+                    <div class="cbm-status-teks">
+                        <div class="cbm-status-judul"><t t-esc="labelStatus(state.data.status)"/></div>
+                        <div class="cbm-status-sub">
+                            <t t-if="state.data.last_backup_wib">
+                                Backup terakhir: <b><t t-esc="state.data.last_backup_wib"/></b> WIB
+                                <t t-if="state.data.umur_jam !== null"> (<t t-esc="state.data.umur_jam"/> jam lalu)</t>
+                            </t>
+                            <t t-else="">Belum ada file backup di folder server.</t>
+                        </div>
+                        <div class="cbm-status-jadwal">🕑 Jadwal otomatis: tiap 02:00 WIB · 📁 <t t-esc="state.data.backup_dir"/></div>
+                    </div>
+                </div>
+
+                <!-- KARTU STATISTIK -->
+                <div class="cbm-grid">
+                    <!-- Jam server -->
+                    <div class="cbm-kartu">
+                        <div class="cbm-kartu-judul">🕐 Jam Server</div>
+                        <div class="cbm-jam-besar"><t t-esc="state.data.now_wib"/></div>
+                        <div class="cbm-kartu-sub">WIB (UTC+7)</div>
+                        <div class="cbm-kartu-mini">UTC: <t t-esc="state.data.now_utc"/></div>
+                    </div>
+
+                    <!-- Penyimpanan -->
+                    <div class="cbm-kartu">
+                        <div class="cbm-kartu-judul">💽 Penyimpanan Server</div>
+                        <t t-if="state.data.disk and state.data.disk.total">
+                            <div class="cbm-angka-besar"><t t-esc="state.data.disk.percent"/>%</div>
+                            <div class="cbm-kartu-sub">terpakai</div>
+                            <div class="cbm-bar"><div t-attf-class="cbm-bar-isi #{kelasBar(state.data.disk.percent)}" t-attf-style="width: #{state.data.disk.percent}%;"/></div>
+                            <div class="cbm-kartu-mini">
+                                <t t-esc="state.data.disk.used"/> / <t t-esc="state.data.disk.total"/>
+                                · sisa <b><t t-esc="state.data.disk.free"/></b>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="cbm-kosong-mini">Data tidak tersedia (jalankan di server).</div></t>
+                    </div>
+
+                    <!-- CPU -->
+                    <div class="cbm-kartu">
+                        <div class="cbm-kartu-judul">⚙️ Kecepatan / Beban CPU</div>
+                        <div class="cbm-angka-besar"><t t-esc="state.data.cpu.count or '—'"/> <span class="cbm-unit">core</span></div>
+                        <t t-if="state.data.cpu and state.data.cpu.load1 !== null and state.data.cpu.load1 !== undefined">
+                            <div class="cbm-kartu-sub">Beban rata-rata (load average)</div>
+                            <div class="cbm-load">
+                                <span class="cbm-load-item">1m <b><t t-esc="state.data.cpu.load1"/></b></span>
+                                <span class="cbm-load-item">5m <b><t t-esc="state.data.cpu.load5"/></b></span>
+                                <span class="cbm-load-item">15m <b><t t-esc="state.data.cpu.load15"/></b></span>
+                            </div>
+                            <div class="cbm-kartu-mini">Sehat bila beban &lt; jumlah core.</div>
+                        </t>
+                        <t t-else=""><div class="cbm-kosong-mini">Load average tidak tersedia.</div></t>
+                    </div>
+
+                    <!-- RAM -->
+                    <div class="cbm-kartu">
+                        <div class="cbm-kartu-judul">🧠 RAM</div>
+                        <t t-if="state.data.ram and state.data.ram.total">
+                            <div class="cbm-angka-besar"><t t-esc="state.data.ram.percent"/>%</div>
+                            <div class="cbm-kartu-sub">terpakai</div>
+                            <div class="cbm-bar"><div t-attf-class="cbm-bar-isi #{kelasBar(state.data.ram.percent)}" t-attf-style="width: #{state.data.ram.percent}%;"/></div>
+                            <div class="cbm-kartu-mini"><t t-esc="state.data.ram.used"/> / <t t-esc="state.data.ram.total"/> · sisa <b><t t-esc="state.data.ram.free"/></b></div>
+                        </t>
+                        <t t-else=""><div class="cbm-kosong-mini">Data tidak tersedia.</div></t>
+                    </div>
+                </div>
+
+                <!-- UJI KECEPATAN DISK -->
+                <div class="cbm-speed">
+                    <div class="cbm-speed-kiri">
+                        <div class="cbm-kartu-judul">🚀 Uji Kecepatan Disk</div>
+                        <div class="cbm-kartu-mini">Menulis &amp; membaca file ~64MB untuk mengukur kecepatan baca/tulis server.</div>
+                    </div>
+                    <div class="cbm-speed-kanan">
+                        <t t-if="state.speed">
+                            <div class="cbm-speed-hasil">
+                                <span>Tulis: <b><t t-esc="state.speed.write_mbps"/> MB/s</b></span>
+                                <span>Baca: <b><t t-esc="state.speed.read_mbps"/> MB/s</b></span>
+                            </div>
+                        </t>
+                        <button class="cbm-btn-uji" t-on-click="ujiKecepatan" t-att-disabled="state.ujiProses">
+                            <t t-if="state.ujiProses">⏳ Menguji...</t>
+                            <t t-else="">Jalankan Uji</t>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- DAFTAR FILE BACKUP -->
+                <div class="cbm-files">
+                    <div class="cbm-files-kepala">
+                        <div class="cbm-kartu-judul">📦 File Backup
+                            <span class="cbm-badge-jml"><t t-esc="state.data.files.length"/></span>
+                        </div>
+                        <div class="cbm-files-total">Total: <b><t t-esc="state.data.total_backup"/></b></div>
+                    </div>
+
+                    <t t-if="state.data.files.length === 0">
+                        <div class="cbm-kosong">
+                            <div class="cbm-kosong-ikon">📭</div>
+                            <p>Belum ada file backup di <code><t t-esc="state.data.backup_dir"/></code></p>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <!-- Tabel (desktop) -->
+                        <div class="cbm-tabel-wrap">
+                            <table class="cbm-tabel">
+                                <thead>
+                                    <tr><th>Nama File</th><th>Ukuran</th><th>Waktu (WIB)</th><th class="cbm-tengah">Aksi</th></tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.data.files" t-as="f" t-key="f.name">
+                                        <tr>
+                                            <td class="cbm-nama"><t t-esc="f.name"/></td>
+                                            <td><span class="cbm-badge-ukuran"><t t-esc="f.size"/></span></td>
+                                            <td><t t-esc="f.time_wib"/></td>
+                                            <td class="cbm-tengah">
+                                                <a class="cbm-btn-download" t-att-href="urlUnduh(f.name)" download="download">⬇ Download</a>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Kartu (mobile) -->
+                        <div class="cbm-file-kartu-list">
+                            <t t-foreach="state.data.files" t-as="f" t-key="f.name">
+                                <div class="cbm-file-kartu">
+                                    <div class="cbm-file-nama"><t t-esc="f.name"/></div>
+                                    <div class="cbm-file-meta">
+                                        <span class="cbm-badge-ukuran"><t t-esc="f.size"/></span>
+                                        <span><t t-esc="f.time_wib"/> WIB</span>
+                                    </div>
+                                    <a class="cbm-btn-download cbm-btn-download-blok" t-att-href="urlUnduh(f.name)" download="download">⬇ Download</a>
+                                </div>
+                            </t>
+                        </div>
+                    </t>
+                </div>
+
+                <!-- LOG (opsional) -->
+                <div class="cbm-log" t-if="state.data.log_tail">
+                    <button class="cbm-log-toggle" t-on-click="toggleLog">
+                        <t t-esc="state.logBuka ? '▾' : '▸'"/> Log backup otomatis (cron.log)
+                    </button>
+                    <pre class="cbm-log-isi" t-if="state.logBuka"><t t-esc="state.data.log_tail"/></pre>
+                </div>
+
+            </div>
+        </t>
+    </div>
+</t>
+
+</templates>

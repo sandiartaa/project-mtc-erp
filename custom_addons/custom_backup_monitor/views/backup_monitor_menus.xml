@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_backup_monitor" model="ir.actions.client">
+        <field name="name">Backup Monitor</field>
+        <field name="tag">backup_monitor_app</field>
+    </record>
+
+    <!-- Menu top-level khusus Administrator (base.group_system). -->
+    <menuitem id="menu_backup_monitor_root" name="Backup Monitor" sequence="20"
+              groups="base.group_system"/>
+    <menuitem id="menu_backup_monitor_dash" name="Dashboard"
+              parent="menu_backup_monitor_root" action="action_backup_monitor" sequence="1"
+              groups="base.group_system"/>
+</odoo>
