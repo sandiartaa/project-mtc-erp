@@ -49,6 +49,16 @@
             </div>
         </div>
 
+        <!-- TAB JENIS WORK ORDER -->
+        <div class="cwo-tabbar" t-if="state.tabTersedia.length">
+            <t t-foreach="state.tabTersedia" t-as="tb" t-key="tb.value">
+                <button t-attf-class="cwo-tab #{state.tabAktif === tb.value ? 'cwo-tab-aktif' : ''}"
+                    t-on-click="() => this.setTab(tb.value)">
+                    <t t-esc="tb.label"/>
+                </button>
+            </t>
+        </div>
+
         <!-- LOADING -->
         <t t-if="state.memuat">
             <div class="cwo-loading"><div class="cwo-spinner"/><p>Loading data...</p></div>
@@ -72,8 +82,8 @@
                             <tr class="cwo-grup-row">
                                 <th rowspan="2" class="cwo-tengah cwo-col-no">No.</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-status">Status</th>
-                                <th colspan="6" class="cwo-grup cwo-grup-pd">Product</th>
-                                <th colspan="2" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
+                                <th colspan="8" class="cwo-grup cwo-grup-pd">Product</th>
+                                <th colspan="3" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-req">Requestor</th>
                                 <th colspan="3" class="cwo-grup cwo-grup-tl">Timeline</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-ap">Approval</th>
@@ -85,9 +95,12 @@
                                 <th>Code</th>
                                 <th>Brand</th>
                                 <th>Job Type</th>
+                                <th>Production</th>
+                                <th class="cwo-tengah">Qty</th>
                                 <th>Details</th>
                                 <th class="cwo-tengah">Image</th>
-                                <th>Designer 2D/3D</th>
+                                <th>Executor</th>
+                                <th>Section</th>
                                 <th class="cwo-tengah">Local/RRC</th>
                                 <th>Req Date</th>
                                 <th>Target</th>
@@ -114,6 +127,8 @@
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
+                                    <td data-label="Production"><t t-esc="rec.production_id ? rec.production_id[1] : '—'"/></td>
+                                    <td class="cwo-tengah" data-label="Qty"><t t-esc="rec.qty or '—'"/></td>
                                     <td class="cwo-sel-details" data-label="Details"><t t-esc="rec.details or '—'"/></td>
                                     <td class="cwo-tengah" data-label="Image">
                                         <t t-if="adaGambarTampil(rec)">
@@ -130,7 +145,13 @@
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td data-label="Designer 2D/3D"><t t-esc="namaDesigner(rec) or '—'"/></td>
+                                    <td data-label="Executor"><t t-esc="namaDesigner(rec) or '—'"/></td>
+                                    <td data-label="Section">
+                                        <t t-if="rec.section_id">
+                                            <span class="cwo-badge-jt"><t t-esc="rec.section_id[1]"/></span>
+                                        </t>
+                                        <t t-else=""><span class="cwo-sel-kosong">—</span></t>
+                                    </td>
                                     <td class="cwo-tengah" data-label="Local/RRC">
                                         <t t-if="rec.lokal_rrc">
                                             <span class="cwo-badge-lr"><t t-esc="labelLokalRrc(rec.lokal_rrc)"/></span>
@@ -204,14 +225,24 @@
                                     <span class="cwo-kartu-label">Image</span>
                                     <span class="cwo-sel-kosong">No image</span>
                                 </div>
+                                <!-- Production - Qty (jika ada) -->
+                                <div class="cwo-kartu-baris" t-if="rec.production_id or rec.qty">
+                                    <span class="cwo-kartu-label">Prod / Qty</span>
+                                    <span><t t-esc="(rec.production_id ? rec.production_id[1] : '—')"/> · <t t-esc="rec.qty or '—'"/></span>
+                                </div>
                                 <!-- Details (jika ada) -->
                                 <div class="cwo-kartu-detail" t-if="rec.details">
                                     <t t-esc="rec.details"/>
                                 </div>
-                                <!-- Designer - Lokal/RRC -->
+                                <!-- Executor - Lokal/RRC -->
                                 <div class="cwo-kartu-baris">
-                                    <span class="cwo-kartu-label">Designer</span>
+                                    <span class="cwo-kartu-label">Executor</span>
                                     <span><t t-esc="barisDesigner(rec)"/></span>
+                                </div>
+                                <!-- Section -->
+                                <div class="cwo-kartu-baris" t-if="rec.section_id">
+                                    <span class="cwo-kartu-label">Section</span>
+                                    <span><span class="cwo-badge-jt"><t t-esc="rec.section_id[1]"/></span></span>
                                 </div>
                                 <!-- Requestor - Req Date -->
                                 <div class="cwo-kartu-baris">
@@ -288,6 +319,20 @@
                             </div>
                         </div>
 
+                        <!-- Type (jenis WO) -->
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Type <span class="cwo-wajib">*</span></label>
+                            <div class="cwo-status-toggle cwo-type-toggle">
+                                <t t-foreach="state.tabTersedia" t-as="tt" t-key="tt.value">
+                                    <button type="button"
+                                        t-attf-class="cwo-st-btn #{state.form.wo_type === tt.value ? 'cwo-st-aktif' : ''}"
+                                        t-on-click="() => state.form.wo_type = tt.value">
+                                        <t t-esc="tt.label"/>
+                                    </button>
+                                </t>
+                            </div>
+                        </div>
+
                         <!-- Product -->
                         <div class="cwo-seksi-judul cwo-sj-pd">Product</div>
                         <div class="cwo-form-baris-3">
@@ -336,6 +381,30 @@
                                     t-on-click="bukaJobTypeMgr">⚙ Manage</button>
                             </div>
                         </div>
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Production</label>
+                                <div class="cwo-jt-baris">
+                                    <div class="cwo-picker">
+                                        <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                            placeholder="-- Select Production --"
+                                            t-att-value="fieldNama('production')"
+                                            t-on-click="() => this.bukaFieldPicker('production')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'production'">
+                                            <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwo-btn-kelola-jt" title="Manage Production options"
+                                        t-on-click="bukaProductionMgr">⚙ Manage</button>
+                                </div>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Qty</label>
+                                <input type="text" class="cwo-form-input" placeholder="mis. 100"
+                                    t-att-value="state.form.qty"
+                                    t-on-input="(ev) => state.form.qty = ev.target.value"/>
+                            </div>
+                        </div>
                         <div class="cwo-form-grup">
                             <label class="cwo-form-label">Details</label>
                             <textarea class="cwo-form-input cwo-form-textarea" rows="4"
@@ -365,7 +434,7 @@
                         <div class="cwo-seksi-judul cwo-sj-ic">IN CHARGE</div>
                         <div class="cwo-form-baris-2">
                             <div class="cwo-form-grup">
-                                <label class="cwo-form-label">Designer 2D/3D</label>
+                                <label class="cwo-form-label">Executor</label>
                                 <div class="cwo-picker">
                                     <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
                                         placeholder="-- Select user or type a name --"
@@ -375,19 +444,35 @@
                                         <t t-call="custom_work_orders.UserPickerPanel"/>
                                     </t>
                                 </div>
-                                <span class="cwo-form-hint">Pick a system user, or type a custom designer name below.</span>
+                                <span class="cwo-form-hint">Pick a system user, or type a custom executor name below.</span>
                             </div>
                             <div class="cwo-form-grup">
-                                <label class="cwo-form-label">Local/RRC</label>
-                                <div class="cwo-picker">
-                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
-                                        placeholder="-- Select --"
-                                        t-att-value="fieldNama('lokal_rrc')"
-                                        t-on-click="() => this.bukaFieldPicker('lokal_rrc')"/>
-                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'lokal_rrc'">
-                                        <t t-call="custom_work_orders.FieldPickerPanel"/>
-                                    </t>
+                                <label class="cwo-form-label">Section</label>
+                                <div class="cwo-jt-baris">
+                                    <div class="cwo-picker">
+                                        <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                            placeholder="-- Select Section --"
+                                            t-att-value="fieldNama('section')"
+                                            t-on-click="() => this.bukaFieldPicker('section')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'section'">
+                                            <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwo-btn-kelola-jt" title="Manage Section options"
+                                        t-on-click="bukaSectionMgr">⚙ Manage</button>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Local/RRC</label>
+                            <div class="cwo-picker">
+                                <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                    placeholder="-- Select --"
+                                    t-att-value="fieldNama('lokal_rrc')"
+                                    t-on-click="() => this.bukaFieldPicker('lokal_rrc')"/>
+                                <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'lokal_rrc'">
+                                    <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                </t>
                             </div>
                         </div>
 
@@ -484,10 +569,11 @@
                     <div class="cwo-modal-isi">
                         <div class="cwo-impor-info">
                             <p>CSV columns (first row = header):</p>
-                            <code class="cwo-impor-kode">Name, Code, Brand, Job Type, Details, Designer 2D/3D, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status</code>
+                            <code class="cwo-impor-kode">Type, Name, Code, Brand, Job Type, Production, Qty, Details, Executor, Section, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status</code>
                             <ul class="cwo-impor-tips">
                                 <li><b>Name</b> is required. <b>No.</b> is generated automatically (not needed in CSV).</li>
-                                <li><b>Designer 2D/3D</b> filled with a user name; matched against users with Work Orders access.</li>
+                                <li><b>Type</b>: Design / Mold / Maintenance / Utility (default Design). <b>Production</b> &amp; <b>Section</b>: created automatically if not exist.</li>
+                                <li><b>Executor</b> filled with a user name; matched against users with Work Orders access.</li>
                                 <li><b>Requestor/Approver</b> filled with a name (e.g. P. Setiadi); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Job Type</b> filled with a name (e.g. Box, Layer); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Local/RRC</b>: Local / RRC. <b>Status</b>: Ongoing / Finished. <b>Date</b>: YYYY-MM-DD or DD/MM/YYYY.</li>
@@ -576,6 +662,108 @@
                     </div>
                     <div class="cwo-modal-footer">
                         <button class="cwo-tombol-sekunder" t-on-click="tutupBrandMgr">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA PRODUCTION ══════════ -->
+        <t t-if="state.productionMgr.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jt" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⚙ Manage Production</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupProductionMgr">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <div class="cwo-jt-tambah">
+                            <input type="text" class="cwo-form-input" placeholder="New Production name..."
+                                t-att-value="state.productionMgr.baru"
+                                t-on-input="(ev) => state.productionMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahProduction()"/>
+                            <button class="cwo-tombol-utama" t-att-disabled="state.productionMgr.proses"
+                                t-on-click="tambahProduction">+ Add</button>
+                        </div>
+                        <div class="cwo-jt-daftar">
+                            <t t-if="state.daftarProduction.length === 0">
+                                <div class="cwo-picker-kosong">No Production yet.</div>
+                            </t>
+                            <t t-foreach="state.daftarProduction" t-as="p" t-key="p.id">
+                                <div class="cwo-jt-item">
+                                    <t t-if="state.productionMgr.editId === p.id">
+                                        <input type="text" class="cwo-form-input cwo-jt-edit-input"
+                                            t-att-value="state.productionMgr.editNama"
+                                            t-on-input="(ev) => state.productionMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditProduction()"/>
+                                        <button class="cwo-ico cwo-ico-simpan" title="Save"
+                                            t-on-click="simpanEditProduction"><i class="fa fa-check"/></button>
+                                        <button class="cwo-ico" title="Cancel"
+                                            t-on-click="batalEditProduction"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwo-jt-nama"><t t-esc="p.name"/></span>
+                                        <button class="cwo-ico cwo-ico-edit" title="Edit"
+                                            t-on-click="() => this.mulaiEditProduction(p)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwo-ico cwo-ico-hapus" title="Delete"
+                                            t-on-click="() => this.konfirmasiHapusProduction(p)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupProductionMgr">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA SECTION ══════════ -->
+        <t t-if="state.sectionMgr.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jt" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>⚙ Manage Section</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupSectionMgr">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <div class="cwo-jt-tambah">
+                            <input type="text" class="cwo-form-input" placeholder="New Section name..."
+                                t-att-value="state.sectionMgr.baru"
+                                t-on-input="(ev) => state.sectionMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahSection()"/>
+                            <button class="cwo-tombol-utama" t-att-disabled="state.sectionMgr.proses"
+                                t-on-click="tambahSection">+ Add</button>
+                        </div>
+                        <div class="cwo-jt-daftar">
+                            <t t-if="state.daftarSection.length === 0">
+                                <div class="cwo-picker-kosong">No Section yet.</div>
+                            </t>
+                            <t t-foreach="state.daftarSection" t-as="s" t-key="s.id">
+                                <div class="cwo-jt-item">
+                                    <t t-if="state.sectionMgr.editId === s.id">
+                                        <input type="text" class="cwo-form-input cwo-jt-edit-input"
+                                            t-att-value="state.sectionMgr.editNama"
+                                            t-on-input="(ev) => state.sectionMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditSection()"/>
+                                        <button class="cwo-ico cwo-ico-simpan" title="Save"
+                                            t-on-click="simpanEditSection"><i class="fa fa-check"/></button>
+                                        <button class="cwo-ico" title="Cancel"
+                                            t-on-click="batalEditSection"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwo-jt-nama"><t t-esc="s.name"/></span>
+                                        <button class="cwo-ico cwo-ico-edit" title="Edit"
+                                            t-on-click="() => this.mulaiEditSection(s)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwo-ico cwo-ico-hapus" title="Delete"
+                                            t-on-click="() => this.konfirmasiHapusSection(s)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupSectionMgr">Close</button>
                     </div>
                 </div>
             </div>

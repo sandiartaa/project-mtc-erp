@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Pilihan awal Section. noupdate="1" agar user bebas CRUD
+         (rename/hapus/tambah) tanpa ditimpa saat update modul. -->
+    <data noupdate="1">
+        <record id="section_2d" model="wo.section">
+            <field name="name">2D</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="section_3d" model="wo.section">
+            <field name="name">3D</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="section_inj" model="wo.section">
+            <field name="name">INJ</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="section_deco" model="wo.section">
+            <field name="name">DECO</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="section_assy" model="wo.section">
+            <field name="name">ASSY</field>
+            <field name="sequence">50</field>
+        </record>
+    </data>
+</odoo>

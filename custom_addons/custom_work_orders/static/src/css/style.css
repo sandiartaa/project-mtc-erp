@@ -597,3 +597,27 @@
 .cwo-design-item, .cwo-revisi-item { position: relative; }
 .cwo-hist-hapus { position: absolute; top: 8px; right: 8px; z-index: 2; }
 .cwo-design-isi, .cwo-revisi-isi { padding-right: 30px; }
+
+/* ── TAB jenis Work Order ── */
+.cwo-tabbar {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin: 0 24px 16px; padding: 6px;
+    background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+.cwo-tab {
+    border: none; background: transparent; color: #6b7280;
+    font-size: 13.5px; font-weight: 700; padding: 10px 20px; border-radius: 9px;
+    cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+}
+.cwo-tab:hover { background: #f3f4f6; color: #374151; }
+.cwo-tab-aktif { background: #714B67; color: #fff; }
+.cwo-tab-aktif:hover { background: #5d3d55; color: #fff; }
+
+/* Toggle Type di form (4 tombol, boleh wrap) */
+.cwo-type-toggle { display: flex; flex-wrap: wrap; gap: 6px; }
+.cwo-type-toggle .cwo-st-btn { border-radius: 8px; border: 1.5px solid #e5e7eb; }
+
+@media (max-width: 768px) {
+    .cwo-tabbar { margin: 0 12px 12px; overflow-x: auto; flex-wrap: nowrap; }
+    .cwo-tab { flex: 0 0 auto; padding: 10px 16px; }
+}

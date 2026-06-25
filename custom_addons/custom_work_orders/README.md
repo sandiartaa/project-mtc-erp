@@ -31,6 +31,17 @@ Odoo aktif (default sudah aktif saat menjalankan odoo-bin).
 - `wo.revision` — riwayat revisi tiap Work Order (dibuat saat pengajuan approval ditolak; mencatat isi revisi, **gambar opsional**, oleh siapa, kapan).
 - `wo.design.image` — riwayat per pengajuan "Ready for Approval": description (wajib) + image (opsional), oleh siapa, kapan.
 - `wo.audit` — log aktivitas Work Order (create/edit/delete): siapa, apa, kapan. Dibaca lewat tombol **History** (khusus akses Full).
+- `wo.production` — daftar pilihan Production (dropdown CRUD + search).
+- `wo.section` — daftar pilihan Section (dropdown CRUD + search). Default: 2D, 3D, INJ, DECO, ASSY.
+
+## Jenis Work Order & Tab
+- Tiap Work Order punya **Type**: **Design / Mold / Maintenance / Utility** (wajib dipilih saat Add).
+- Daftar ditampilkan per **tab** sesuai Type (tab Design hanya menampilkan WO Design, dst).
+- **Admin mengatur tab mana yang muncul untuk tiap user** lewat **Master User** (grup `WO Tab: Design/Mold/Maintenance/Utility`). Jika user tidak dicentang satu pun tab, ia melihat **semua** tab (default tanpa batasan); Administrator selalu melihat semua.
+
+## Kolom baru
+- **Production** (dropdown CRUD), **Qty** (sebelum Details), **Section** (di sebelah Executor, dropdown CRUD: 2D/3D/INJ/DECO/ASSY).
+- **Executor** = nama lama "Designer 2D/3D" (field sama, hanya label). Tetap bisa pilih user sistem atau ketik nama custom.
 
 ## Designer (dropdown ATAU ketik custom)
 Field **Designer 2D/3D** bisa dipilih dari daftar user sistem **atau** diketik bebas

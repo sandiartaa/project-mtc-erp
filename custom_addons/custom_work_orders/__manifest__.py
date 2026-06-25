@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Work Orders',
-    'version': '1.5.2',
+    'version': '1.6.0',
     'category': 'Custom',
     'summary': 'Manajemen Work Order: Product Details, InCharge, Timeline',
     'description': """
@@ -23,6 +23,7 @@ Akses dikelola lewat grup (bisa diatur dari Master User).
         'data/sequence.xml',
         'data/job_types.xml',
         'data/persons.xml',
+        'data/sections.xml',
         'views/work_orders_menus.xml',
     ],
     'assets': {

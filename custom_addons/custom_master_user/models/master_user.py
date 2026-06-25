@@ -11,6 +11,11 @@ MODUL_AKSES = [
     ('custom_work_orders.group_work_orders_user', 'Work Orders (Full)'),
     ('custom_work_orders.group_work_orders_designer', 'Work Orders (Designer)'),
     ('custom_work_orders.group_work_orders_readonly', 'Work Orders (Read-only)'),
+    # Tab jenis Work Order yang muncul untuk user (kosong = semua tab).
+    ('custom_work_orders.group_wo_type_design', 'WO Tab: Design'),
+    ('custom_work_orders.group_wo_type_mold', 'WO Tab: Mold'),
+    ('custom_work_orders.group_wo_type_maintenance', 'WO Tab: Maintenance'),
+    ('custom_work_orders.group_wo_type_utility', 'WO Tab: Utility'),
     # Work Order Mold — modul kembar, 3 level akses yang sama.
     ('custom_work_orders_mold.group_wom_user', 'Work Order Mold (Full)'),
     ('custom_work_orders_mold.group_wom_designer', 'Work Order Mold (Designer)'),

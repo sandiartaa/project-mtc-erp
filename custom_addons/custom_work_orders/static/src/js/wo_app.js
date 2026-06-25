@@ -45,10 +45,16 @@ class WoApp extends Component {
             filterTglDari: "",
             filterTglSampai: "",
             daftarDesignerFilter: [], // pilihan designer untuk dropdown filter
-            daftarUser: [],   // user (akses Work Orders) untuk Designer
+            daftarUser: [],   // user (akses Work Orders) untuk Executor
             daftarJobType: [], // pilihan Job Type (model wo.job.type, bisa di-CRUD)
             daftarPerson: [],  // pilihan Requestor/Approver (model wo.person, bisa di-CRUD)
             daftarBrand: [],   // pilihan Brand (model wo.brand, bisa di-CRUD)
+            daftarProduction: [], // pilihan Production (model wo.production, bisa di-CRUD)
+            daftarSection: [],    // pilihan Section (model wo.section, bisa di-CRUD)
+
+            // Tab jenis Work Order
+            tabTersedia: [],   // [{value,label}] tab yang boleh dilihat user
+            tabAktif: "",      // jenis WO yang sedang ditampilkan
 
             // Pengelola Job Type (CRUD daftar dropdown)
             jobTypeMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
@@ -56,6 +62,10 @@ class WoApp extends Component {
             personMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
             // Pengelola Brand (CRUD daftar dropdown)
             brandMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
+            // Pengelola Production (CRUD daftar dropdown)
+            productionMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
+            // Pengelola Section (CRUD daftar dropdown)
+            sectionMgr: { buka: false, baru: "", editId: null, editNama: "", proses: false },
 
             // Picker user generik (target: incharge) + input nama custom (designer ketik bebas)
             userPicker: { buka: false, target: "", cari: "", halaman: 1, custom: "" },
@@ -69,14 +79,19 @@ class WoApp extends Component {
                 id: null,
                 menyimpan: false,
                 wo_number: "",
+                // Jenis WO (tab)
+                wo_type: "design",
                 // Product
                 name: "",
                 code: "",
                 brand_id: "", brand_nama: "",
                 job_type_id: "", job_type_nama: "",
+                production_id: "", production_nama: "",
+                qty: "",
                 details: "",
                 // IN CHARGE (incharge_id = user sistem; incharge_custom = nama ketik bebas)
                 incharge_id: "", incharge_nama: "", incharge_custom: "",
+                section_id: "", section_nama: "",
                 lokal_rrc: "",
                 // Requestor
                 requestor_id: "", requestor_nama: "",
@@ -123,10 +138,11 @@ class WoApp extends Component {
             // Daftarkan diri ke channel bus & mulai dengarkan sinyal perubahan.
             this.bus.addChannel(this._WO_CHANNEL);
             this.bus.subscribe(this._WO_TYPE, this._onWoChanged);
-            await this.muatHakAkses();
+            await Promise.all([this.muatHakAkses(), this.muatTab()]);
             await Promise.all([
                 this.muatData(), this.muatUser(),
                 this.muatJobType(), this.muatPerson(), this.muatBrand(),
+                this.muatProduction(), this.muatSection(),
                 this.muatDesignerFilter(),
             ]);
         });
@@ -142,6 +158,10 @@ class WoApp extends Component {
         this.state.memuat = true;
         try {
             const domain = [];
+            // Filter berdasarkan tab jenis WO yang aktif.
+            if (this.state.tabAktif) {
+                domain.push(["wo_type", "=", this.state.tabAktif]);
+            }
             const cari = (this.state.cari || "").trim();
             if (cari) {
                 domain.push(
@@ -167,9 +187,10 @@ class WoApp extends Component {
             this.state.list = await this.orm.searchRead(
                 "wo.work.order",
                 domain,
-                ["id", "wo_number", "name", "code", "brand_id", "job_type_id", "details", "image_ada",
+                ["id", "wo_number", "wo_type", "name", "code", "brand_id", "job_type_id",
+                 "production_id", "qty", "details", "image_ada",
                  "design_image_ada", "last_design_image_id", "design_count",
-                 "incharge_id", "incharge_custom", "lokal_rrc", "requestor_id", "create_uid",
+                 "incharge_id", "incharge_custom", "section_id", "lokal_rrc", "requestor_id", "create_uid",
                  "request_date", "target_date", "finish_date",
                  "approver_id", "approval_date", "status", "approval_state", "revisi_count"],
                 { order: "id desc" }
@@ -189,6 +210,48 @@ class WoApp extends Component {
         } catch (e) {
             console.error("Gagal memuat user:", e);
         }
+    }
+
+    async muatTab() {
+        try {
+            const tabs = await this.orm.call("wo.work.order", "tab_tersedia", []);
+            this.state.tabTersedia = tabs || [];
+            // Set tab aktif ke tab pertama yang tersedia bila belum valid.
+            const adaAktif = this.state.tabTersedia.some((t) => t.value === this.state.tabAktif);
+            if (!adaAktif) {
+                this.state.tabAktif = this.state.tabTersedia.length ? this.state.tabTersedia[0].value : "design";
+            }
+        } catch (e) {
+            console.error("Gagal memuat tab:", e);
+            this.state.tabTersedia = [];
+            this.state.tabAktif = "design";
+        }
+    }
+
+    async muatProduction() {
+        try {
+            this.state.daftarProduction = await this.orm.call("wo.production", "daftar_production", []);
+        } catch (e) {
+            console.error("Gagal memuat Production:", e);
+        }
+    }
+
+    async muatSection() {
+        try {
+            this.state.daftarSection = await this.orm.call("wo.section", "daftar_section", []);
+        } catch (e) {
+            console.error("Gagal memuat Section:", e);
+        }
+    }
+
+    setTab(value) {
+        if (this.state.tabAktif === value) return;
+        this.state.tabAktif = value;
+        this.muatData();
+    }
+    labelTab(value) {
+        const t = this.state.tabTersedia.find((x) => x.value === value);
+        return t ? t.label : value;
     }
 
     async muatHakAkses() {
@@ -700,6 +763,16 @@ class WoApp extends Component {
                 nama: () => f.job_type_nama,
                 set: (it) => { f.job_type_id = it ? String(it.key) : ""; f.job_type_nama = it ? it.label : ""; },
             },
+            production: {
+                sumber: () => this.state.daftarProduction.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.production_nama,
+                set: (it) => { f.production_id = it ? String(it.key) : ""; f.production_nama = it ? it.label : ""; },
+            },
+            section: {
+                sumber: () => this.state.daftarSection.map(x => ({ key: x.id, label: x.name })),
+                nama: () => f.section_nama,
+                set: (it) => { f.section_id = it ? String(it.key) : ""; f.section_nama = it ? it.label : ""; },
+            },
             lokal_rrc: {
                 sumber: () => this.lokalRrcPilihan.map(x => ({ key: x.value, label: x.label })),
                 nama: () => this.labelLokalRrcNama(),
@@ -765,10 +838,14 @@ class WoApp extends Component {
         const f = this.state.form;
         f.buka = true; f.mode = "tambah"; f.id = null; f.menyimpan = false;
         f.wo_number = "";
+        // Default jenis = tab yang sedang aktif.
+        f.wo_type = this.state.tabAktif || "design";
         f.name = ""; f.code = "";
         f.brand_id = ""; f.brand_nama = "";
-        f.job_type_id = ""; f.job_type_nama = ""; f.details = "";
-        f.incharge_id = ""; f.incharge_nama = ""; f.incharge_custom = ""; f.lokal_rrc = "";
+        f.job_type_id = ""; f.job_type_nama = "";
+        f.production_id = ""; f.production_nama = ""; f.qty = ""; f.details = "";
+        f.incharge_id = ""; f.incharge_nama = ""; f.incharge_custom = "";
+        f.section_id = ""; f.section_nama = ""; f.lokal_rrc = "";
         f.requestor_id = ""; f.requestor_nama = "";
         f.request_date = ""; f.target_date = ""; f.finish_date = "";
         f.approver_id = ""; f.approver_nama = ""; f.approval_date = "";
@@ -776,23 +853,30 @@ class WoApp extends Component {
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false; f.image_ada = false;
         this.tutupUserPicker();
         this.tutupFieldPicker();
-        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand()]);
+        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
+            this.muatProduction(), this.muatSection()]);
     }
 
     async bukaFormEdit(rec) {
         const f = this.state.form;
         f.buka = true; f.mode = "edit"; f.id = rec.id; f.menyimpan = false;
         f.wo_number = rec.wo_number || "";
+        f.wo_type = rec.wo_type || "design";
         f.name = rec.name || "";
         f.code = rec.code || "";
         f.brand_id = rec.brand_id ? String(rec.brand_id[0]) : "";
         f.brand_nama = rec.brand_id ? rec.brand_id[1] : "";
         f.job_type_id = rec.job_type_id ? String(rec.job_type_id[0]) : "";
         f.job_type_nama = rec.job_type_id ? rec.job_type_id[1] : "";
+        f.production_id = rec.production_id ? String(rec.production_id[0]) : "";
+        f.production_nama = rec.production_id ? rec.production_id[1] : "";
+        f.qty = rec.qty || "";
         f.details = rec.details || "";
         f.incharge_id = rec.incharge_id ? String(rec.incharge_id[0]) : "";
         f.incharge_nama = rec.incharge_id ? rec.incharge_id[1] : "";
         f.incharge_custom = rec.incharge_custom || "";
+        f.section_id = rec.section_id ? String(rec.section_id[0]) : "";
+        f.section_nama = rec.section_id ? rec.section_id[1] : "";
         f.lokal_rrc = rec.lokal_rrc || "";
         f.requestor_id = rec.requestor_id ? String(rec.requestor_id[0]) : "";
         f.requestor_nama = rec.requestor_id ? rec.requestor_id[1] : "";
@@ -807,7 +891,8 @@ class WoApp extends Component {
         f.image_ada = !!rec.image_ada;
         this.tutupUserPicker();
         this.tutupFieldPicker();
-        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand()]);
+        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
+            this.muatProduction(), this.muatSection()]);
     }
 
     tutupForm() { this.state.form.buka = false; this.tutupUserPicker(); this.tutupFieldPicker(); }
@@ -842,13 +927,17 @@ class WoApp extends Component {
         f.menyimpan = true;
         try {
             const vals = {
+                wo_type: f.wo_type || "design",
                 name: f.name.trim(),
                 code: f.code ? f.code.trim() : false,
                 brand_id: f.brand_id ? parseInt(f.brand_id) : false,
                 job_type_id: f.job_type_id ? parseInt(f.job_type_id) : false,
+                production_id: f.production_id ? parseInt(f.production_id) : false,
+                qty: f.qty ? f.qty.trim() : false,
                 details: f.details ? f.details.trim() : false,
                 incharge_id: f.incharge_id ? parseInt(f.incharge_id) : false,
                 incharge_custom: (!f.incharge_id && f.incharge_custom) ? f.incharge_custom.trim() : false,
+                section_id: f.section_id ? parseInt(f.section_id) : false,
                 lokal_rrc: f.lokal_rrc || false,
                 requestor_id: f.requestor_id ? parseInt(f.requestor_id) : false,
                 request_date: f.request_date || false,
@@ -943,6 +1032,128 @@ class WoApp extends Component {
         } catch (e) {
             console.error("Gagal hapus Brand:", e);
             this.notification.add("Failed to delete Brand.", { type: "danger" });
+        }
+    }
+
+    // ─── PRODUCTION (dropdown CRUD) ──────────────────────────────────────────
+    bukaProductionMgr() {
+        const m = this.state.productionMgr;
+        m.buka = true; m.baru = ""; m.editId = null; m.editNama = ""; m.proses = false;
+    }
+    tutupProductionMgr() { this.state.productionMgr.buka = false; }
+    async tambahProduction() {
+        const m = this.state.productionMgr;
+        const nama = (m.baru || "").trim();
+        if (!nama) { this.notification.add("Production name is empty.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.create("wo.production", [{ name: nama }]);
+            m.baru = "";
+            await this.muatProduction();
+            this.notification.add("Production added.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah Production:", e);
+            this.notification.add("Failed to add (name may already exist).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    mulaiEditProduction(p) { const m = this.state.productionMgr; m.editId = p.id; m.editNama = p.name; }
+    batalEditProduction() { const m = this.state.productionMgr; m.editId = null; m.editNama = ""; }
+    async simpanEditProduction() {
+        const m = this.state.productionMgr;
+        const nama = (m.editNama || "").trim();
+        if (!nama) { this.notification.add("Production name is empty.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.write("wo.production", [m.editId], { name: nama });
+            m.editId = null; m.editNama = "";
+            await Promise.all([this.muatProduction(), this.muatData()]);
+            this.notification.add("Production updated.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah Production:", e);
+            this.notification.add("Failed to update (name may already exist).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    konfirmasiHapusProduction(p) {
+        this.tampilKonfirmasi({
+            judul: "Delete Production",
+            pesan: `Delete Production <b>${p.name}</b>?<br/>Work Orders using it will have their Production field cleared.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
+            aksi: () => this.lakukanHapusProduction(p),
+        });
+    }
+    async lakukanHapusProduction(p) {
+        try {
+            await this.orm.unlink("wo.production", [p.id]);
+            const f = this.state.form;
+            if (String(f.production_id) === String(p.id)) { f.production_id = ""; f.production_nama = ""; }
+            await Promise.all([this.muatProduction(), this.muatData()]);
+            this.notification.add("Production deleted.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus Production:", e);
+            this.notification.add("Failed to delete Production.", { type: "danger" });
+        }
+    }
+
+    // ─── SECTION (dropdown CRUD) ─────────────────────────────────────────────
+    bukaSectionMgr() {
+        const m = this.state.sectionMgr;
+        m.buka = true; m.baru = ""; m.editId = null; m.editNama = ""; m.proses = false;
+    }
+    tutupSectionMgr() { this.state.sectionMgr.buka = false; }
+    async tambahSection() {
+        const m = this.state.sectionMgr;
+        const nama = (m.baru || "").trim();
+        if (!nama) { this.notification.add("Section name is empty.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.create("wo.section", [{ name: nama }]);
+            m.baru = "";
+            await this.muatSection();
+            this.notification.add("Section added.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal tambah Section:", e);
+            this.notification.add("Failed to add (name may already exist).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    mulaiEditSection(s) { const m = this.state.sectionMgr; m.editId = s.id; m.editNama = s.name; }
+    batalEditSection() { const m = this.state.sectionMgr; m.editId = null; m.editNama = ""; }
+    async simpanEditSection() {
+        const m = this.state.sectionMgr;
+        const nama = (m.editNama || "").trim();
+        if (!nama) { this.notification.add("Section name is empty.", { type: "warning" }); return; }
+        m.proses = true;
+        try {
+            await this.orm.write("wo.section", [m.editId], { name: nama });
+            m.editId = null; m.editNama = "";
+            await Promise.all([this.muatSection(), this.muatData()]);
+            this.notification.add("Section updated.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal ubah Section:", e);
+            this.notification.add("Failed to update (name may already exist).", { type: "danger" });
+        }
+        m.proses = false;
+    }
+    konfirmasiHapusSection(s) {
+        this.tampilKonfirmasi({
+            judul: "Delete Section",
+            pesan: `Delete Section <b>${s.name}</b>?<br/>Work Orders using it will have their Section field cleared.`,
+            labelYa: "Yes, Delete", warnaYa: "merah",
+            aksi: () => this.lakukanHapusSection(s),
+        });
+    }
+    async lakukanHapusSection(s) {
+        try {
+            await this.orm.unlink("wo.section", [s.id]);
+            const f = this.state.form;
+            if (String(f.section_id) === String(s.id)) { f.section_id = ""; f.section_nama = ""; }
+            await Promise.all([this.muatSection(), this.muatData()]);
+            this.notification.add("Section deleted.", { type: "success" });
+        } catch (e) {
+            console.error("Gagal hapus Section:", e);
+            this.notification.add("Failed to delete Section.", { type: "danger" });
         }
     }
 
@@ -1197,10 +1408,12 @@ class WoApp extends Component {
         }
     }
     unduhTemplate() {
-        const headers = ["Name", "Code", "Brand", "Job Type", "Details", "Designer 2D/3D", "Lokal/RRC",
+        const headers = ["Type", "Name", "Code", "Brand", "Job Type", "Production", "Qty", "Details",
+                         "Executor", "Section", "Lokal/RRC",
                          "Requestor", "Req Date", "Target", "Finish Date",
                          "Approver", "Approval Date", "Status"];
-        const contoh = ["Sample WO", "WO-001", "BrandX", "Box", "Note line 1", "Administrator", "Local",
+        const contoh = ["Design", "Sample WO", "WO-001", "BrandX", "Box", "Line A", "100", "Note line 1",
+                        "Administrator", "2D", "Local",
                         "Administrator", "2026-06-20", "2026-07-01", "",
                         "Administrator", "", "Ongoing"];
         const cell = (v) => {

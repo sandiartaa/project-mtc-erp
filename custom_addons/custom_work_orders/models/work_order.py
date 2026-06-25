@@ -18,6 +18,13 @@ class WoWorkOrder(models.Model):
         'No.', readonly=True, copy=False, default='New', index=True
     )
 
+    # ── Jenis Work Order (penentu TAB) ──
+    wo_type = fields.Selection(
+        [('design', 'Design'), ('mold', 'Mold'),
+         ('maintenance', 'Maintenance'), ('utility', 'Utility')],
+        string='Type', required=True, default='design', index=True
+    )
+
     # ── Product ──
     name = fields.Char('Name', required=True, index=True)
     code = fields.Char('Code', index=True)
@@ -25,6 +32,10 @@ class WoWorkOrder(models.Model):
     brand_id = fields.Many2one('wo.brand', 'Brand', ondelete='set null')
     # Job Type — dropdown ke model custom wo.job.type (isinya bisa di-CRUD).
     job_type_id = fields.Many2one('wo.job.type', 'Job Type', ondelete='set null')
+    # Production — dropdown ke model custom wo.production (bisa di-CRUD & search).
+    production_id = fields.Many2one('wo.production', 'Production', ondelete='set null')
+    # Qty (jumlah) — teks bebas agar fleksibel (bisa angka atau "100 pcs").
+    qty = fields.Char('Qty')
     details = fields.Text('Details')
     # Image referensi dari pembuat WO (acuan untuk designer mengerjakan).
     image = fields.Binary('Reference Image', attachment=True)
@@ -51,10 +62,12 @@ class WoWorkOrder(models.Model):
     )
 
     # ── IN CHARGE ──
-    # Designer 2D/3D: user yang punya akses modul Work Orders (lihat users_incharge).
-    incharge_id = fields.Many2one('res.users', 'Designer 2D/3D', ondelete='set null')
-    # Nama designer ketikan bebas (dipakai bila designer bukan user sistem).
-    incharge_custom = fields.Char('Designer (Custom)')
+    # Executor: user yang punya akses modul Work Orders (lihat users_incharge).
+    incharge_id = fields.Many2one('res.users', 'Executor', ondelete='set null')
+    # Nama executor ketikan bebas (dipakai bila executor bukan user sistem).
+    incharge_custom = fields.Char('Executor (Custom)')
+    # Section — dropdown ke model custom wo.section (mis. 2D/3D/INJ/DECO/ASSY).
+    section_id = fields.Many2one('wo.section', 'Section', ondelete='set null')
     lokal_rrc = fields.Selection(
         [('lokal', 'Lokal'), ('rrc', 'RRC')], string='Lokal/RRC'
     )
@@ -237,6 +250,35 @@ class WoWorkOrder(models.Model):
             'designer': u.has_group('custom_work_orders.group_work_orders_designer'),
             'readonly': u.has_group('custom_work_orders.group_work_orders_readonly'),
         }
+
+    # Urutan & label jenis Work Order (penentu tab).
+    _WO_TYPES = [
+        ('design', 'Design'), ('mold', 'Mold'),
+        ('maintenance', 'Maintenance'), ('utility', 'Utility'),
+    ]
+
+    @api.model
+    def tab_tersedia(self):
+        """Tab jenis WO yang boleh dilihat user (diatur admin via Master User).
+        - Administrator, atau user yang TIDAK punya satu pun grup tab -> SEMUA tab.
+        - Selain itu -> hanya tab yang grupnya dimiliki user."""
+        u = self.env.user
+        semua = [{'value': v, 'label': l} for v, l in self._WO_TYPES]
+        if u.has_group('base.group_system'):
+            return semua
+        dipilih = [{'value': v, 'label': l} for v, l in self._WO_TYPES
+                   if u.has_group('custom_work_orders.group_wo_type_%s' % v)]
+        return dipilih or semua
+
+    @api.model
+    def daftar_production(self):
+        """Daftar production untuk dropdown (delegasi ke model wo.production)."""
+        return self.env['wo.production'].daftar_production()
+
+    @api.model
+    def daftar_section(self):
+        """Daftar section untuk dropdown (delegasi ke model wo.section)."""
+        return self.env['wo.section'].daftar_section()
 
     @api.model
     def daftar_designer_filter(self):
@@ -441,6 +483,37 @@ class WoWorkOrder(models.Model):
                 persons[key] = Person.create({'name': nama}).id
             return persons[key]
 
+        # Cache production: nama(lower) -> id. Buat baru bila belum ada.
+        Production = self.env['wo.production']
+        productions = {(p['name'] or '').strip().lower(): p['id']
+                       for p in Production.daftar_production()}
+
+        def production_id(nama):
+            if not nama:
+                return False
+            key = nama.lower()
+            if key not in productions:
+                productions[key] = Production.create({'name': nama}).id
+            return productions[key]
+
+        # Cache section: nama(lower) -> id. Buat baru bila belum ada.
+        Section = self.env['wo.section']
+        sections = {(s['name'] or '').strip().lower(): s['id']
+                    for s in Section.daftar_section()}
+
+        def section_id(nama):
+            if not nama:
+                return False
+            key = nama.lower()
+            if key not in sections:
+                sections[key] = Section.create({'name': nama}).id
+            return sections[key]
+
+        type_map = {
+            'design': 'design', 'mold': 'mold',
+            'maintenance': 'maintenance', 'utility': 'utility',
+        }
+
         vals_list = []
         for r in rows:
             name = ambil(r, 'Name', 'name', 'Nama', 'NAMA')
@@ -451,14 +524,19 @@ class WoWorkOrder(models.Model):
             approver = ambil(r, 'Approver', 'approver')
             lr = ambil(r, 'Lokal/RRC', 'LokalRRC', 'Lokal RRC', 'lokal_rrc', 'lokal/rrc').lower()
             stat = ambil(r, 'Status', 'status').lower()
+            tipe = ambil(r, 'Type', 'type', 'Jenis', 'jenis', 'Tab').lower()
             vals_list.append({
                 'name': name,
+                'wo_type': type_map.get(tipe, 'design'),
                 'code': ambil(r, 'Code', 'code') or False,
                 'brand_id': brand_id(ambil(r, 'Brand', 'brand', 'Merek')),
                 'job_type_id': job_type_id(ambil(r, 'Job Type', 'JobType', 'job_type', 'Tipe')),
+                'production_id': production_id(ambil(r, 'Production', 'production', 'Produksi')),
+                'qty': ambil(r, 'Qty', 'qty', 'Quantity', 'Jumlah') or False,
                 'details': ambil(r, 'Details', 'details') or False,
                 # Image TIDAK diimpor — dimasukkan/diedit manual lewat form.
                 'incharge_id': user_id(designer),
+                'section_id': section_id(ambil(r, 'Section', 'section', 'Seksi')),
                 'lokal_rrc': lr_map.get(lr, False),
                 'requestor_id': person_id(requestor),
                 'request_date': self._parse_tanggal(ambil(r, 'Req Date', 'Request', 'request', 'Req')),
