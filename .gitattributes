@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Script shell WAJIB akhir baris LF (Unix) walau di-checkout/scp dari Windows,
+# supaya jalan di server (CRLF bikin bash error: "set: pipefail: invalid option name").
+*.sh text eol=lf
