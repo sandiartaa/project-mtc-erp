@@ -15,14 +15,19 @@ Dashboard khusus **Administrator** untuk memantau backup server: daftar file bac
 - Disk = `shutil.disk_usage`, CPU = `os.getloadavg`, RAM = `/proc/meminfo` (Linux).
 - Unduh lewat controller `/backup_monitor/download` (hanya admin, nama file divalidasi ketat — tidak bisa keluar folder backup).
 
-## ⚠️ Wajib di server: mount folder backup ke container
-Agar Odoo (di dalam Docker) bisa membaca `/opt/odoo/backups`, tambahkan bind-mount
-pada service `odoo19` (dan `odoo19-sandbox` bila perlu), lalu recreate container:
+## ⚠️ Wajib di server: mount folder backup ke container (read-only)
+Agar Odoo (di dalam Docker) bisa membaca `/opt/odoo/backups`, tambahkan bind-mount.
+Paling rapi pakai **file override** (tidak menyentuh compose utama) di
+`/opt/odoo/project-odoo-mtc/docker-compose.override.yml`:
 ```yaml
-volumes:
-  - /opt/odoo/backups:/opt/odoo/backups
+services:
+  odoo:
+    volumes:
+      - /opt/odoo/backups:/opt/odoo/backups:ro
 ```
-Tanpa mount ini, daftar file & disk akan kosong (modul tetap jalan, hanya tidak ada data).
+Lalu `docker compose up -d` untuk recreate. (`:ro` = read-only, Odoo tak bisa
+mengubah/menghapus backup. Uji kecepatan disk menulis ke /tmp, jadi tetap jalan.)
+Tanpa mount ini, daftar file & disk akan kosong (modul tetap jalan, hanya tanpa data).
 
 Folder backup bisa diganti lewat **Settings → Technical → System Parameters**,
 kunci `custom_backup_monitor.dir`.

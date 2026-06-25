@@ -149,12 +149,12 @@ class BackupMonitor(models.TransientModel):
     # ── Uji kecepatan disk ────────────────────────────────────────────────────
     @api.model
     def disk_speed_test(self):
-        """Tulis & baca file sementara ~64MB untuk mengukur kecepatan disk server."""
+        """Tulis & baca file sementara ~64MB untuk mengukur kecepatan disk server.
+        Ditulis ke folder /tmp (selalu writable) agar folder backup boleh di-mount
+        read-only — disk fisiknya sama, jadi hasilnya tetap mewakili kecepatan server."""
         self._cek_admin()
-        d = self._dir_backup()
-        if not os.path.isdir(d):
-            d = os.path.abspath(os.sep)
-        path = os.path.join(d, '.speedtest.tmp')
+        import tempfile
+        path = os.path.join(tempfile.gettempdir(), '.bm_speedtest.tmp')
         size_mb = 64
         chunk = b'\0' * (1024 * 1024)
         try:
