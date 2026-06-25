@@ -47,11 +47,17 @@ git checkout dev            # balik ke dev untuk kerja berikutnya
 ## 🏭 Tahap 4 — Terapkan di PRODUCTION (:8069)
 Di SSH server:
 ```bash
+# 0) BACKUP DULU (pengaman) — DB + filestore jadi 1 .tar.gz
+bash /opt/odoo/project-odoo-mtc/deploy/backup-server.sh production
+
 cd /opt/odoo/project-odoo-mtc
 git pull                                    # tarik perubahan branch main
 bash /opt/odoo/project-odoo-mtc/deploy/upgrade.sh odoo19 NAMA_MODUL
 ```
-Cek **http://5.223.95.218:8069**. Selesai — kode resmi naik produksi.
+Cek **http://5.223.95.218:8069** (atau https://mtc-erp.com). Selesai — kode resmi naik produksi.
+
+> 💾 **Selalu jalankan `backup-server.sh production` sebelum upgrade produksi.** Hasilnya
+> `/opt/odoo/backup_production_<tanggal>.tar.gz` — kalau perlu balik: `bash deploy/restore.sh production <file>`.
 
 ---
 

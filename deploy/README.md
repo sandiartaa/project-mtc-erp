@@ -21,6 +21,7 @@ Folder ini berisi script & panduan untuk mengirim/meng-update project Odoo ke se
 | Script | Fungsi | Dijalankan di |
 |--------|--------|---------------|
 | `backup.sh` | Backup database lokal (dump + filestore, auto-tambal PG18→16) | Lokal (Git Bash) |
+| `backup-server.sh` | Backup DB + filestore di server (sandbox/produksi) → `.tar.gz` siap restore | Server |
 | `restore.sh` | Restore backup ke **sandbox** / **produksi** | Server |
 | `upgrade.sh` | Upgrade 1 modul di container lalu restart | Server |
 
