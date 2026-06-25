@@ -78,9 +78,9 @@ class WoWorkOrder(models.Model):
     # sebenarnya) — selalu user yang login, bukan superuser/OdooBot.
 
     # ── Timeline ──
-    request_date = fields.Date('Req Date')
-    target_date = fields.Date('Target')
-    finish_date = fields.Date('Finish Date')
+    request_date = fields.Date('Req Date')   # ditampilkan di bagian Requestor (Date)
+    lead_time = fields.Char('Lead Time (Hour)')
+    finish_date = fields.Date('Target Finish (Date)')
 
     # ── Approval ── (daftar custom wo.person, bukan res.users)
     approver_id = fields.Many2one('wo.person', 'Approver', ondelete='set null')
@@ -543,8 +543,8 @@ class WoWorkOrder(models.Model):
                 'lokal_rrc': lr_map.get(lr, False),
                 'requestor_id': person_id(requestor),
                 'request_date': self._parse_tanggal(ambil(r, 'Req Date', 'Request', 'request', 'Req')),
-                'target_date': self._parse_tanggal(ambil(r, 'Target', 'target', 'Deadline')),
-                'finish_date': self._parse_tanggal(ambil(r, 'Finish Date', 'Finish', 'finish_date')),
+                'lead_time': ambil(r, 'Lead Time (Hour)', 'Lead Time', 'LeadTime', 'lead_time') or False,
+                'finish_date': self._parse_tanggal(ambil(r, 'Target Finish (Date)', 'Target Finish', 'Finish Date', 'Finish', 'finish_date')),
                 'approver_id': person_id(approver),
                 'approval_date': self._parse_tanggal(ambil(r, 'Approval Date', 'Date', 'Approval', 'approval')),
                 'status': stat_map.get(stat, 'ongoing'),

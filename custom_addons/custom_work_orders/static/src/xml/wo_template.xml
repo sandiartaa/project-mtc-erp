@@ -104,8 +104,8 @@
                                 <th class="cwo-tengah">Local/RRC</th>
                                 <th>Name</th>
                                 <th>Date</th>
-                                <th>Target</th>
-                                <th>Finish Date</th>
+                                <th>Lead Time (Hour)</th>
+                                <th>Target Finish (Date)</th>
                                 <th>Approver</th>
                                 <th>Date</th>
                             </tr>
@@ -166,8 +166,8 @@
                                         </div>
                                     </td>
                                     <td data-label="Requestor Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
-                                    <td data-label="Target"><t t-esc="formatTanggal(rec.target_date)"/></td>
-                                    <td data-label="Finish Date"><t t-esc="formatTanggal(rec.finish_date)"/></td>
+                                    <td class="cwo-tengah" data-label="Lead Time (Hour)"><t t-esc="rec.lead_time or '—'"/></td>
+                                    <td data-label="Target Finish (Date)"><t t-esc="formatTanggal(rec.finish_date)"/></td>
                                     <td data-label="Approver"><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
                                     <td data-label="Approval Date"><t t-esc="formatTanggal(rec.approval_date)"/></td>
                                     <td class="cwo-tengah" data-label="Ready Approval">
@@ -256,9 +256,9 @@
                                     <span><i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/></span>
                                 </div>
                                 <!-- Target / Finish (jika ada) -->
-                                <div class="cwo-kartu-baris" t-if="rec.target_date or rec.finish_date">
-                                    <span class="cwo-kartu-label">Target/Finish</span>
-                                    <span><t t-esc="formatTanggal(rec.target_date)"/> · <t t-esc="formatTanggal(rec.finish_date)"/></span>
+                                <div class="cwo-kartu-baris" t-if="rec.lead_time or rec.finish_date">
+                                    <span class="cwo-kartu-label">Lead/Target</span>
+                                    <span><t t-esc="rec.lead_time or '—'"/> jam · <t t-esc="formatTanggal(rec.finish_date)"/></span>
                                 </div>
                                 <!-- Approver - Approval Date (paling bawah) -->
                                 <div class="cwo-kartu-baris">
@@ -508,13 +508,13 @@
                         <div class="cwo-seksi-judul cwo-sj-tl">Timeline</div>
                         <div class="cwo-form-baris-2">
                             <div class="cwo-form-grup">
-                                <label class="cwo-form-label">Target</label>
-                                <input type="date" class="cwo-form-input"
-                                    t-att-value="state.form.target_date"
-                                    t-on-change="(ev) => state.form.target_date = ev.target.value"/>
+                                <label class="cwo-form-label">Lead Time (Hour)</label>
+                                <input type="text" class="cwo-form-input" placeholder="mis. 48"
+                                    t-att-value="state.form.lead_time"
+                                    t-on-input="(ev) => state.form.lead_time = ev.target.value"/>
                             </div>
                             <div class="cwo-form-grup">
-                                <label class="cwo-form-label">Finish Date</label>
+                                <label class="cwo-form-label">Target Finish (Date)</label>
                                 <input type="date" class="cwo-form-input"
                                     t-att-value="state.form.finish_date"
                                     t-on-change="(ev) => state.form.finish_date = ev.target.value"/>
@@ -572,7 +572,7 @@
                     <div class="cwo-modal-isi">
                         <div class="cwo-impor-info">
                             <p>CSV columns (first row = header):</p>
-                            <code class="cwo-impor-kode">Type, Name, Code, Brand, Job Type, Production, Qty, Details, Executor, Section, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status</code>
+                            <code class="cwo-impor-kode">Type, Name, Code, Brand, Job Type, Production, Qty, Details, Executor, Section, Local/RRC, Requestor, Req Date, Lead Time (Hour), Target Finish (Date), Approver, Approval Date, Status</code>
                             <ul class="cwo-impor-tips">
                                 <li><b>Name</b> is required. <b>No.</b> is generated automatically (not needed in CSV).</li>
                                 <li><b>Type</b>: Design / Mold / Maintenance / Utility (default Design). <b>Production</b> &amp; <b>Section</b>: created automatically if not exist.</li>
@@ -1139,8 +1139,7 @@
                         <label class="cwo-form-label" style="margin-top:14px;">📅 Period</label>
                         <select class="cwo-form-input cwo-filter-sel" t-on-change="setFilterTglField">
                             <option value="request_date" t-att-selected="state.filterTglField === 'request_date'">Req Date</option>
-                            <option value="target_date" t-att-selected="state.filterTglField === 'target_date'">Target</option>
-                            <option value="finish_date" t-att-selected="state.filterTglField === 'finish_date'">Finish Date</option>
+                            <option value="finish_date" t-att-selected="state.filterTglField === 'finish_date'">Target Finish</option>
                             <option value="approval_date" t-att-selected="state.filterTglField === 'approval_date'">Approval Date</option>
                         </select>
                         <div class="cwo-filter-tgl-baris">

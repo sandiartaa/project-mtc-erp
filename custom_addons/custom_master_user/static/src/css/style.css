@@ -232,7 +232,7 @@
 
 /* ---- AKSI ---- */
 .cmu-aksi-grup { display: inline-flex; gap: 6px; justify-content: center; }
-.cmu-btn-history, .cmu-btn-edit, .cmu-btn-hapus {
+.cmu-btn-akses, .cmu-btn-history, .cmu-btn-edit, .cmu-btn-hapus {
     padding: 6px 12px;
     border-radius: 7px;
     border: 1.5px solid transparent;

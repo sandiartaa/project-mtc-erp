@@ -97,7 +97,7 @@ class WoApp extends Component {
                 requestor_id: "", requestor_nama: "",
                 // Timeline
                 request_date: "",
-                target_date: "",
+                lead_time: "",
                 finish_date: "",
                 // Approval
                 approver_id: "", approver_nama: "",
@@ -191,7 +191,7 @@ class WoApp extends Component {
                  "production_id", "qty", "details", "image_ada",
                  "design_image_ada", "last_design_image_id", "design_count",
                  "incharge_id", "incharge_custom", "section_id", "lokal_rrc", "requestor_id", "create_uid",
-                 "request_date", "target_date", "finish_date",
+                 "request_date", "lead_time", "finish_date",
                  "approver_id", "approval_date", "status", "approval_state", "revisi_count"],
                 { order: "id desc" }
             );
@@ -326,8 +326,8 @@ class WoApp extends Component {
     setFilterTglSampai(ev) { this.state.filterTglSampai = ev.target.value; this.muatData(); }
     // Label field tanggal yang sedang difilter (untuk teks ringkas).
     labelTglField() {
-        return { request_date: "Req Date", target_date: "Target",
-                 finish_date: "Finish Date", approval_date: "Approval Date" }[this.state.filterTglField] || "Date";
+        return { request_date: "Req Date",
+                 finish_date: "Target Finish", approval_date: "Approval Date" }[this.state.filterTglField] || "Date";
     }
     // ── Popup Filter (1 tombol) ──
     bukaFilter() { this.state.filterPopup.buka = true; }
@@ -847,7 +847,7 @@ class WoApp extends Component {
         f.incharge_id = ""; f.incharge_nama = ""; f.incharge_custom = "";
         f.section_id = ""; f.section_nama = ""; f.lokal_rrc = "";
         f.requestor_id = ""; f.requestor_nama = "";
-        f.request_date = ""; f.target_date = ""; f.finish_date = "";
+        f.request_date = ""; f.lead_time = ""; f.finish_date = "";
         f.approver_id = ""; f.approver_nama = ""; f.approval_date = "";
         f.status = "ongoing";
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false; f.image_ada = false;
@@ -881,7 +881,7 @@ class WoApp extends Component {
         f.requestor_id = rec.requestor_id ? String(rec.requestor_id[0]) : "";
         f.requestor_nama = rec.requestor_id ? rec.requestor_id[1] : "";
         f.request_date = rec.request_date || "";
-        f.target_date = rec.target_date || "";
+        f.lead_time = rec.lead_time || "";
         f.finish_date = rec.finish_date || "";
         f.approver_id = rec.approver_id ? String(rec.approver_id[0]) : "";
         f.approver_nama = rec.approver_id ? rec.approver_id[1] : "";
@@ -941,7 +941,7 @@ class WoApp extends Component {
                 lokal_rrc: f.lokal_rrc || false,
                 requestor_id: f.requestor_id ? parseInt(f.requestor_id) : false,
                 request_date: f.request_date || false,
-                target_date: f.target_date || false,
+                lead_time: f.lead_time ? f.lead_time.trim() : false,
                 finish_date: f.finish_date || false,
                 approver_id: f.approver_id ? parseInt(f.approver_id) : false,
                 approval_date: f.approval_date || false,
@@ -1410,11 +1410,11 @@ class WoApp extends Component {
     unduhTemplate() {
         const headers = ["Type", "Name", "Code", "Brand", "Job Type", "Production", "Qty", "Details",
                          "Executor", "Section", "Lokal/RRC",
-                         "Requestor", "Req Date", "Target", "Finish Date",
+                         "Requestor", "Req Date", "Lead Time (Hour)", "Target Finish (Date)",
                          "Approver", "Approval Date", "Status"];
         const contoh = ["Design", "Sample WO", "WO-001", "BrandX", "Box", "Line A", "100", "Note line 1",
                         "Administrator", "2D", "Local",
-                        "Administrator", "2026-06-20", "2026-07-01", "",
+                        "Administrator", "2026-06-20", "48", "2026-07-01",
                         "Administrator", "", "Ongoing"];
         const cell = (v) => {
             v = v == null ? "" : String(v);
