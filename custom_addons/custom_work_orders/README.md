@@ -37,7 +37,13 @@ Odoo aktif (default sudah aktif saat menjalankan odoo-bin).
 ## Jenis Work Order & Tab
 - Tiap Work Order punya **Type**: **Design / Mold / Maintenance / Utility** (wajib dipilih saat Add).
 - Daftar ditampilkan per **tab** sesuai Type (tab Design hanya menampilkan WO Design, dst).
-- **Admin mengatur tab mana yang muncul untuk tiap user** lewat **Master User** (grup `WO Tab: Design/Mold/Maintenance/Utility`). Jika user tidak dicentang satu pun tab, ia melihat **semua** tab (default tanpa batasan); Administrator selalu melihat semua.
+- Kolom **Requestor** kini berisi **Name** + **Date** (Date diambil dari Req Date — dipindah dari Timeline).
+
+## Akses (diatur admin via Master User)
+- **Work Orders (Full)** — CRUD + approve/reject, **lihat semua tab**.
+- **Work Orders (Read-only)** — read saja, **lihat semua tab**, tanpa aksi.
+- **WO Tab: Design / Mold / Maintenance / Utility** — peran **Designer** untuk jenis itu: hanya melihat **tab tsb** (WO miliknya) dan bisa **Ready for Approval**. Grup ini meng-imply basis designer (akses read + WO sendiri). Grup lama "Work Orders (Designer)" sudah **digabung** ke **WO Tab: Design**.
+- Administrator selalu melihat semua tab.
 
 ## Kolom baru
 - **Production** (dropdown CRUD), **Qty** (sebelum Details), **Section** (di sebelah Executor, dropdown CRUD: 2D/3D/INJ/DECO/ASSY).
@@ -65,12 +71,9 @@ Requestor (desktop) & baris "Input by" (mobile).
 - **Reject** → muncul dialog dengan textarea besar **Revision Detail** (wajib diisi). Saat dikirim, status approval kembali ke draft dan catatan revisi tersimpan sebagai record `wo.revision`.
 - Tombol **Revisions** ada di tiap Work Order (desktop & mobile) → membuka popup berisi daftar revisi: isi revisi, oleh siapa, dan kapan. Jumlah revisi tampil di label tombol.
 
-## Akses (3 level, diatur admin via Master User)
-- **Work Orders (Full)** — `group_work_orders_user`: Create / View / Update / Delete + **Approve/Reject**. Melihat **semua** WO. **Tidak** menampilkan tombol "Ready for Approval" (itu khusus Designer).
-- **Work Orders (Designer)** — `group_work_orders_designer`: hanya melihat WO yang dia jadi **Designer 2D/3D**-nya, dan bisa menekan **"Ready for Approval"**. Tidak bisa CRUD. Badge header: **🎨 Designer Only**.
-- **Work Orders (Read-only)** — `group_work_orders_readonly`: **read murni** — melihat **semua** WO, tanpa aksi apa pun (tidak ada Ready/Approve/Reject/CRUD). Badge header: **👁 Read Only**.
-- Admin memilih salah satu level untuk tiap user dari modul **Master User**.
-- **Visibilitas data (record rule `ir.rule`):** Full & Read-only lihat **semua**; Designer hanya WO miliknya.
+## Detail akses & approval
+- **Visibilitas data (record rule `ir.rule`):** Full & Read-only lihat **semua** WO; Designer (WO Tab: *) hanya WO miliknya.
+- Tombol "Ready for Approval" hanya untuk Designer; Full/Read-only tidak menampilkannya.
 - **Alur approval:** Designer menekan "Ready for Approval" pada WO miliknya → **popup description (WAJIB) + image designer (opsional, drag-drop/upload)** → setelah submit, muncul real-time ke user Full untuk di-Approve/Reject.
 - **Reject + gambar:** saat user Full menolak, **Detail Revision wajib**; gambar **opsional** (drag-drop/upload). Gambar + deskripsi tampil di popup **Revisions** (history).
 - **Hapus entri history:** user Full bisa menghapus tiap entri di popup **Revisions** & **Designer Images** (tombol 🗑).

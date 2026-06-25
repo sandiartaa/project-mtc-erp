@@ -104,6 +104,8 @@
                                     </td>
                                     <td class="cmu-tengah">
                                         <div class="cmu-aksi-grup">
+                                            <button class="cmu-btn-akses"
+                                                t-on-click="() => this.bukaAkses(rec)">Akses</button>
                                             <button class="cmu-btn-history"
                                                 t-on-click="() => this.bukaRiwayat(rec)">History</button>
                                             <button class="cmu-btn-edit"
@@ -155,6 +157,7 @@
                                     </span>
                                 </div>
                                 <div class="cmu-kartu-aksi">
+                                    <button class="cmu-btn-akses" t-on-click="() => this.bukaAkses(rec)">Akses</button>
                                     <button class="cmu-btn-history" t-on-click="() => this.bukaRiwayat(rec)">History</button>
                                     <button class="cmu-btn-edit" t-on-click="() => this.bukaFormEdit(rec)">Edit</button>
                                     <button class="cmu-btn-hapus" t-on-click="() => this.konfirmasiHapus(rec)">Hapus</button>
@@ -240,25 +243,9 @@
                             </div>
                         </div>
 
-                        <!-- Akses Modul: centang app yang boleh dilihat user (hanya Internal) -->
-                        <div class="cmu-form-grup" t-if="state.modulTersedia.length">
-                            <label class="cmu-form-label">Akses Modul</label>
-                            <t t-if="state.form.internal">
-                                <div class="cmu-akses-list">
-                                    <t t-foreach="state.modulTersedia" t-as="m" t-key="m.id">
-                                        <label class="cmu-akses-item">
-                                            <input type="checkbox"
-                                                t-att-checked="state.form.modulAkses[m.id]"
-                                                t-on-change="(ev) => state.form.modulAkses[m.id] = ev.target.checked"/>
-                                            <span><t t-esc="m.label"/></span>
-                                        </label>
-                                    </t>
-                                </div>
-                                <span class="cmu-form-hint">Modul yang dicentang muncul sebagai tombol app setelah user login.</span>
-                            </t>
-                            <t t-else="">
-                                <div class="cmu-akses-nonaktif">User Portal tidak bisa diberi akses modul backend. Ubah ke Internal dulu.</div>
-                            </t>
+                        <!-- Akses modul diatur lewat tombol "Akses" di daftar (popup terpisah). -->
+                        <div class="cmu-akses-info">
+                            ℹ️ Akses modul diatur lewat tombol <b>Akses</b> di daftar user (setelah disimpan).
                         </div>
                     </div>
                     <div class="cmu-modal-footer">
@@ -272,6 +259,53 @@
                                 <span class="cmu-spinner-tombol"/>Menyimpan...
                             </t>
                             <t t-else="">Simpan</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP AKSES MODUL ══════════ -->
+        <t t-if="state.akses.buka">
+            <div class="cmu-overlay" t-on-click="tutupAkses">
+                <div class="cmu-modal cmu-modal-akses" t-on-click.stop="">
+                    <div class="cmu-modal-kepala">
+                        <div class="cmu-modal-judul">
+                            <h2>🔑 Akses Modul</h2>
+                            <p class="cmu-subkepala"><t t-esc="state.akses.userName"/></p>
+                        </div>
+                        <button class="cmu-tombol-tutup" t-on-click="tutupAkses">✕</button>
+                    </div>
+                    <div class="cmu-modal-isi">
+                        <t t-if="state.akses.memuat">
+                            <div class="cmu-loading"><div class="cmu-spinner"/><p>Memuat...</p></div>
+                        </t>
+                        <t t-else="">
+                            <div class="cmu-akses-nonaktif" t-if="!state.akses.internal">
+                                ⚠️ User ini Portal. Mencentang akses akan otomatis menjadikannya Internal.
+                            </div>
+                            <p class="cmu-form-hint" style="margin: 0 0 12px;">Centang modul yang boleh dibuka user ini. Akan muncul sebagai tombol app setelah login.</p>
+                            <t t-if="state.akses.items.length === 0">
+                                <div class="cmu-riwayat-kosong">Belum ada modul yang bisa diberikan.</div>
+                            </t>
+                            <div class="cmu-akses-list" t-else="">
+                                <t t-foreach="state.akses.items" t-as="m" t-key="m.id">
+                                    <label t-attf-class="cmu-akses-item #{m.granted ? 'cmu-akses-aktif' : ''}">
+                                        <input type="checkbox" t-att-checked="m.granted"
+                                            t-on-change="() => this.toggleAkses(m)"/>
+                                        <span><t t-esc="m.label"/></span>
+                                    </label>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cmu-modal-footer">
+                        <button class="cmu-tombol-sekunder" t-att-disabled="state.akses.proses"
+                            t-on-click="tutupAkses">Batal</button>
+                        <button class="cmu-tombol-utama" t-att-disabled="state.akses.proses or state.akses.memuat"
+                            t-on-click="simpanAkses">
+                            <t t-if="state.akses.proses"><span class="cmu-spinner-tombol"/>Menyimpan...</t>
+                            <t t-else="">Simpan Akses</t>
                         </button>
                     </div>
                 </div>

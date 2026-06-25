@@ -259,12 +259,15 @@ class WoWorkOrder(models.Model):
 
     @api.model
     def tab_tersedia(self):
-        """Tab jenis WO yang boleh dilihat user (diatur admin via Master User).
-        - Administrator, atau user yang TIDAK punya satu pun grup tab -> SEMUA tab.
-        - Selain itu -> hanya tab yang grupnya dimiliki user."""
+        """Tab jenis WO yang boleh dilihat user.
+        - Full / Read-only / Administrator -> SEMUA tab.
+        - Designer (grup "WO Tab: <jenis>") -> hanya tab jenis yang dimiliki.
+        - Fallback (tak punya grup apa pun) -> SEMUA tab."""
         u = self.env.user
         semua = [{'value': v, 'label': l} for v, l in self._WO_TYPES]
-        if u.has_group('base.group_system'):
+        if (u.has_group('base.group_system')
+                or u.has_group('custom_work_orders.group_work_orders_user')
+                or u.has_group('custom_work_orders.group_work_orders_readonly')):
             return semua
         dipilih = [{'value': v, 'label': l} for v, l in self._WO_TYPES
                    if u.has_group('custom_work_orders.group_wo_type_%s' % v)]

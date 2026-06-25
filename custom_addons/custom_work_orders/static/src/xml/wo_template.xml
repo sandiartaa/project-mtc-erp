@@ -84,8 +84,8 @@
                                 <th rowspan="2" class="cwo-tengah cwo-col-status">Status</th>
                                 <th colspan="8" class="cwo-grup cwo-grup-pd">Product</th>
                                 <th colspan="3" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
-                                <th rowspan="2" class="cwo-tengah cwo-col-req">Requestor</th>
-                                <th colspan="3" class="cwo-grup cwo-grup-tl">Timeline</th>
+                                <th colspan="2" class="cwo-grup cwo-grup-rq">Requestor</th>
+                                <th colspan="2" class="cwo-grup cwo-grup-tl">Timeline</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-ap">Approval</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-apr">Ready Approval</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-aksi" t-if="state.bisaUbah">Action</th>
@@ -102,7 +102,8 @@
                                 <th>Executor</th>
                                 <th>Section</th>
                                 <th class="cwo-tengah">Local/RRC</th>
-                                <th>Req Date</th>
+                                <th>Name</th>
+                                <th>Date</th>
                                 <th>Target</th>
                                 <th>Finish Date</th>
                                 <th>Approver</th>
@@ -158,13 +159,13 @@
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td data-label="Requestor">
+                                    <td data-label="Requestor Name">
                                         <div><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></div>
                                         <div class="cwo-input-oleh" t-if="rec.create_uid">
                                             <i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/>
                                         </div>
                                     </td>
-                                    <td data-label="Req Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
+                                    <td data-label="Requestor Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
                                     <td data-label="Target"><t t-esc="formatTanggal(rec.target_date)"/></td>
                                     <td data-label="Finish Date"><t t-esc="formatTanggal(rec.finish_date)"/></td>
                                     <td data-label="Approver"><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
@@ -476,34 +477,36 @@
                             </div>
                         </div>
 
-                        <!-- Requestor -->
+                        <!-- Requestor: Name + Date (Req Date dipindah ke sini) -->
                         <div class="cwo-seksi-judul cwo-sj-rq">Requestor</div>
-                        <div class="cwo-form-grup">
-                            <label class="cwo-form-label">Requestor</label>
-                            <div class="cwo-jt-baris">
-                                <div class="cwo-picker">
-                                    <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
-                                        placeholder="-- Select Requestor --"
-                                        t-att-value="fieldNama('requestor')"
-                                        t-on-click="() => this.bukaFieldPicker('requestor')"/>
-                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'requestor'">
-                                        <t t-call="custom_work_orders.FieldPickerPanel"/>
-                                    </t>
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Name</label>
+                                <div class="cwo-jt-baris">
+                                    <div class="cwo-picker">
+                                        <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
+                                            placeholder="-- Select Requestor --"
+                                            t-att-value="fieldNama('requestor')"
+                                            t-on-click="() => this.bukaFieldPicker('requestor')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'requestor'">
+                                            <t t-call="custom_work_orders.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwo-btn-kelola-jt" title="Manage Requestor/Approver list"
+                                        t-on-click="bukaPersonMgr">⚙ Manage</button>
                                 </div>
-                                <button type="button" class="cwo-btn-kelola-jt" title="Manage Requestor/Approver list"
-                                    t-on-click="bukaPersonMgr">⚙ Manage</button>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Date</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.request_date"
+                                    t-on-change="(ev) => state.form.request_date = ev.target.value"/>
                             </div>
                         </div>
 
                         <!-- Timeline -->
                         <div class="cwo-seksi-judul cwo-sj-tl">Timeline</div>
-                        <div class="cwo-form-baris-3">
-                            <div class="cwo-form-grup">
-                                <label class="cwo-form-label">Req Date</label>
-                                <input type="date" class="cwo-form-input"
-                                    t-att-value="state.form.request_date"
-                                    t-on-change="(ev) => state.form.request_date = ev.target.value"/>
-                            </div>
+                        <div class="cwo-form-baris-2">
                             <div class="cwo-form-grup">
                                 <label class="cwo-form-label">Target</label>
                                 <input type="date" class="cwo-form-input"

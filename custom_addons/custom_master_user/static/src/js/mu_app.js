@@ -47,8 +47,10 @@ class MuApp extends Component {
                 divisi: "",
                 subdivisi: "",
                 kode: "",
-                modulAkses: {},   // {groupId: bool}
             },
+
+            // Popup Akses Modul (centang akses lewat tombol "Akses" di daftar)
+            akses: { buka: false, userId: null, userName: "", internal: true, items: [], proses: false, memuat: false },
 
             // Modal history/riwayat
             riwayat: { buka: false, memuat: false, judul: "", daftar: [] },
@@ -172,7 +174,6 @@ class MuApp extends Component {
         const f = this.state.form;
         f.buka = true; f.mode = "tambah"; f.id = null; f.menyimpan = false;
         f.user_id = ""; f.internal = true; f.divisi = ""; f.subdivisi = ""; f.kode = "";
-        f.modulAkses = {};
         // Muat ulang daftar user agar user yang baru ditambah ikut muncul
         await this.muatUser();
     }
@@ -185,40 +186,55 @@ class MuApp extends Component {
         f.divisi = rec.divisi || "";
         f.subdivisi = rec.subdivisi || "";
         f.kode = rec.kode || "";
-        await this._muatAksesForm(rec.user_id ? rec.user_id[0] : null);
     }
 
-    // Saat user dipilih di form, ikut set tipe + muat akses modul user tsb
-    async pilihUserForm(ev) {
+    // Saat user dipilih di form, ikut set tipe (Internal/Portal)
+    pilihUserForm(ev) {
         const f = this.state.form;
         f.user_id = ev.target.value;
         f.internal = !this._shareUser(f.user_id);
-        await this._muatAksesForm(f.user_id);
     }
 
-    // Ubah tipe user di form; bila Portal, akses modul dikosongkan (tidak berlaku)
-    setTipe(internal) {
-        this.state.form.internal = internal;
-        if (!internal) this.state.form.modulAkses = {};
-    }
-
-    async _muatAksesForm(userId) {
-        const f = this.state.form;
-        f.modulAkses = {};
-        if (!userId) return;
-        try {
-            const akses = await this.orm.call(
-                "cui.user.info", "akses_modul_user", [parseInt(userId)]
-            );
-            const map = {};
-            akses.forEach((a) => { map[a.id] = a.granted; });
-            f.modulAkses = map;
-        } catch (e) {
-            console.error("Gagal memuat akses modul:", e);
-        }
-    }
+    // Ubah tipe user di form
+    setTipe(internal) { this.state.form.internal = internal; }
 
     tutupForm() { this.state.form.buka = false; }
+
+    // ─── POPUP AKSES MODUL ───────────────────────────────────────────────────
+    async bukaAkses(rec) {
+        const a = this.state.akses;
+        a.buka = true; a.memuat = true; a.proses = false; a.items = [];
+        a.userId = rec.user_id ? rec.user_id[0] : null;
+        a.userName = rec.user_id ? rec.user_id[1] : (rec.kode || "");
+        a.internal = !this._shareUser(a.userId);
+        try {
+            const akses = await this.orm.call(
+                "cui.user.info", "akses_modul_user", [parseInt(a.userId)]
+            );
+            a.items = (akses || []).map((x) => ({ id: x.id, label: x.label, granted: !!x.granted }));
+        } catch (e) {
+            console.error("Gagal memuat akses modul:", e);
+            this.notification.add("Gagal memuat akses modul.", { type: "danger" });
+        }
+        a.memuat = false;
+    }
+    tutupAkses() { this.state.akses.buka = false; }
+    toggleAkses(item) { item.granted = !item.granted; }
+    async simpanAkses() {
+        const a = this.state.akses;
+        a.proses = true;
+        try {
+            const granted = a.items.filter((x) => x.granted).map((x) => x.id);
+            await this.orm.call("cui.user.info", "set_akses_modul", [parseInt(a.userId), granted]);
+            this.notification.add("Akses modul disimpan.", { type: "success" });
+            a.buka = false;
+            await Promise.all([this.muatData(), this.muatUser()]);
+        } catch (e) {
+            console.error("Gagal simpan akses:", e);
+            this.notification.add("Gagal menyimpan akses modul.", { type: "danger" });
+        }
+        a.proses = false;
+    }
 
     async simpan() {
         const f = this.state.form;
@@ -237,21 +253,13 @@ class MuApp extends Component {
             await this.orm.call("cui.user.info", "set_tipe_user", [
                 parseInt(f.user_id), f.internal,
             ]);
-            // 2) Simpan data master (kode/divisi/subdivisi)
+            // 2) Simpan data master (kode/divisi/subdivisi).
+            //    Akses modul kini diatur terpisah lewat tombol "Akses" (popup).
             if (f.mode === "edit") {
                 await this.orm.write("cui.user.info", [f.id], vals);
             } else {
                 await this.orm.create("cui.user.info", [vals]);
             }
-            // 3) Simpan akses modul (kosong bila Portal)
-            const granted = f.internal
-                ? this.state.modulTersedia
-                      .filter((m) => f.modulAkses[m.id])
-                      .map((m) => m.id)
-                : [];
-            await this.orm.call("cui.user.info", "set_akses_modul", [
-                parseInt(f.user_id), granted,
-            ]);
             this.notification.add(
                 f.mode === "edit" ? "Data user diperbarui." : "Data user ditambahkan.",
                 { type: "success" }

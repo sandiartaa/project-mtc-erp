@@ -6,6 +6,9 @@ Menampilkan semua user beserta **Nama, Kode, Divisi, Subdivisi**, dan tombol **H
 ## Menu yang ditambahkan
 - Menu top-level **Master User** → submenu **Daftar User** (khusus grup Administrator/Settings)
 
+## Akses Modul (lewat popup)
+Tiap baris user punya tombol **Akses**. Ditekan → muncul **popup** berisi daftar modul/grup yang bisa diberikan; tinggal **centang** lalu **Simpan**. (Form Tambah/Edit hanya untuk Nama/Kode/Divisi/Subdivisi/Tipe; akses diatur terpisah lewat tombol Akses setelah user tersimpan.)
+
 ## Model/tabel baru yang dibuat
 - `mu.user.riwayat` — audit log perubahan (pembuat, editor, waktu, aksi)
 - Menambah relasi/aksi pada `cui.user.info` (model custom dari modul `custom_user_info`) — `res.users` tidak disentuh.

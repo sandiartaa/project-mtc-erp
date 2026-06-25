@@ -8,9 +8,11 @@
          2. Designer (group_work_orders_designer): hanya WO miliknya (incharge), bisa Ready for Approval.
          3. Read-only (group_work_orders_readonly): lihat SEMUA WO, tanpa aksi apa pun. -->
 
-    <!-- Designer: lihat & kerjakan WO miliknya, menekan Ready for Approval. -->
+    <!-- BASIS akses Designer (read + WO miliknya + Ready for Approval).
+         TIDAK ditampilkan di Master User — diberikan otomatis lewat grup
+         "WO Tab: <jenis>" yang meng-imply grup ini. -->
     <record id="group_work_orders_designer" model="res.groups">
-        <field name="name">Akses Work Orders (Designer)</field>
+        <field name="name">Akses Work Orders (Designer - basis)</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
@@ -27,19 +29,24 @@
         <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
     </record>
 
-    <!-- Grup TAB per jenis Work Order. Admin pilih lewat Master User untuk
-         menentukan tab apa saja yang muncul pada seorang user. Jika user tidak
-         punya satu pun grup ini, ia melihat SEMUA tab (default tanpa batasan). -->
+    <!-- Grup "WO Tab: <jenis>" = peran DESIGNER untuk satu jenis WO.
+         Meng-imply grup designer basis (dapat akses read + WO miliknya + Ready),
+         sekaligus menentukan tab mana yang muncul. Admin memilihnya lewat Master
+         User. Full & Read-only melihat SEMUA tab tanpa perlu grup ini. -->
     <record id="group_wo_type_design" model="res.groups">
         <field name="name">WO Tab: Design</field>
+        <field name="implied_ids" eval="[(4, ref('group_work_orders_designer'))]"/>
     </record>
     <record id="group_wo_type_mold" model="res.groups">
         <field name="name">WO Tab: Mold</field>
+        <field name="implied_ids" eval="[(4, ref('group_work_orders_designer'))]"/>
     </record>
     <record id="group_wo_type_maintenance" model="res.groups">
         <field name="name">WO Tab: Maintenance</field>
+        <field name="implied_ids" eval="[(4, ref('group_work_orders_designer'))]"/>
     </record>
     <record id="group_wo_type_utility" model="res.groups">
         <field name="name">WO Tab: Utility</field>
+        <field name="implied_ids" eval="[(4, ref('group_work_orders_designer'))]"/>
     </record>
 </odoo>

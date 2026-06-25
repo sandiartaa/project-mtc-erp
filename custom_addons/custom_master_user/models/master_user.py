@@ -8,10 +8,11 @@ MODUL_AKSES = [
     # Work Orders punya 3 level: Full (CRUD + approve), Designer (WO miliknya +
     # Ready for Approval), Read-only (lihat semua, tanpa aksi).
     # Admin pilih salah satu untuk tiap user.
+    # Work Orders: Full (semua + semua tab), Read-only (read + semua tab).
     ('custom_work_orders.group_work_orders_user', 'Work Orders (Full)'),
-    ('custom_work_orders.group_work_orders_designer', 'Work Orders (Designer)'),
     ('custom_work_orders.group_work_orders_readonly', 'Work Orders (Read-only)'),
-    # Tab jenis Work Order yang muncul untuk user (kosong = semua tab).
+    # "WO Tab: <jenis>" = peran Designer untuk jenis itu (hanya tab tsb).
+    # Menggantikan grup "Work Orders (Designer)" lama (sudah digabung ke WO Tab: Design).
     ('custom_work_orders.group_wo_type_design', 'WO Tab: Design'),
     ('custom_work_orders.group_wo_type_mold', 'WO Tab: Mold'),
     ('custom_work_orders.group_wo_type_maintenance', 'WO Tab: Maintenance'),

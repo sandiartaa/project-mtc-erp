@@ -241,6 +241,8 @@
     cursor: pointer;
     transition: all 0.15s;
 }
+.cmu-btn-akses { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.cmu-btn-akses:hover { background: #d1fae5; }
 .cmu-btn-history { background: #f5f3ff; color: #7c3aed; border-color: #ddd6fe; }
 .cmu-btn-history:hover { background: #ede9fe; }
 .cmu-btn-edit { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
@@ -450,6 +452,12 @@
 }
 .cmu-akses-item:hover { border-color: #c7d2fe; background: #f5f3ff; }
 .cmu-akses-item input { width: 15px; height: 15px; cursor: pointer; accent-color: #7c3aed; }
+.cmu-akses-aktif { border-color: #7c3aed; background: #f5f3ff; color: #5b21b6; }
+.cmu-modal-akses { max-width: 460px; }
+.cmu-akses-info {
+    background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+    border-radius: 9px; padding: 12px 14px; font-size: 12.5px; line-height: 1.5;
+}
 .cmu-badge-akses {
     display: inline-block;
     background: #f0fdf4;
