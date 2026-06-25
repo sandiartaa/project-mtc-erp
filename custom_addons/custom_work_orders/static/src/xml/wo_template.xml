@@ -1065,6 +1065,48 @@
             </div>
         </t>
 
+        <!-- ══════════ POPUP DESIGNER: LEAD TIME + TARGET FINISH ══════════ -->
+        <t t-if="state.jadwalForm.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-jadwal" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2>🕒 Lead Time &amp; Target Finish
+                                <t t-if="state.jadwalForm.rec"> — <t t-esc="state.jadwalForm.rec.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupJadwal">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <p class="cwo-revisi-info">Isi sendiri perkiraan Lead Time (jam) dan tanggal Target Finish untuk Work Order ini.</p>
+                        <div class="cwo-form-baris-2">
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Lead Time (Hour)</label>
+                                <input type="text" class="cwo-form-input" placeholder="mis. 48"
+                                    t-att-value="state.jadwalForm.lead_time"
+                                    t-on-input="(ev) => state.jadwalForm.lead_time = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup">
+                                <label class="cwo-form-label">Target Finish (Date)</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.jadwalForm.finish_date"
+                                    t-on-change="(ev) => state.jadwalForm.finish_date = ev.target.value"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.jadwalForm.proses"
+                            t-on-click="tutupJadwal">Cancel</button>
+                        <button class="cwo-tombol-utama" t-att-disabled="state.jadwalForm.proses"
+                            t-on-click="simpanJadwal">
+                            <t t-if="state.jadwalForm.proses"><span class="cwo-spinner-tombol"/>Saving...</t>
+                            <t t-else="">Save</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
         <!-- ══════════ POPUP RIWAYAT IMAGE DESIGNER ══════════ -->
         <t t-if="state.designList.buka">
             <div class="cwo-overlay" t-on-click="tutupDesignList">
@@ -1247,6 +1289,9 @@
                 t-on-click="() => this.approve(rec)">Approve</button>
             <button t-if="showTolak(rec)" class="cwo-apr-btn cwo-apr-btn-tolak"
                 t-on-click="() => this.reject(rec)">Reject</button>
+            <button t-if="showJadwal(rec)" class="cwo-apr-btn cwo-apr-btn-jadwal" title="Set Lead Time / Target Finish"
+                t-on-click="() => this.bukaJadwal(rec)">
+                <i class="fa fa-clock-o"/> Lead/Target</button>
             <button class="cwo-apr-btn cwo-apr-btn-revisi" title="View Revisions"
                 t-on-click="() => this.bukaRevisiList(rec)">
                 <i class="fa fa-history"/> Revisions<t t-if="rec.revisi_count"> (<t t-esc="rec.revisi_count"/>)</t>

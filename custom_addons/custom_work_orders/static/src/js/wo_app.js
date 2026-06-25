@@ -128,6 +128,8 @@ class WoApp extends Component {
             },
             // Popup riwayat image designer tiap Work Order
             designList: { buka: false, judul: "", items: [], memuat: false, woId: null },
+            // Popup Designer isi Lead Time (Hour) + Target Finish (Date)
+            jadwalForm: { buka: false, rec: null, lead_time: "", finish_date: "", proses: false },
             // Popup Filter (gabungan: status + period + designer)
             filterPopup: { buka: false },
             // Popup History (audit) — khusus akses Full
@@ -479,6 +481,34 @@ class WoApp extends Component {
         rf.proses = false;
     }
     cancelReady(rec) { this._aksiApproval(rec, "action_cancel_ready", "Submission cancelled."); }
+
+    // ── Designer isi Lead Time (Hour) + Target Finish (Date) untuk WO-nya ──
+    showJadwal(rec) { return this.state.adalahDesigner && this.isDesigner(rec); }
+    bukaJadwal(rec) {
+        const jf = this.state.jadwalForm;
+        jf.buka = true; jf.rec = rec; jf.proses = false;
+        jf.lead_time = rec.lead_time || "";
+        jf.finish_date = rec.finish_date || "";
+    }
+    tutupJadwal() { this.state.jadwalForm.buka = false; this.state.jadwalForm.rec = null; }
+    async simpanJadwal() {
+        const jf = this.state.jadwalForm;
+        jf.proses = true;
+        try {
+            await this.orm.call(
+                "wo.work.order", "simpan_jadwal",
+                [[jf.rec.id], (jf.lead_time || "").trim(), jf.finish_date || false]
+            );
+            this.notification.add("Lead Time / Target Finish saved.", { type: "success" });
+            this.tutupJadwal();
+            await this.muatData();
+        } catch (e) {
+            console.error("Gagal simpan jadwal:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
+        }
+        jf.proses = false;
+    }
     approve(rec) {
         this.tampilKonfirmasi({
             judul: "Approve Work Order",

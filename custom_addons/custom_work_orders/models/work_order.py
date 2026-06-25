@@ -336,6 +336,21 @@ class WoWorkOrder(models.Model):
         self._catat_audit('edit', 'Diajukan untuk approval (Ready)')
         return True
 
+    def simpan_jadwal(self, lead_time=None, finish_date=None):
+        """Designer (pemegang WO) atau user Full mengisi Lead Time (jam) &
+        Target Finish (tanggal) untuk WO-nya sendiri. Pakai sudo agar Designer
+        ber-akses read-only tetap bisa menulis 2 field ini (dibatasi oleh
+        _cek_designer_atau_full)."""
+        self._cek_designer_atau_full()
+        self.ensure_one()
+        vals = {
+            'lead_time': (lead_time or '').strip() or False,
+            'finish_date': finish_date or False,
+        }
+        self.sudo().with_context(skip_wo_audit=True).write(vals)
+        self._catat_audit('edit', 'Ubah Lead Time / Target Finish')
+        return True
+
     def action_cancel_ready(self):
         """Designer membatalkan pengajuan (ready → draft) — penjaga dari salah ajukan."""
         self._cek_designer_atau_full()

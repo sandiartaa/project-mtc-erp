@@ -163,6 +163,9 @@
 .cwo-apr-btn-tolak:hover { background: #fee2e2; }
 .cwo-apr-btn-revisi { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
 .cwo-apr-btn-revisi:hover { background: #ede9fe; }
+.cwo-apr-btn-jadwal { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; }
+.cwo-apr-btn-jadwal:hover { background: #cffafe; }
+.cwo-modal-jadwal { max-width: 460px; }
 
 /* Modal Reject — Detail Revision */
 .cwo-modal-revisi { max-width: 540px; }
