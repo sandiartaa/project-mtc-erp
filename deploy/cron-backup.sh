@@ -3,7 +3,7 @@
 # cron-backup.sh - Dipanggil oleh cron tiap hari: backup PRODUKSI + buang yang lama.
 #
 # - Simpan hasil ke /opt/odoo/backups/
-# - Hapus otomatis backup lebih lama dari RETENSI_HARI (default 7) agar disk aman.
+# - Hapus otomatis backup lebih lama dari RETENSI_HARI (default 30) agar disk aman.
 #
 # Pasang di cron (lihat panduan): jalan tiap 02:00 WIB.
 # Uji manual:  bash deploy/cron-backup.sh
@@ -15,7 +15,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP_DIR="/opt/odoo/backups"
-RETENSI_HARI=7
+RETENSI_HARI=30
 
 mkdir -p "$BACKUP_DIR"
 
