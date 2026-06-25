@@ -21,12 +21,13 @@
                     <button class="cwo-btn-tambah" t-on-click="bukaFormTambah">+ Add Work Order</button>
                 </div>
                 <div class="cwo-header-aksi" t-else="">
-                    <span class="cwo-badge-ro">👁 Read-only</span>
+                    <span class="cwo-badge-ro" t-if="state.adalahDesigner">🎨 Designer Only</span>
+                    <span class="cwo-badge-ro" t-else="">👁 Read Only</span>
                 </div>
             </div>
         </div>
 
-        <!-- FILTER -->
+        <!-- TOOLBAR: Search + tombol Filter (popup) + History (Full) + Reset -->
         <div class="cwo-filterbar">
             <div class="cwo-filter-grup">
                 <input type="text" class="cwo-filter-input cwo-filter-cari"
@@ -36,15 +37,16 @@
                     t-on-keydown="handleKeydown"/>
                 <button class="cwo-btn-cari" t-on-click="cariData">Search</button>
             </div>
-            <div class="cwo-filter-status">
-                <button t-attf-class="cwo-fs-btn #{state.filterStatus === '' ? 'cwo-fs-aktif' : ''}"
-                    t-on-click="() => this.setFilterStatus('')">All</button>
-                <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'ongoing' ? 'cwo-fs-aktif' : ''}"
-                    t-on-click="() => this.setFilterStatus('ongoing')">Ongoing</button>
-                <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'finished' ? 'cwo-fs-aktif' : ''}"
-                    t-on-click="() => this.setFilterStatus('finished')">Finished</button>
+            <div class="cwo-toolbar-aksi">
+                <button class="cwo-btn-filter" t-on-click="bukaFilter">
+                    <i class="fa fa-sliders"/> Filter
+                    <span class="cwo-filter-badge" t-if="filterAktifJumlah"><t t-esc="filterAktifJumlah"/></span>
+                </button>
+                <button class="cwo-btn-history" t-if="state.bisaUbah" t-on-click="bukaHistory">
+                    <i class="fa fa-history"/> History
+                </button>
+                <button class="cwo-btn-reset" t-on-click="resetCari">Reset</button>
             </div>
-            <button class="cwo-btn-reset" t-on-click="resetCari">Reset</button>
         </div>
 
         <!-- LOADING -->
@@ -114,21 +116,33 @@
                                     </td>
                                     <td class="cwo-sel-details" data-label="Details"><t t-esc="rec.details or '—'"/></td>
                                     <td class="cwo-tengah" data-label="Image">
-                                        <t t-if="rec.image_ada">
-                                            <img class="cwo-thumb cwo-thumb-klik" title="Click to enlarge"
-                                                t-att-src="'/web/image/wo.work.order/' + rec.id + '/image'"
-                                                t-on-click="() => this.bukaImgPopup(rec)"/>
+                                        <t t-if="adaGambarTampil(rec)">
+                                            <div class="cwo-img-sel">
+                                                <img class="cwo-thumb cwo-thumb-klik" title="Click to enlarge"
+                                                    t-att-src="urlGambar(rec)"
+                                                    t-on-click="() => this.bukaImgPopup(rec)"/>
+                                                <span t-if="pakaiReferensi(rec)" class="cwo-img-tag cwo-img-tag-ref" title="Reference image (no designer image yet)">Ref</span>
+                                                <span t-if="rec.design_count" class="cwo-img-tag cwo-img-tag-hist"
+                                                    title="View designer image history"
+                                                    t-on-click="() => this.bukaDesignList(rec)">
+                                                    <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
+                                            </div>
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td data-label="Designer 2D/3D"><t t-esc="rec.incharge_id ? rec.incharge_id[1] : '—'"/></td>
+                                    <td data-label="Designer 2D/3D"><t t-esc="namaDesigner(rec) or '—'"/></td>
                                     <td class="cwo-tengah" data-label="Local/RRC">
                                         <t t-if="rec.lokal_rrc">
                                             <span class="cwo-badge-lr"><t t-esc="labelLokalRrc(rec.lokal_rrc)"/></span>
                                         </t>
                                         <t t-else=""><span class="cwo-sel-kosong">—</span></t>
                                     </td>
-                                    <td data-label="Requestor"><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></td>
+                                    <td data-label="Requestor">
+                                        <div><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></div>
+                                        <div class="cwo-input-oleh" t-if="rec.create_uid">
+                                            <i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/>
+                                        </div>
+                                    </td>
                                     <td data-label="Req Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
                                     <td data-label="Target"><t t-esc="formatTanggal(rec.target_date)"/></td>
                                     <td data-label="Finish Date"><t t-esc="formatTanggal(rec.finish_date)"/></td>
@@ -178,9 +192,13 @@
 
                             <!-- ISI (muncul saat kartu dibuka) -->
                             <div class="cwo-kartu-isi" t-if="state.kartuTerbuka[rec.id]">
-                                <!-- Gambar inline ke bawah -->
-                                <div class="cwo-kartu-gambar" t-if="rec.image_ada">
+                                <!-- Gambar inline ke bawah (image designer terbaru / referensi) -->
+                                <div class="cwo-kartu-gambar" t-if="adaGambarTampil(rec)">
                                     <img t-att-src="urlGambar(rec)"/>
+                                    <span t-if="pakaiReferensi(rec)" class="cwo-img-tag cwo-img-tag-ref">Ref</span>
+                                    <span t-if="rec.design_count" class="cwo-img-tag cwo-img-tag-hist"
+                                        t-on-click="() => this.bukaDesignList(rec)">
+                                        <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
                                 </div>
                                 <div class="cwo-kartu-baris" t-else="">
                                     <span class="cwo-kartu-label">Image</span>
@@ -199,6 +217,11 @@
                                 <div class="cwo-kartu-baris">
                                     <span class="cwo-kartu-label">Requestor</span>
                                     <span><t t-esc="barisRequestor(rec)"/></span>
+                                </div>
+                                <!-- Diinput oleh (user yang login saat membuat WO) -->
+                                <div class="cwo-kartu-baris" t-if="rec.create_uid">
+                                    <span class="cwo-kartu-label">Input by</span>
+                                    <span><i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/></span>
                                 </div>
                                 <!-- Target / Finish (jika ada) -->
                                 <div class="cwo-kartu-baris" t-if="rec.target_date or rec.finish_date">
@@ -321,7 +344,8 @@
                                 t-on-input="(ev) => state.form.details = ev.target.value"></textarea>
                         </div>
                         <div class="cwo-form-grup">
-                            <label class="cwo-form-label">Image</label>
+                            <label class="cwo-form-label">Reference Image</label>
+                            <span class="cwo-form-hint" style="display:block; margin-bottom:6px;">Reference for the designer. The designer's own image is uploaded later when submitting for approval.</span>
                             <div class="cwo-img-area">
                                 <div class="cwo-img-preview">
                                     <t t-if="state.form.image_preview"><img t-att-src="state.form.image_preview"/></t>
@@ -344,14 +368,14 @@
                                 <label class="cwo-form-label">Designer 2D/3D</label>
                                 <div class="cwo-picker">
                                     <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
-                                        placeholder="-- Select User --"
-                                        t-att-value="state.form.incharge_nama"
+                                        placeholder="-- Select user or type a name --"
+                                        t-att-value="designerTampil()"
                                         t-on-click="() => this.bukaUserPicker('incharge')"/>
                                     <t t-if="state.userPicker.buka and state.userPicker.target === 'incharge'">
                                         <t t-call="custom_work_orders.UserPickerPanel"/>
                                     </t>
                                 </div>
-                                <span class="cwo-form-hint">Only users with Work Orders access.</span>
+                                <span class="cwo-form-hint">Pick a system user, or type a custom designer name below.</span>
                             </div>
                             <div class="cwo-form-grup">
                                 <label class="cwo-form-label">Local/RRC</label>
@@ -460,14 +484,14 @@
                     <div class="cwo-modal-isi">
                         <div class="cwo-impor-info">
                             <p>CSV columns (first row = header):</p>
-                            <code class="cwo-impor-kode">Name, Code, Brand, Job Type, Details, Designer 2D/3D, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status, Image</code>
+                            <code class="cwo-impor-kode">Name, Code, Brand, Job Type, Details, Designer 2D/3D, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status</code>
                             <ul class="cwo-impor-tips">
                                 <li><b>Name</b> is required. <b>No.</b> is generated automatically (not needed in CSV).</li>
                                 <li><b>Designer 2D/3D</b> filled with a user name; matched against users with Work Orders access.</li>
                                 <li><b>Requestor/Approver</b> filled with a name (e.g. P. Setiadi); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Job Type</b> filled with a name (e.g. Box, Layer); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Local/RRC</b>: Local / RRC. <b>Status</b>: Ongoing / Finished. <b>Date</b>: YYYY-MM-DD or DD/MM/YYYY.</li>
-                                <li><b>Image</b>: base64 text (images pasted into Excel are not included in the CSV — use upload in the form).</li>
+                                <li><b>Image is not imported</b> — add/edit it manually in the form after import.</li>
                                 <li>Import <b>adds</b> data — existing data is not deleted.</li>
                             </ul>
                             <button class="cwo-btn-template" t-on-click="unduhTemplate">⬇ Download CSV Template</button>
@@ -671,7 +695,10 @@
             <div class="cwo-overlay cwo-img-overlay" t-on-click="tutupImgPopup">
                 <div class="cwo-img-popup" t-on-click.stop="">
                     <div class="cwo-img-popup-kepala">
-                        <span class="cwo-img-popup-judul"><t t-esc="state.imgPopup.judul"/></span>
+                        <span class="cwo-img-popup-judul">
+                            <t t-esc="state.imgPopup.judul"/>
+                            <span t-if="state.imgPopup.ref" class="cwo-img-tag cwo-img-tag-ref">Reference</span>
+                        </span>
                         <button class="cwo-tombol-tutup" t-on-click="tutupImgPopup">✕</button>
                     </div>
                     <div class="cwo-img-popup-isi">
@@ -695,8 +722,27 @@
                             <b><t t-esc="state.revisiForm.rec and state.revisiForm.rec.wo_number"/></b>.
                             The status will return to draft. Please describe in detail what needs to be revised:
                         </p>
-                        <label class="cwo-form-label cwo-revisi-label">Revision Detail <span class="cwo-wajib">*</span></label>
-                        <textarea class="cwo-form-input cwo-revisi-textarea" rows="7"
+                        <!-- Gambar pendukung revisi (opsional, drag-drop / upload) — DI ATAS deskripsi -->
+                        <label class="cwo-form-label">Attach Image <span class="cwo-form-hint">(optional)</span></label>
+                        <div t-attf-class="cwo-dropzone #{state.revisiForm.seret ? 'cwo-dropzone-aktif' : ''} #{state.revisiForm.image_preview ? 'cwo-dropzone-isi' : ''}"
+                            t-on-dragover="onSeretMasukRevisi" t-on-dragleave="onSeretKeluarRevisi" t-on-drop="onJatuhkanGambarRevisi">
+                            <t t-if="state.revisiForm.image_preview">
+                                <img class="cwo-dropzone-preview" t-att-src="state.revisiForm.image_preview"/>
+                                <div class="cwo-dropzone-nama"><t t-esc="state.revisiForm.namaFile"/></div>
+                                <button type="button" class="cwo-btn-hapus-img" t-on-click="hapusGambarRevisi">Remove Image</button>
+                            </t>
+                            <t t-else="">
+                                <div class="cwo-dropzone-ikon">🖼️</div>
+                                <div class="cwo-dropzone-teks">Drag &amp; drop an image, or</div>
+                                <label class="cwo-dropzone-pilih">
+                                    Choose file
+                                    <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambarRevisi"/>
+                                </label>
+                            </t>
+                        </div>
+
+                        <label class="cwo-form-label cwo-revisi-label" style="margin-top:14px;">Revision Detail <span class="cwo-wajib">*</span></label>
+                        <textarea class="cwo-form-input cwo-revisi-textarea" rows="6"
                             placeholder="Describe the requested revisions clearly..."
                             t-att-value="state.revisiForm.detail"
                             t-on-input="(ev) => state.revisiForm.detail = ev.target.value"></textarea>
@@ -735,11 +781,22 @@
                             <div class="cwo-revisi-daftar">
                                 <t t-foreach="state.revisiList.items" t-as="rv" t-key="rv.id">
                                     <div class="cwo-revisi-item">
-                                        <div class="cwo-revisi-meta">
-                                            <span class="cwo-revisi-oleh"><i class="fa fa-user"/> <t t-esc="rv.oleh"/></span>
-                                            <span class="cwo-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="rv.tanggal"/></span>
+                                        <button class="cwo-ico cwo-ico-hapus cwo-hist-hapus" title="Delete this revision"
+                                            t-if="state.bisaUbah" t-on-click="() => this.hapusRevisiItem(rv)">
+                                            <i class="fa fa-trash-o"/>
+                                        </button>
+                                        <div class="cwo-revisi-gambar" t-if="rv.ada_gambar">
+                                            <img class="cwo-thumb-klik" title="Click to enlarge"
+                                                t-att-src="urlRevisiItem(rv.id)"
+                                                t-on-click="() => this.bukaGambarPopup(urlRevisiItem(rv.id), 'Revision — ' + state.revisiList.judul)"/>
                                         </div>
-                                        <div class="cwo-revisi-teks"><t t-esc="rv.detail"/></div>
+                                        <div class="cwo-revisi-isi">
+                                            <div class="cwo-revisi-meta">
+                                                <span class="cwo-revisi-oleh"><i class="fa fa-user"/> <t t-esc="rv.oleh"/></span>
+                                                <span class="cwo-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="rv.tanggal"/></span>
+                                            </div>
+                                            <div class="cwo-revisi-teks"><t t-esc="rv.detail"/></div>
+                                        </div>
                                     </div>
                                 </t>
                             </div>
@@ -747,6 +804,218 @@
                     </div>
                     <div class="cwo-modal-footer">
                         <button class="cwo-tombol-sekunder" t-on-click="tutupRevisiList">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP READY FOR APPROVAL — UPLOAD IMAGE DESIGNER ══════════ -->
+        <t t-if="state.readyForm.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-ready" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2>📤 Ready for Approval
+                                <t t-if="state.readyForm.rec"> — <t t-esc="state.readyForm.rec.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupReadyForm">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <p class="cwo-revisi-info">
+                            Submit this Work Order for approval. <b>Description is required</b>;
+                            the designer image is optional (if provided, it becomes the latest
+                            image shown on the Work Order).
+                        </p>
+
+                        <!-- Referensi dari pembuat WO (acuan) -->
+                        <div class="cwo-ready-ref" t-if="state.readyForm.rec and state.readyForm.rec.image_ada">
+                            <span class="cwo-form-label">Reference (from requestor)</span>
+                            <img class="cwo-ready-ref-img" t-att-src="urlRef(state.readyForm.rec)"
+                                t-on-click="() => this.bukaImgPopup(state.readyForm.rec)" title="Click to enlarge"/>
+                        </div>
+
+                        <!-- Dropzone: drag-drop atau klik untuk upload (opsional) -->
+                        <label class="cwo-form-label">Designer Image <span class="cwo-form-hint">(optional)</span></label>
+                        <div t-attf-class="cwo-dropzone #{state.readyForm.seret ? 'cwo-dropzone-aktif' : ''} #{state.readyForm.image_preview ? 'cwo-dropzone-isi' : ''}"
+                            t-on-dragover="onSeretMasuk" t-on-dragleave="onSeretKeluar" t-on-drop="onJatuhkanGambar">
+                            <t t-if="state.readyForm.image_preview">
+                                <img class="cwo-dropzone-preview" t-att-src="state.readyForm.image_preview"/>
+                                <div class="cwo-dropzone-nama"><t t-esc="state.readyForm.namaFile"/></div>
+                                <button type="button" class="cwo-btn-hapus-img" t-on-click="hapusGambarReady">Remove Image</button>
+                            </t>
+                            <t t-else="">
+                                <div class="cwo-dropzone-ikon">🖼️</div>
+                                <div class="cwo-dropzone-teks">Drag &amp; drop an image here, or</div>
+                                <label class="cwo-dropzone-pilih">
+                                    Choose file
+                                    <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambarReady"/>
+                                </label>
+                            </t>
+                        </div>
+
+                        <!-- Deskripsi (WAJIB) -->
+                        <label class="cwo-form-label" style="margin-top:14px;">Description <span class="cwo-wajib">*</span></label>
+                        <textarea class="cwo-form-input cwo-form-textarea" rows="4"
+                            placeholder="Describe the design / what was done..."
+                            t-att-value="state.readyForm.description"
+                            t-on-input="(ev) => state.readyForm.description = ev.target.value"></textarea>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.readyForm.proses"
+                            t-on-click="tutupReadyForm">Cancel</button>
+                        <button class="cwo-tombol-utama" t-att-disabled="state.readyForm.proses"
+                            t-on-click="kirimReady">
+                            <t t-if="state.readyForm.proses"><span class="cwo-spinner-tombol"/>Submitting...</t>
+                            <t t-else="">Submit for Approval</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP RIWAYAT IMAGE DESIGNER ══════════ -->
+        <t t-if="state.designList.buka">
+            <div class="cwo-overlay" t-on-click="tutupDesignList">
+                <div class="cwo-modal cwo-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2><i class="fa fa-clone"/> Designer Images — <t t-esc="state.designList.judul"/></h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupDesignList">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <t t-if="state.designList.memuat">
+                            <div class="cwo-loading"><div class="cwo-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.designList.items.length === 0">
+                            <div class="cwo-picker-kosong">No designer images yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwo-design-daftar">
+                                <t t-foreach="state.designList.items" t-as="di" t-key="di.id">
+                                    <div class="cwo-design-item">
+                                        <button class="cwo-ico cwo-ico-hapus cwo-hist-hapus" title="Delete this image"
+                                            t-if="state.bisaUbah" t-on-click="() => this.hapusDesignItem(di)">
+                                            <i class="fa fa-trash-o"/>
+                                        </button>
+                                        <div class="cwo-design-gambar" t-if="di.ada_gambar">
+                                            <img class="cwo-thumb-klik" title="Click to enlarge"
+                                                t-att-src="urlDesignItem(di.id)"
+                                                t-on-click="() => this.bukaGambarPopup(urlDesignItem(di.id), 'Designer Image — ' + state.designList.judul)"/>
+                                        </div>
+                                        <div class="cwo-design-isi">
+                                            <div class="cwo-revisi-meta">
+                                                <span class="cwo-revisi-oleh"><i class="fa fa-user"/> <t t-esc="di.oleh"/></span>
+                                                <span class="cwo-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="di.tanggal"/></span>
+                                            </div>
+                                            <div class="cwo-revisi-teks" t-if="di.description"><t t-esc="di.description"/></div>
+                                            <div class="cwo-revisi-teks cwo-sel-kosong" t-else="">No description</div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupDesignList">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP FILTER (gabungan) ══════════ -->
+        <t t-if="state.filterPopup.buka">
+            <div class="cwo-overlay" t-on-click="tutupFilter">
+                <div class="cwo-modal cwo-modal-filter" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2><i class="fa fa-sliders"/> Filter</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupFilter">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <!-- Status -->
+                        <label class="cwo-form-label">Status</label>
+                        <div class="cwo-filter-status">
+                            <button t-attf-class="cwo-fs-btn #{state.filterStatus === '' ? 'cwo-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('')">All</button>
+                            <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'ongoing' ? 'cwo-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('ongoing')">Ongoing</button>
+                            <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'finished' ? 'cwo-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('finished')">Finished</button>
+                        </div>
+
+                        <!-- Period (rentang tanggal) -->
+                        <label class="cwo-form-label" style="margin-top:14px;">📅 Period</label>
+                        <select class="cwo-form-input cwo-filter-sel" t-on-change="setFilterTglField">
+                            <option value="request_date" t-att-selected="state.filterTglField === 'request_date'">Req Date</option>
+                            <option value="target_date" t-att-selected="state.filterTglField === 'target_date'">Target</option>
+                            <option value="finish_date" t-att-selected="state.filterTglField === 'finish_date'">Finish Date</option>
+                            <option value="approval_date" t-att-selected="state.filterTglField === 'approval_date'">Approval Date</option>
+                        </select>
+                        <div class="cwo-filter-tgl-baris">
+                            <input type="date" class="cwo-form-input" title="From"
+                                t-att-value="state.filterTglDari" t-on-change="setFilterTglDari"/>
+                            <span class="cwo-filter-sampai">→</span>
+                            <input type="date" class="cwo-form-input" title="To"
+                                t-att-value="state.filterTglSampai" t-on-change="setFilterTglSampai"/>
+                        </div>
+
+                        <!-- Designer (Full & Read-only) -->
+                        <t t-if="state.bolehFilterDesigner">
+                            <label class="cwo-form-label" style="margin-top:14px;">👤 Designer</label>
+                            <select class="cwo-form-input cwo-filter-sel" t-on-change="setFilterDesigner">
+                                <option value="" t-att-selected="state.filterDesigner === ''">All designers</option>
+                                <t t-foreach="state.daftarDesignerFilter" t-as="d" t-key="d.key">
+                                    <option t-att-value="d.key" t-att-selected="state.filterDesigner === d.key">
+                                        <t t-esc="d.label"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </t>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="resetCari">Reset</button>
+                        <button class="cwo-tombol-utama" t-on-click="tutupFilter">Done</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP HISTORY (audit) — akses Full ══════════ -->
+        <t t-if="state.history.buka">
+            <div class="cwo-overlay" t-on-click="tutupHistory">
+                <div class="cwo-modal cwo-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2><i class="fa fa-history"/> Work Order History</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupHistory">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <t t-if="state.history.memuat">
+                            <div class="cwo-loading"><div class="cwo-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.history.items.length === 0">
+                            <div class="cwo-picker-kosong">No activity yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwo-audit-daftar">
+                                <t t-foreach="state.history.items" t-as="a" t-key="a.id">
+                                    <div class="cwo-audit-item">
+                                        <span t-attf-class="cwo-aud-badge #{kelasAksiAudit(a.aksi)}"><t t-esc="labelAksiAudit(a.aksi)"/></span>
+                                        <div class="cwo-audit-isi">
+                                            <div class="cwo-audit-baris1">
+                                                <span class="cwo-audit-wo"><t t-esc="a.wo"/></span>
+                                                <span class="cwo-audit-tgl"><i class="fa fa-clock-o"/> <t t-esc="a.waktu"/></span>
+                                            </div>
+                                            <div class="cwo-audit-ket"><t t-esc="a.keterangan"/></div>
+                                            <div class="cwo-audit-oleh"><i class="fa fa-user"/> <t t-esc="a.oleh"/></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupHistory">Close</button>
                     </div>
                 </div>
             </div>
@@ -846,6 +1115,18 @@
             <button class="cwo-picker-navbtn" t-on-click="userNext"
                 t-att-disabled="state.userPicker.halaman >= userTotalHalaman">Next ›</button>
         </div>
+        <!-- Input nama designer custom (ketik bebas) — hanya untuk target Designer -->
+        <t t-if="state.userPicker.target === 'incharge'">
+            <div class="cwo-picker-custom">
+                <div class="cwo-picker-custom-judul">Or type a custom name</div>
+                <div class="cwo-picker-custom-baris">
+                    <input type="text" class="cwo-picker-cari" placeholder="e.g. Vendor X / freelancer..."
+                        t-att-value="state.userPicker.custom" t-on-input="userCustomInput"
+                        t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.pakaiDesignerCustom()"/>
+                    <button class="cwo-picker-custom-btn" t-on-click="pakaiDesignerCustom">Use</button>
+                </div>
+            </div>
+        </t>
     </div>
 </t>
 

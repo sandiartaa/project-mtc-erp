@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- 3 level akses modul Work Orders (admin pilih salah satu lewat Master User):
+    <!-- 3 level akses modul Work Order Mold (admin pilih salah satu lewat Master User):
          - implied base.group_user: pemilik grup otomatis Internal User.
          - admin dimasukkan ke Full agar tetap bisa melihat & mengelola.
 
-         1. Full (group_work_orders_user)      : CRUD semua WO, approve/reject. Tanpa tombol Ready.
-         2. Designer (group_work_orders_designer): hanya WO miliknya (incharge), bisa Ready for Approval.
-         3. Read-only (group_work_orders_readonly): lihat SEMUA WO, tanpa aksi apa pun. -->
+         1. Full (group_wom_user)      : CRUD semua WO, approve/reject. Tanpa tombol Ready.
+         2. Designer (group_wom_designer): hanya WO miliknya (incharge), bisa Ready for Approval.
+         3. Read-only (group_wom_readonly): lihat SEMUA WO, tanpa aksi apa pun. -->
 
     <!-- Designer: lihat & kerjakan WO miliknya, menekan Ready for Approval. -->
-    <record id="group_work_orders_designer" model="res.groups">
-        <field name="name">Akses Work Orders (Designer)</field>
+    <record id="group_wom_designer" model="res.groups">
+        <field name="name">Akses Work Order Mold (Designer)</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
     <!-- Read-only MURNI: hanya melihat SEMUA Work Order, tidak bisa aksi apa pun. -->
-    <record id="group_work_orders_readonly" model="res.groups">
-        <field name="name">Akses Work Orders (Read-only)</field>
+    <record id="group_wom_readonly" model="res.groups">
+        <field name="name">Akses Work Order Mold (Read-only)</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
     <!-- Full: boleh Create/View/Update/Delete + approve/reject. Ditentukan admin lewat Master User. -->
-    <record id="group_work_orders_user" model="res.groups">
-        <field name="name">Akses Work Orders</field>
+    <record id="group_wom_user" model="res.groups">
+        <field name="name">Akses Work Order Mold</field>
         <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
         <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
     </record>

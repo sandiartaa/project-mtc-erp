@@ -8,7 +8,7 @@ from odoo.exceptions import AccessError, ValidationError
 
 class WoWorkOrder(models.Model):
     """Work Order — tabel custom modul ini (tidak menyentuh tabel bawaan)."""
-    _name = 'wo.work.order'
+    _name = 'wom.work.order'
     _description = 'Work Order'
     _order = 'id desc'
     _rec_name = 'wo_number'
@@ -21,10 +21,10 @@ class WoWorkOrder(models.Model):
     # ── Product ──
     name = fields.Char('Name', required=True, index=True)
     code = fields.Char('Code', index=True)
-    # Brand — dropdown ke model custom wo.brand (isinya bisa di-CRUD).
-    brand_id = fields.Many2one('wo.brand', 'Brand', ondelete='set null')
-    # Job Type — dropdown ke model custom wo.job.type (isinya bisa di-CRUD).
-    job_type_id = fields.Many2one('wo.job.type', 'Job Type', ondelete='set null')
+    # Brand — dropdown ke model custom wom.brand (isinya bisa di-CRUD).
+    brand_id = fields.Many2one('wom.brand', 'Brand', ondelete='set null')
+    # Job Type — dropdown ke model custom wom.job.type (isinya bisa di-CRUD).
+    job_type_id = fields.Many2one('wom.job.type', 'Job Type', ondelete='set null')
     details = fields.Text('Details')
     # Image referensi dari pembuat WO (acuan untuk designer mengerjakan).
     image = fields.Binary('Reference Image', attachment=True)
@@ -34,13 +34,13 @@ class WoWorkOrder(models.Model):
     )
 
     # ── Image hasil designer ──
-    # Tiap pengajuan approval, designer meng-upload image (lihat wo.design.image).
+    # Tiap pengajuan approval, designer meng-upload image (lihat wom.design.image).
     # Yang ditampilkan di daftar adalah image TERBARU dari designer.
     design_image_ids = fields.One2many(
-        'wo.design.image', 'work_order_id', 'Designer Images'
+        'wom.design.image', 'work_order_id', 'Designer Images'
     )
     last_design_image_id = fields.Many2one(
-        'wo.design.image', 'Image Designer Terakhir',
+        'wom.design.image', 'Image Designer Terakhir',
         compute='_compute_design_info', store=True
     )
     design_image_ada = fields.Boolean(
@@ -51,7 +51,7 @@ class WoWorkOrder(models.Model):
     )
 
     # ── IN CHARGE ──
-    # Designer 2D/3D: user yang punya akses modul Work Orders (lihat users_incharge).
+    # Designer 2D/3D: user yang punya akses modul Work Order Mold (lihat users_incharge).
     incharge_id = fields.Many2one('res.users', 'Designer 2D/3D', ondelete='set null')
     # Nama designer ketikan bebas (dipakai bila designer bukan user sistem).
     incharge_custom = fields.Char('Designer (Custom)')
@@ -59,8 +59,8 @@ class WoWorkOrder(models.Model):
         [('lokal', 'Lokal'), ('rrc', 'RRC')], string='Lokal/RRC'
     )
 
-    # ── Requestor ── (daftar custom wo.person, bukan res.users)
-    requestor_id = fields.Many2one('wo.person', 'Requestor', ondelete='set null')
+    # ── Requestor ── (daftar custom wom.person, bukan res.users)
+    requestor_id = fields.Many2one('wom.person', 'Requestor', ondelete='set null')
     # Catatan: "Diinput oleh" memakai create_uid bawaan (user pembuat record yang
     # sebenarnya) — selalu user yang login, bukan superuser/OdooBot.
 
@@ -69,8 +69,8 @@ class WoWorkOrder(models.Model):
     target_date = fields.Date('Target')
     finish_date = fields.Date('Finish Date')
 
-    # ── Approval ── (daftar custom wo.person, bukan res.users)
-    approver_id = fields.Many2one('wo.person', 'Approver', ondelete='set null')
+    # ── Approval ── (daftar custom wom.person, bukan res.users)
+    approver_id = fields.Many2one('wom.person', 'Approver', ondelete='set null')
     approval_date = fields.Date('Approval Date')
 
     # ── Status keseluruhan + filter ──
@@ -93,7 +93,7 @@ class WoWorkOrder(models.Model):
     import_batch = fields.Char('Batch Impor', index=True, copy=False)
 
     # ── Riwayat revisi ── (dibuat saat pengajuan approval ditolak)
-    revisi_ids = fields.One2many('wo.revision', 'work_order_id', 'Revisions')
+    revisi_ids = fields.One2many('wom.revision', 'work_order_id', 'Revisions')
     revisi_count = fields.Integer('Jumlah Revisi', compute='_compute_revisi_count')
 
     @api.depends('image')
@@ -104,7 +104,7 @@ class WoWorkOrder(models.Model):
     @api.depends('design_image_ids')
     def _compute_design_info(self):
         """Hitung image designer terbaru. design_image_ids sudah urut id desc
-        (lihat _order di wo.design.image), jadi elemen pertama = terbaru."""
+        (lihat _order di wom.design.image), jadi elemen pertama = terbaru."""
         for rec in self:
             last = rec.design_image_ids[:1]
             rec.last_design_image_id = last.id if last else False
@@ -117,12 +117,12 @@ class WoWorkOrder(models.Model):
             rec.revisi_count = len(rec.revisi_ids)
 
     # Nama channel bus untuk siaran perubahan ke semua klien yang sedang membuka app.
-    _BUS_CHANNEL = 'wo_work_order'
-    _BUS_TYPE = 'wo_work_order/changed'
+    _BUS_CHANNEL = 'wom_work_order'
+    _BUS_TYPE = 'wom_work_order/changed'
 
     def _notify_changed(self):
         """Siarkan sinyal 'data berubah' lewat bus Odoo agar semua klien yang
-        sedang membuka Work Orders memuat ulang daftarnya (real-time, tanpa refresh).
+        sedang membuka Work Order Mold memuat ulang daftarnya (real-time, tanpa refresh).
         Payload sengaja kosong — hanya pemicu reload, tidak membawa data."""
         self.env['bus.bus']._sendone(self._BUS_CHANNEL, self._BUS_TYPE, {})
 
@@ -142,7 +142,7 @@ class WoWorkOrder(models.Model):
             if not rec.image:
                 continue
             att = Att.search([
-                ('res_model', '=', 'wo.work.order'),
+                ('res_model', '=', 'wom.work.order'),
                 ('res_field', '=', 'image'),
                 ('res_id', '=', rec.id),
             ], limit=1)
@@ -166,7 +166,7 @@ class WoWorkOrder(models.Model):
     def _catat_audit(self, aksi, keterangan, user=None):
         """Tulis 1 baris log audit per record (selalu via sudo).
         user: pemilik aksi sebenarnya (default user yang login saat ini)."""
-        Audit = self.env['wo.audit'].sudo()
+        Audit = self.env['wom.audit'].sudo()
         uid = (user or self.env.user).id
         for rec in self:
             Audit.create({
@@ -194,7 +194,7 @@ class WoWorkOrder(models.Model):
         for vals in vals_list:
             if vals.get('wo_number', 'New') in (False, 'New', ''):
                 vals['wo_number'] = (
-                    self.env['ir.sequence'].next_by_code('wo.work.order') or 'New'
+                    self.env['ir.sequence'].next_by_code('wom.work.order') or 'New'
                 )
         records = super().create(vals_list)
         records._rename_image_attachment()
@@ -225,7 +225,7 @@ class WoWorkOrder(models.Model):
     def boleh_ubah(self):
         """True jika user boleh Create/Update/Delete (anggota grup Full).
         User Designer/Read-only akan mendapat False sehingga tombol aksi disembunyikan."""
-        return self.env.user.has_group('custom_work_orders.group_work_orders_user')
+        return self.env.user.has_group('custom_work_orders_mold.group_wom_user')
 
     @api.model
     def peran_akses(self):
@@ -233,9 +233,9 @@ class WoWorkOrder(models.Model):
         Dipakai frontend untuk menentukan tombol & filter yang tampil."""
         u = self.env.user
         return {
-            'full': u.has_group('custom_work_orders.group_work_orders_user'),
-            'designer': u.has_group('custom_work_orders.group_work_orders_designer'),
-            'readonly': u.has_group('custom_work_orders.group_work_orders_readonly'),
+            'full': u.has_group('custom_work_orders_mold.group_wom_user'),
+            'designer': u.has_group('custom_work_orders_mold.group_wom_designer'),
+            'readonly': u.has_group('custom_work_orders_mold.group_wom_readonly'),
         }
 
     @api.model
@@ -257,7 +257,7 @@ class WoWorkOrder(models.Model):
         """Hanya Designer 2D/3D dari WO ini, atau user Full, yang boleh
         mengajukan/membatalkan pengajuan."""
         user = self.env.user
-        if user.has_group('custom_work_orders.group_work_orders_user'):
+        if user.has_group('custom_work_orders_mold.group_wom_user'):
             return
         for rec in self:
             if rec.incharge_id.id != user.id:
@@ -266,13 +266,13 @@ class WoWorkOrder(models.Model):
                 )
 
     def _cek_full(self):
-        if not self.env.user.has_group('custom_work_orders.group_work_orders_user'):
+        if not self.env.user.has_group('custom_work_orders_mold.group_wom_user'):
             raise AccessError("Hanya user akses Full yang boleh menyetujui/menolak.")
 
     def action_set_ready(self, image=None, description=None):
         """Designer mengajukan WO untuk approval (draft → ready).
         WAJIB mengisi description; image hasil designer OPSIONAL. Keduanya
-        disimpan sebagai record wo.design.image (riwayat). Image terbaru inilah
+        disimpan sebagai record wom.design.image (riwayat). Image terbaru inilah
         yang ditampilkan di daftar Work Order (bila ada).
         Pakai sudo agar Designer ber-akses read-only tetap bisa mengajukan
         sendiri, namun dibatasi oleh _cek_designer_atau_full di atas."""
@@ -282,7 +282,7 @@ class WoWorkOrder(models.Model):
         if not teks:
             raise ValidationError("Deskripsi wajib diisi saat mengajukan approval.")
         img = self._parse_image(image)  # opsional
-        self.env['wo.design.image'].sudo().create({
+        self.env['wom.design.image'].sudo().create({
             'work_order_id': self.id,
             'image': img or False,
             'description': teks,
@@ -311,13 +311,13 @@ class WoWorkOrder(models.Model):
     def action_reject(self, detail=None, image=None):
         """User Full menolak pengajuan (kembali ke draft) dengan catatan revisi.
         Detail revisi wajib diisi; gambar opsional (drag-drop/upload). Disimpan
-        sebagai record wo.revision (riwayat: isi revisi, gambar, oleh siapa, kapan)."""
+        sebagai record wom.revision (riwayat: isi revisi, gambar, oleh siapa, kapan)."""
         self._cek_full()
         teks = (detail or '').strip()
         if not teks:
             raise ValidationError("Detail Revision wajib diisi saat menolak.")
         img = self._parse_image(image)
-        self.env['wo.revision'].create(
+        self.env['wom.revision'].create(
             [{'work_order_id': rec.id, 'detail': teks, 'image': img or False}
              for rec in self]
         )
@@ -327,13 +327,13 @@ class WoWorkOrder(models.Model):
 
     @api.model
     def users_incharge(self):
-        """Semua user yang punya akses modul Work Orders — baik Full maupun
+        """Semua user yang punya akses modul Work Order Mold — baik Full maupun
         Read-only — untuk dropdown Designer 2D/3D."""
         users = self.env['res.users'].browse()
         for xmlid in (
-            'custom_work_orders.group_work_orders_user',
-            'custom_work_orders.group_work_orders_designer',
-            'custom_work_orders.group_work_orders_readonly',
+            'custom_work_orders_mold.group_wom_user',
+            'custom_work_orders_mold.group_wom_designer',
+            'custom_work_orders_mold.group_wom_readonly',
         ):
             grp = self.env.ref(xmlid, raise_if_not_found=False)
             if grp:
@@ -403,7 +403,7 @@ class WoWorkOrder(models.Model):
             return users.get(nama.lower(), False) if nama else False
 
         # Cache job type: nama(lower) -> id. Buat baru bila belum ada.
-        JobType = self.env['wo.job.type']
+        JobType = self.env['wom.job.type']
         job_types = {(jt['name'] or '').strip().lower(): jt['id']
                      for jt in JobType.daftar_job_type()}
 
@@ -416,7 +416,7 @@ class WoWorkOrder(models.Model):
             return job_types[key]
 
         # Cache brand: nama(lower) -> id. Buat baru bila belum ada.
-        Brand = self.env['wo.brand']
+        Brand = self.env['wom.brand']
         brands = {(b['name'] or '').strip().lower(): b['id']
                   for b in Brand.daftar_brand()}
 
@@ -429,7 +429,7 @@ class WoWorkOrder(models.Model):
             return brands[key]
 
         # Cache person (Requestor/Approver): nama(lower) -> id. Buat baru bila belum ada.
-        Person = self.env['wo.person']
+        Person = self.env['wom.person']
         persons = {(p['name'] or '').strip().lower(): p['id']
                    for p in Person.daftar_person()}
 

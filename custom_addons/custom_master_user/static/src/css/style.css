@@ -493,9 +493,72 @@
     font-size: 12.5px;
 }
 
+/* ---- KARTU (mobile, accordion) ---- */
+.cmu-kartu-list { display: none; }
+.cmu-kartu {
+    background: white;
+    border: 1px solid #eef2f7;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+/* Kepala kartu: hanya Kode + Nama, area tekan untuk buka/tutup */
+.cmu-kartu-kepala {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; cursor: pointer; user-select: none;
+}
+.cmu-kartu-buka .cmu-kartu-kepala { background: #f8fafc; }
+.cmu-kartu-nama { font-size: 15px; font-weight: 700; color: #1e293b; flex: 1; min-width: 0; }
+.cmu-kartu-chevron {
+    color: #94a3b8; font-size: 13px; flex-shrink: 0;
+    transition: transform 0.2s;
+}
+.cmu-kartu-buka .cmu-kartu-chevron { transform: rotate(180deg); color: #7c3aed; }
+.cmu-kartu-isi { padding: 0 16px 16px; }
+.cmu-kartu-baris {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; padding: 9px 0; border-top: 1px solid #f1f5f9;
+}
+.cmu-kartu-label {
+    font-size: 11px; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.4px; flex-shrink: 0;
+}
+.cmu-kartu-baris-akses { align-items: flex-start; }
+.cmu-kartu-akses { text-align: right; }
+.cmu-kartu-aksi { display: flex; gap: 8px; margin-top: 14px; }
+.cmu-kartu-aksi button { flex: 1; padding: 11px 8px; font-size: 13px; }
+
 /* ---- RESPONSIVE ---- */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+    /* Header lebih ringkas & melebar */
+    .cmu-header { padding: 14px 16px 18px; }
+    .cmu-header-konten { flex-direction: column; align-items: stretch; gap: 12px; }
+    .cmu-header-judul { gap: 12px; }
+    .cmu-header-ikon { width: 52px; height: 52px; font-size: 28px; border-radius: 14px; }
+    .cmu-header-konten h1 { font-size: 22px; }
+    .cmu-btn-tambah { width: 100%; text-align: center; padding: 12px; }
+
+    /* Filter bar menumpuk rapi */
+    .cmu-filterbar { margin: -14px 16px 16px; padding: 14px; }
+    .cmu-filter-grup { flex: 1 1 100%; min-width: 0; }
+    .cmu-btn-reset { width: 100%; }
+
+    /* Ganti tabel dengan daftar kartu */
+    .cmu-tabel-wrapper { display: none; }
+    .cmu-kartu-list { display: flex; flex-direction: column; gap: 12px; margin: 0 16px; }
+    .cmu-kosong { margin: 0 16px; }
+
+    /* Modal full-screen + font input 16px (cegah auto-zoom iOS) */
+    .cmu-overlay { padding: 0; align-items: stretch; }
+    .cmu-modal { max-width: none; width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    .cmu-modal-isi { padding: 18px 16px; }
     .cmu-form-baris-2 { flex-direction: column; gap: 0; }
-    .cmu-header-konten { flex-direction: column; align-items: flex-start; }
-    .cmu-aksi-grup { flex-wrap: wrap; }
+    .cmu-form-input { font-size: 16px; padding: 12px; }
+    .cmu-modal-footer { padding: 14px 16px; }
+    .cmu-modal-footer .cmu-tombol-sekunder,
+    .cmu-modal-footer .cmu-tombol-utama { flex: 1; justify-content: center; padding: 13px 16px; }
+
+    /* Dialog konfirmasi tetap kecil di tengah (bukan full-screen) */
+    .cmu-overlay-konfirmasi { padding: 20px; align-items: center; }
+    .cmu-modal-konfirmasi { max-width: 100%; }
 }

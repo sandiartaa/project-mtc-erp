@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Pembatasan baris (record rules) untuk wo.work.order.
+    <!-- Pembatasan baris (record rules) untuk wom.work.order.
          Aturan per-grup di-OR: Full & Read-only lihat semua;
          Designer hanya melihat Work Order yang dia jadi Designer 2D/3D-nya. -->
 
     <!-- Full: lihat & kelola SEMUA Work Order -->
     <record id="rule_wo_full_semua" model="ir.rule">
         <field name="name">Work Order: Full lihat semua</field>
-        <field name="model_id" ref="model_wo_work_order"/>
-        <field name="groups" eval="[(4, ref('group_work_orders_user'))]"/>
+        <field name="model_id" ref="model_wom_work_order"/>
+        <field name="groups" eval="[(4, ref('group_wom_user'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
     </record>
 
     <!-- Designer: hanya Work Order miliknya sendiri -->
     <record id="rule_wo_designer_sendiri" model="ir.rule">
         <field name="name">Work Order: Designer hanya milik sendiri</field>
-        <field name="model_id" ref="model_wo_work_order"/>
-        <field name="groups" eval="[(4, ref('group_work_orders_designer'))]"/>
+        <field name="model_id" ref="model_wom_work_order"/>
+        <field name="groups" eval="[(4, ref('group_wom_designer'))]"/>
         <field name="domain_force">[('incharge_id', '=', user.id)]</field>
     </record>
 
     <!-- Read-only: lihat SEMUA Work Order (tanpa aksi) -->
     <record id="rule_wo_readonly_semua" model="ir.rule">
         <field name="name">Work Order: Read-only lihat semua</field>
-        <field name="model_id" ref="model_wo_work_order"/>
-        <field name="groups" eval="[(4, ref('group_work_orders_readonly'))]"/>
+        <field name="model_id" ref="model_wom_work_order"/>
+        <field name="groups" eval="[(4, ref('group_wom_readonly'))]"/>
         <field name="domain_force">[(1, '=', 1)]</field>
     </record>
 </odoo>

@@ -6,12 +6,12 @@ class WoRevision(models.Model):
     ditolak (Reject). Tabel custom sendiri (tidak menyentuh tabel bawaan).
     create_uid & create_date bawaan Odoo dipakai untuk mencatat oleh siapa
     dan kapan revisi diminta."""
-    _name = 'wo.revision'
+    _name = 'wom.revision'
     _description = 'Work Order Revision'
     _order = 'id desc'
 
     work_order_id = fields.Many2one(
-        'wo.work.order', 'Work Order', required=True, ondelete='cascade', index=True
+        'wom.work.order', 'Work Order', required=True, ondelete='cascade', index=True
     )
     detail = fields.Text('Detail Revision', required=True)
     # Gambar opsional pendukung revisi (di-upload user Full saat menolak).

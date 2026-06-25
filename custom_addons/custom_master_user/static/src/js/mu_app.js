@@ -55,11 +55,23 @@ class MuApp extends Component {
 
             // Dialog konfirmasi
             konfirmasi: { buka: false, judul: "", labelYa: "Ya", warnaYa: "merah" },
+
+            // Kartu mobile yang sedang dibuka (accordion). Key = id record → true.
+            kartuTerbuka: {},
         });
 
         onMounted(async () => {
             await Promise.all([this.muatData(), this.muatUser(), this.muatModul()]);
         });
+    }
+
+    // Buka/tutup kartu (accordion mobile).
+    toggleKartu(id) {
+        if (this.state.kartuTerbuka[id]) {
+            delete this.state.kartuTerbuka[id];
+        } else {
+            this.state.kartuTerbuka[id] = true;
+        }
     }
 
     async muatModul() {

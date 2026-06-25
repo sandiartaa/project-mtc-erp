@@ -117,6 +117,52 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- ══════════ KARTU (tampilan mobile, accordion) ══════════ -->
+                <div class="cmu-kartu-list">
+                    <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                        <div t-attf-class="cmu-kartu #{state.kartuTerbuka[rec.id] ? 'cmu-kartu-buka' : ''}">
+                            <!-- KEPALA: hanya Kode + Nama, ditekan untuk buka/tutup -->
+                            <div class="cmu-kartu-kepala" t-on-click="() => this.toggleKartu(rec.id)">
+                                <span class="cmu-badge-kode"><t t-esc="rec.kode"/></span>
+                                <span class="cmu-kartu-nama"><t t-esc="rec.user_id ? rec.user_id[1] : '-'"/></span>
+                                <span class="cmu-kartu-chevron">▾</span>
+                            </div>
+
+                            <!-- ISI: muncul saat kartu dibuka -->
+                            <div class="cmu-kartu-isi" t-if="state.kartuTerbuka[rec.id]">
+                                <div class="cmu-kartu-baris">
+                                    <span class="cmu-kartu-label">Divisi</span>
+                                    <span>
+                                        <t t-if="rec.divisi"><span class="cmu-badge-divisi"><t t-esc="labelDivisi(rec.divisi)"/></span></t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </span>
+                                </div>
+                                <div class="cmu-kartu-baris">
+                                    <span class="cmu-kartu-label">Subdivisi</span>
+                                    <span>
+                                        <t t-if="rec.subdivisi"><span class="cmu-badge-sub"><t t-esc="labelSubdivisi(rec.subdivisi)"/></span></t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </span>
+                                </div>
+                                <div class="cmu-kartu-baris cmu-kartu-baris-akses">
+                                    <span class="cmu-kartu-label">Akses</span>
+                                    <span class="cmu-kartu-akses">
+                                        <t t-if="rec.akses and rec.akses.length">
+                                            <t t-foreach="rec.akses" t-as="a" t-key="a"><span class="cmu-badge-akses"><t t-esc="a"/></span></t>
+                                        </t>
+                                        <t t-else=""><span class="cmu-sel-kosong">—</span></t>
+                                    </span>
+                                </div>
+                                <div class="cmu-kartu-aksi">
+                                    <button class="cmu-btn-history" t-on-click="() => this.bukaRiwayat(rec)">History</button>
+                                    <button class="cmu-btn-edit" t-on-click="() => this.bukaFormEdit(rec)">Edit</button>
+                                    <button class="cmu-btn-hapus" t-on-click="() => this.konfirmasiHapus(rec)">Hapus</button>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
             </t>
         </t>
 

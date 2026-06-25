@@ -4,12 +4,17 @@ from odoo.exceptions import AccessError
 # Daftar grup "akses modul" yang dikelola dari Master User.
 # (xmlid grup, label tampilan). Grup yang modulnya belum terpasang dilewati.
 MODUL_AKSES = [
-    ('custom_penjualan.group_penjualan_user', 'Penjualan'),
     ('custom_spk.group_spk_user', 'SPK'),
-    # Work Orders punya 2 level: Full (CRUD) dan Read-only (lihat saja).
+    # Work Orders punya 3 level: Full (CRUD + approve), Designer (WO miliknya +
+    # Ready for Approval), Read-only (lihat semua, tanpa aksi).
     # Admin pilih salah satu untuk tiap user.
     ('custom_work_orders.group_work_orders_user', 'Work Orders (Full)'),
+    ('custom_work_orders.group_work_orders_designer', 'Work Orders (Designer)'),
     ('custom_work_orders.group_work_orders_readonly', 'Work Orders (Read-only)'),
+    # Work Order Mold — modul kembar, 3 level akses yang sama.
+    ('custom_work_orders_mold.group_wom_user', 'Work Order Mold (Full)'),
+    ('custom_work_orders_mold.group_wom_designer', 'Work Order Mold (Designer)'),
+    ('custom_work_orders_mold.group_wom_readonly', 'Work Order Mold (Read-only)'),
 ]
 
 

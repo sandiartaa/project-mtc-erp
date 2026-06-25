@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Daftar awal orang untuk Requestor & Approver. noupdate="1" agar user
+         bebas CRUD (rename/hapus/tambah) tanpa ditimpa saat update modul. -->
+    <data noupdate="1">
+        <record id="person_setiadi" model="wom.person">
+            <field name="name">P. Setiadi</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="person_apin" model="wom.person">
+            <field name="name">P. Apin</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="person_minto" model="wom.person">
+            <field name="name">P. Minto</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="person_rahmatk" model="wom.person">
+            <field name="name">P. Rahmatk</field>
+            <field name="sequence">40</field>
+        </record>
+        <record id="person_rei" model="wom.person">
+            <field name="name">Rei</field>
+            <field name="sequence">50</field>
+        </record>
+    </data>
+</odoo>

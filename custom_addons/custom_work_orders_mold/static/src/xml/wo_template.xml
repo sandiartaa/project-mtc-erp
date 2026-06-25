@@ -1,0 +1,1133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_work_orders_mold.WomApp">
+    <div class="cwom-wrapper">
+
+        <!-- HEADER -->
+        <div class="cwom-header">
+            <div class="cwom-header-lingkaran cwom-ling-1"/>
+            <div class="cwom-header-lingkaran cwom-ling-2"/>
+            <div class="cwom-header-konten">
+                <div class="cwom-header-judul">
+                    <div class="cwom-header-ikon">🛠️</div>
+                    <div>
+                        <h1>Work Order Mold</h1>
+                        <p>Product · IN CHARGE · Requestor · Timeline · Approval</p>
+                    </div>
+                </div>
+                <div class="cwom-header-aksi" t-if="state.bisaUbah">
+                    <button class="cwom-btn-import" t-on-click="bukaImpor">⬆ Import</button>
+                    <button class="cwom-btn-tambah" t-on-click="bukaFormTambah">+ Add Work Order</button>
+                </div>
+                <div class="cwom-header-aksi" t-else="">
+                    <span class="cwom-badge-ro" t-if="state.adalahDesigner">🎨 Designer Only</span>
+                    <span class="cwom-badge-ro" t-else="">👁 Read Only</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOOLBAR: Search + tombol Filter (popup) + History (Full) + Reset -->
+        <div class="cwom-filterbar">
+            <div class="cwom-filter-grup">
+                <input type="text" class="cwom-filter-input cwom-filter-cari"
+                    placeholder="Search No. / name / code..."
+                    t-att-value="state.cari"
+                    t-on-input="(ev) => state.cari = ev.target.value"
+                    t-on-keydown="handleKeydown"/>
+                <button class="cwom-btn-cari" t-on-click="cariData">Search</button>
+            </div>
+            <div class="cwom-toolbar-aksi">
+                <button class="cwom-btn-filter" t-on-click="bukaFilter">
+                    <i class="fa fa-sliders"/> Filter
+                    <span class="cwom-filter-badge" t-if="filterAktifJumlah"><t t-esc="filterAktifJumlah"/></span>
+                </button>
+                <button class="cwom-btn-history" t-if="state.bisaUbah" t-on-click="bukaHistory">
+                    <i class="fa fa-history"/> History
+                </button>
+                <button class="cwom-btn-reset" t-on-click="resetCari">Reset</button>
+            </div>
+        </div>
+
+        <!-- LOADING -->
+        <t t-if="state.memuat">
+            <div class="cwom-loading"><div class="cwom-spinner"/><p>Loading data...</p></div>
+        </t>
+
+        <t t-else="">
+            <t t-if="state.list.length === 0">
+                <div class="cwom-kosong">
+                    <div class="cwom-kosong-ikon">📭</div>
+                    <h3>No Work Order Mold yet</h3>
+                    <p t-if="state.bisaUbah">Click the button below to add one</p>
+                    <button t-if="state.bisaUbah" class="cwom-btn-tambah cwom-btn-tambah-kosong"
+                        t-on-click="bukaFormTambah">+ Add Work Order</button>
+                </div>
+            </t>
+
+            <t t-else="">
+                <div class="cwom-tabel-wrapper">
+                    <table class="cwom-tabel">
+                        <thead>
+                            <tr class="cwom-grup-row">
+                                <th rowspan="2" class="cwom-tengah cwom-col-no">No.</th>
+                                <th rowspan="2" class="cwom-tengah cwom-col-status">Status</th>
+                                <th colspan="6" class="cwom-grup cwom-grup-pd">Product</th>
+                                <th colspan="2" class="cwom-grup cwom-grup-ic">IN CHARGE</th>
+                                <th rowspan="2" class="cwom-tengah cwom-col-req">Requestor</th>
+                                <th colspan="3" class="cwom-grup cwom-grup-tl">Timeline</th>
+                                <th colspan="2" class="cwom-grup cwom-grup-ap">Approval</th>
+                                <th rowspan="2" class="cwom-tengah cwom-col-apr">Ready Approval</th>
+                                <th rowspan="2" class="cwom-tengah cwom-col-aksi" t-if="state.bisaUbah">Action</th>
+                            </tr>
+                            <tr class="cwom-sub-row">
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Brand</th>
+                                <th>Job Type</th>
+                                <th>Details</th>
+                                <th class="cwom-tengah">Image</th>
+                                <th>Designer 2D/3D</th>
+                                <th class="cwom-tengah">Local/RRC</th>
+                                <th>Req Date</th>
+                                <th>Target</th>
+                                <th>Finish Date</th>
+                                <th>Approver</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                                <tr>
+                                    <td class="cwom-tengah" data-label="No."><span class="cwom-badge-no"><t t-esc="rec.wo_number"/></span></td>
+                                    <td class="cwom-tengah" data-label="Status">
+                                        <span t-attf-class="cwom-badge-st #{kelasStatus(rec.status)}">
+                                            <t t-esc="labelStatus(rec.status)"/>
+                                        </span>
+                                    </td>
+                                    <td data-label="Name"><b><t t-esc="rec.name"/></b></td>
+                                    <td data-label="Code"><t t-esc="rec.code or '—'"/></td>
+                                    <td data-label="Brand"><t t-esc="rec.brand_id ? rec.brand_id[1] : '—'"/></td>
+                                    <td class="cwom-tengah" data-label="Job Type">
+                                        <t t-if="rec.job_type_id">
+                                            <span class="cwom-badge-jt"><t t-esc="rec.job_type_id[1]"/></span>
+                                        </t>
+                                        <t t-else=""><span class="cwom-sel-kosong">—</span></t>
+                                    </td>
+                                    <td class="cwom-sel-details" data-label="Details"><t t-esc="rec.details or '—'"/></td>
+                                    <td class="cwom-tengah" data-label="Image">
+                                        <t t-if="adaGambarTampil(rec)">
+                                            <div class="cwom-img-sel">
+                                                <img class="cwom-thumb cwom-thumb-klik" title="Click to enlarge"
+                                                    t-att-src="urlGambar(rec)"
+                                                    t-on-click="() => this.bukaImgPopup(rec)"/>
+                                                <span t-if="pakaiReferensi(rec)" class="cwom-img-tag cwom-img-tag-ref" title="Reference image (no designer image yet)">Ref</span>
+                                                <span t-if="rec.design_count" class="cwom-img-tag cwom-img-tag-hist"
+                                                    title="View designer image history"
+                                                    t-on-click="() => this.bukaDesignList(rec)">
+                                                    <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
+                                            </div>
+                                        </t>
+                                        <t t-else=""><span class="cwom-sel-kosong">—</span></t>
+                                    </td>
+                                    <td data-label="Designer 2D/3D"><t t-esc="namaDesigner(rec) or '—'"/></td>
+                                    <td class="cwom-tengah" data-label="Local/RRC">
+                                        <t t-if="rec.lokal_rrc">
+                                            <span class="cwom-badge-lr"><t t-esc="labelLokalRrc(rec.lokal_rrc)"/></span>
+                                        </t>
+                                        <t t-else=""><span class="cwom-sel-kosong">—</span></t>
+                                    </td>
+                                    <td data-label="Requestor">
+                                        <div><t t-esc="rec.requestor_id ? rec.requestor_id[1] : '—'"/></div>
+                                        <div class="cwom-input-oleh" t-if="rec.create_uid">
+                                            <i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/>
+                                        </div>
+                                    </td>
+                                    <td data-label="Req Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
+                                    <td data-label="Target"><t t-esc="formatTanggal(rec.target_date)"/></td>
+                                    <td data-label="Finish Date"><t t-esc="formatTanggal(rec.finish_date)"/></td>
+                                    <td data-label="Approver"><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
+                                    <td data-label="Approval Date"><t t-esc="formatTanggal(rec.approval_date)"/></td>
+                                    <td class="cwom-tengah" data-label="Ready Approval">
+                                        <t t-call="custom_work_orders_mold.ApprovalCtrl"/>
+                                    </td>
+                                    <td class="cwom-tengah cwom-sel-aksi" data-label="Action" t-if="state.bisaUbah">
+                                        <div class="cwom-aksi-grup">
+                                            <button class="cwom-ico cwom-ico-edit" title="Edit"
+                                                t-on-click="() => this.bukaFormEdit(rec)">
+                                                <i class="fa fa-pencil"/>
+                                            </button>
+                                            <button class="cwom-ico cwom-ico-hapus" title="Delete"
+                                                t-on-click="() => this.konfirmasiHapus(rec)">
+                                                <i class="fa fa-trash-o"/>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ══════════ KARTU (tampilan mobile) ══════════ -->
+                <div class="cwom-kartu-list">
+                    <t t-foreach="state.list" t-as="rec" t-key="rec.id">
+                        <div t-attf-class="cwom-kartu #{state.kartuTerbuka[rec.id] ? 'cwom-kartu-buka' : ''}">
+                            <!-- KEPALA (selalu tampil, bisa ditekan untuk buka/tutup) -->
+                            <div class="cwom-kartu-kepala" t-on-click="() => this.toggleKartu(rec.id)">
+                                <div class="cwom-kartu-atas">
+                                    <span class="cwom-badge-no"><t t-esc="rec.wo_number"/></span>
+                                    <span t-if="rec.approval_state != 'draft'"
+                                        t-attf-class="cwom-badge-apr cwom-badge-apr-mini #{kelasApproval(rec.approval_state)}">
+                                        <t t-esc="labelApproval(rec.approval_state)"/>
+                                    </span>
+                                    <span t-attf-class="cwom-badge-st #{kelasStatus(rec.status)}">
+                                        <t t-esc="labelStatus(rec.status)"/>
+                                    </span>
+                                    <span class="cwom-kartu-chevron">▾</span>
+                                </div>
+                                <div class="cwom-kartu-nama"><t t-esc="rec.name"/></div>
+                                <div class="cwom-kartu-sub"><t t-esc="barisProduk(rec)"/></div>
+                            </div>
+
+                            <!-- ISI (muncul saat kartu dibuka) -->
+                            <div class="cwom-kartu-isi" t-if="state.kartuTerbuka[rec.id]">
+                                <!-- Gambar inline ke bawah (image designer terbaru / referensi) -->
+                                <div class="cwom-kartu-gambar" t-if="adaGambarTampil(rec)">
+                                    <img t-att-src="urlGambar(rec)"/>
+                                    <span t-if="pakaiReferensi(rec)" class="cwom-img-tag cwom-img-tag-ref">Ref</span>
+                                    <span t-if="rec.design_count" class="cwom-img-tag cwom-img-tag-hist"
+                                        t-on-click="() => this.bukaDesignList(rec)">
+                                        <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
+                                </div>
+                                <div class="cwom-kartu-baris" t-else="">
+                                    <span class="cwom-kartu-label">Image</span>
+                                    <span class="cwom-sel-kosong">No image</span>
+                                </div>
+                                <!-- Details (jika ada) -->
+                                <div class="cwom-kartu-detail" t-if="rec.details">
+                                    <t t-esc="rec.details"/>
+                                </div>
+                                <!-- Designer - Lokal/RRC -->
+                                <div class="cwom-kartu-baris">
+                                    <span class="cwom-kartu-label">Designer</span>
+                                    <span><t t-esc="barisDesigner(rec)"/></span>
+                                </div>
+                                <!-- Requestor - Req Date -->
+                                <div class="cwom-kartu-baris">
+                                    <span class="cwom-kartu-label">Requestor</span>
+                                    <span><t t-esc="barisRequestor(rec)"/></span>
+                                </div>
+                                <!-- Diinput oleh (user yang login saat membuat WO) -->
+                                <div class="cwom-kartu-baris" t-if="rec.create_uid">
+                                    <span class="cwom-kartu-label">Input by</span>
+                                    <span><i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/></span>
+                                </div>
+                                <!-- Target / Finish (jika ada) -->
+                                <div class="cwom-kartu-baris" t-if="rec.target_date or rec.finish_date">
+                                    <span class="cwom-kartu-label">Target/Finish</span>
+                                    <span><t t-esc="formatTanggal(rec.target_date)"/> · <t t-esc="formatTanggal(rec.finish_date)"/></span>
+                                </div>
+                                <!-- Approver - Approval Date (paling bawah) -->
+                                <div class="cwom-kartu-baris">
+                                    <span class="cwom-kartu-label">Approver</span>
+                                    <span><t t-esc="barisApprover(rec)"/></span>
+                                </div>
+                                <!-- Alur approval: Ready / Cancel / Approve / Reject -->
+                                <div class="cwom-kartu-baris cwom-kartu-baris-apr">
+                                    <span class="cwom-kartu-label">Approval</span>
+                                    <span><t t-call="custom_work_orders_mold.ApprovalCtrl"/></span>
+                                </div>
+                                <!-- Aksi (hanya untuk akses Full) -->
+                                <div class="cwom-kartu-aksi" t-if="state.bisaUbah">
+                                    <button class="cwom-ico cwom-ico-edit" title="Edit"
+                                        t-on-click="() => this.bukaFormEdit(rec)"><i class="fa fa-pencil"/></button>
+                                    <button class="cwom-ico cwom-ico-hapus" title="Delete"
+                                        t-on-click="() => this.konfirmasiHapus(rec)"><i class="fa fa-trash-o"/></button>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </t>
+        </t>
+
+        <!-- ══════════ MODAL FORM ══════════ -->
+        <t t-if="state.form.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul">
+                            <h2>
+                                <t t-esc="state.form.mode === 'edit' ? '✏️ Edit Work Order' : '➕ Add Work Order'"/>
+                                <t t-if="state.form.mode === 'edit'"> — <t t-esc="state.form.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupForm">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+
+                        <!-- No. + Status -->
+                        <div class="cwom-form-baris-2">
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">No.</label>
+                                <input type="text" class="cwom-form-input" disabled="disabled"
+                                    t-att-value="state.form.mode === 'edit' ? state.form.wo_number : 'Automatic (WOM00001, ...)'"/>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Status</label>
+                                <div class="cwom-status-toggle">
+                                    <t t-foreach="statusPilihan" t-as="s" t-key="s.value">
+                                        <button type="button"
+                                            t-attf-class="cwom-st-btn #{state.form.status === s.value ? 'cwom-st-aktif' : ''}"
+                                            t-on-click="() => state.form.status = s.value">
+                                            <t t-esc="s.label"/>
+                                        </button>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product -->
+                        <div class="cwom-seksi-judul cwom-sj-pd">Product</div>
+                        <div class="cwom-form-baris-3">
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Name <span class="cwom-wajib">*</span></label>
+                                <input type="text" class="cwom-form-input"
+                                    t-att-value="state.form.name"
+                                    t-on-input="(ev) => state.form.name = ev.target.value"/>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Code</label>
+                                <input type="text" class="cwom-form-input"
+                                    t-att-value="state.form.code"
+                                    t-on-input="(ev) => state.form.code = ev.target.value"/>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Brand</label>
+                                <div class="cwom-jt-baris">
+                                    <div class="cwom-picker">
+                                        <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                            placeholder="-- Select Brand --"
+                                            t-att-value="fieldNama('brand')"
+                                            t-on-click="() => this.bukaFieldPicker('brand')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'brand'">
+                                            <t t-call="custom_work_orders_mold.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwom-btn-kelola-jt" title="Manage Brand options"
+                                        t-on-click="bukaBrandMgr">⚙ Manage</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="cwom-form-grup">
+                            <label class="cwom-form-label">Job Type</label>
+                            <div class="cwom-jt-baris">
+                                <div class="cwom-picker">
+                                    <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                        placeholder="-- Select Job Type --"
+                                        t-att-value="fieldNama('job_type')"
+                                        t-on-click="() => this.bukaFieldPicker('job_type')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'job_type'">
+                                        <t t-call="custom_work_orders_mold.FieldPickerPanel"/>
+                                    </t>
+                                </div>
+                                <button type="button" class="cwom-btn-kelola-jt" title="Manage Job Type options"
+                                    t-on-click="bukaJobTypeMgr">⚙ Manage</button>
+                            </div>
+                        </div>
+                        <div class="cwom-form-grup">
+                            <label class="cwom-form-label">Details</label>
+                            <textarea class="cwom-form-input cwom-form-textarea" rows="4"
+                                placeholder="Multiple lines allowed — press Enter for a new line..."
+                                t-att-value="state.form.details"
+                                t-on-input="(ev) => state.form.details = ev.target.value"></textarea>
+                        </div>
+                        <div class="cwom-form-grup">
+                            <label class="cwom-form-label">Reference Image</label>
+                            <span class="cwom-form-hint" style="display:block; margin-bottom:6px;">Reference for the designer. The designer's own image is uploaded later when submitting for approval.</span>
+                            <div class="cwom-img-area">
+                                <div class="cwom-img-preview">
+                                    <t t-if="state.form.image_preview"><img t-att-src="state.form.image_preview"/></t>
+                                    <t t-elif="state.form.image_ada"><img t-att-src="urlGambarForm()"/></t>
+                                    <t t-else=""><span class="cwom-img-kosong">No image</span></t>
+                                </div>
+                                <div class="cwom-img-aksi">
+                                    <input type="file" accept="image/*" t-on-change="onPilihGambar"/>
+                                    <button type="button" class="cwom-btn-hapus-img"
+                                        t-if="state.form.image_preview or state.form.image_ada"
+                                        t-on-click="hapusGambar">Remove Image</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- IN CHARGE -->
+                        <div class="cwom-seksi-judul cwom-sj-ic">IN CHARGE</div>
+                        <div class="cwom-form-baris-2">
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Designer 2D/3D</label>
+                                <div class="cwom-picker">
+                                    <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                        placeholder="-- Select user or type a name --"
+                                        t-att-value="designerTampil()"
+                                        t-on-click="() => this.bukaUserPicker('incharge')"/>
+                                    <t t-if="state.userPicker.buka and state.userPicker.target === 'incharge'">
+                                        <t t-call="custom_work_orders_mold.UserPickerPanel"/>
+                                    </t>
+                                </div>
+                                <span class="cwom-form-hint">Pick a system user, or type a custom designer name below.</span>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Local/RRC</label>
+                                <div class="cwom-picker">
+                                    <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                        placeholder="-- Select --"
+                                        t-att-value="fieldNama('lokal_rrc')"
+                                        t-on-click="() => this.bukaFieldPicker('lokal_rrc')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'lokal_rrc'">
+                                        <t t-call="custom_work_orders_mold.FieldPickerPanel"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Requestor -->
+                        <div class="cwom-seksi-judul cwom-sj-rq">Requestor</div>
+                        <div class="cwom-form-grup">
+                            <label class="cwom-form-label">Requestor</label>
+                            <div class="cwom-jt-baris">
+                                <div class="cwom-picker">
+                                    <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                        placeholder="-- Select Requestor --"
+                                        t-att-value="fieldNama('requestor')"
+                                        t-on-click="() => this.bukaFieldPicker('requestor')"/>
+                                    <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'requestor'">
+                                        <t t-call="custom_work_orders_mold.FieldPickerPanel"/>
+                                    </t>
+                                </div>
+                                <button type="button" class="cwom-btn-kelola-jt" title="Manage Requestor/Approver list"
+                                    t-on-click="bukaPersonMgr">⚙ Manage</button>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="cwom-seksi-judul cwom-sj-tl">Timeline</div>
+                        <div class="cwom-form-baris-3">
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Req Date</label>
+                                <input type="date" class="cwom-form-input"
+                                    t-att-value="state.form.request_date"
+                                    t-on-change="(ev) => state.form.request_date = ev.target.value"/>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Target</label>
+                                <input type="date" class="cwom-form-input"
+                                    t-att-value="state.form.target_date"
+                                    t-on-change="(ev) => state.form.target_date = ev.target.value"/>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Finish Date</label>
+                                <input type="date" class="cwom-form-input"
+                                    t-att-value="state.form.finish_date"
+                                    t-on-change="(ev) => state.form.finish_date = ev.target.value"/>
+                            </div>
+                        </div>
+
+                        <!-- Approval -->
+                        <div class="cwom-seksi-judul cwom-sj-ap">Approval</div>
+                        <div class="cwom-form-baris-2">
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Approver</label>
+                                <div class="cwom-jt-baris">
+                                    <div class="cwom-picker">
+                                        <input type="text" readonly="readonly" class="cwom-form-input cwom-picker-input"
+                                            placeholder="-- Select Approver --"
+                                            t-att-value="fieldNama('approver')"
+                                            t-on-click="() => this.bukaFieldPicker('approver')"/>
+                                        <t t-if="state.fieldPicker.buka and state.fieldPicker.target === 'approver'">
+                                            <t t-call="custom_work_orders_mold.FieldPickerPanel"/>
+                                        </t>
+                                    </div>
+                                    <button type="button" class="cwom-btn-kelola-jt" title="Manage Requestor/Approver list"
+                                        t-on-click="bukaPersonMgr">⚙ Manage</button>
+                                </div>
+                            </div>
+                            <div class="cwom-form-grup">
+                                <label class="cwom-form-label">Date</label>
+                                <input type="date" class="cwom-form-input"
+                                    t-att-value="state.form.approval_date"
+                                    t-on-change="(ev) => state.form.approval_date = ev.target.value"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-att-disabled="state.form.menyimpan"
+                            t-on-click="tutupForm">Cancel</button>
+                        <button class="cwom-tombol-utama" t-att-disabled="state.form.menyimpan"
+                            t-on-click="simpan">
+                            <t t-if="state.form.menyimpan"><span class="cwom-spinner-tombol"/>Saving...</t>
+                            <t t-else="">Save</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL IMPORT CSV ══════════ -->
+        <t t-if="state.impor.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-impor" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2>⬆ Import Work Order Mold (CSV)</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupImpor">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <div class="cwom-impor-info">
+                            <p>CSV columns (first row = header):</p>
+                            <code class="cwom-impor-kode">Name, Code, Brand, Job Type, Details, Designer 2D/3D, Local/RRC, Requestor, Req Date, Target, Finish Date, Approver, Approval Date, Status</code>
+                            <ul class="cwom-impor-tips">
+                                <li><b>Name</b> is required. <b>No.</b> is generated automatically (not needed in CSV).</li>
+                                <li><b>Designer 2D/3D</b> filled with a user name; matched against users with Work Order Mold access.</li>
+                                <li><b>Requestor/Approver</b> filled with a name (e.g. P. Setiadi); created automatically as a new option if it does not exist yet.</li>
+                                <li><b>Job Type</b> filled with a name (e.g. Box, Layer); created automatically as a new option if it does not exist yet.</li>
+                                <li><b>Local/RRC</b>: Local / RRC. <b>Status</b>: Ongoing / Finished. <b>Date</b>: YYYY-MM-DD or DD/MM/YYYY.</li>
+                                <li><b>Image is not imported</b> — add/edit it manually in the form after import.</li>
+                                <li>Import <b>adds</b> data — existing data is not deleted.</li>
+                            </ul>
+                            <button class="cwom-btn-template" t-on-click="unduhTemplate">⬇ Download CSV Template</button>
+                        </div>
+                        <div class="cwom-impor-upload">
+                            <input type="file" accept=".csv,text/csv" t-on-change="onPilihFile"/>
+                            <span class="cwom-impor-nama" t-if="state.impor.namaFile"><t t-esc="state.impor.namaFile"/></span>
+                        </div>
+                        <div class="cwom-impor-batch" t-if="state.impor.batch.length">
+                            <div class="cwom-impor-batch-judul">Import History (delete per batch)</div>
+                            <t t-foreach="state.impor.batch" t-as="b" t-key="b.batch">
+                                <div class="cwom-impor-batch-baris">
+                                    <span class="cwom-impor-batch-nama"><t t-esc="b.batch"/></span>
+                                    <span class="cwom-impor-batch-jml"><t t-esc="b.jumlah"/> rows</span>
+                                    <button class="cwom-ico cwom-ico-hapus" title="Delete batch"
+                                        t-on-click="() => this.konfirmasiHapusBatch(b)">
+                                        <i class="fa fa-trash-o"/>
+                                    </button>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-att-disabled="state.impor.proses"
+                            t-on-click="tutupImpor">Close</button>
+                        <button class="cwom-tombol-utama" t-att-disabled="state.impor.proses"
+                            t-on-click="lakukanImpor">
+                            <t t-if="state.impor.proses"><span class="cwom-spinner-tombol"/>Importing...</t>
+                            <t t-else="">Import Now</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA BRAND ══════════ -->
+        <t t-if="state.brandMgr.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-jt" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2>⚙ Manage Brand</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupBrandMgr">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <!-- Tambah baru -->
+                        <div class="cwom-jt-tambah">
+                            <input type="text" class="cwom-form-input" placeholder="New Brand name..."
+                                t-att-value="state.brandMgr.baru"
+                                t-on-input="(ev) => state.brandMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahBrand()"/>
+                            <button class="cwom-tombol-utama" t-att-disabled="state.brandMgr.proses"
+                                t-on-click="tambahBrand">+ Add</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwom-jt-daftar">
+                            <t t-if="state.daftarBrand.length === 0">
+                                <div class="cwom-picker-kosong">No Brand yet.</div>
+                            </t>
+                            <t t-foreach="state.daftarBrand" t-as="b" t-key="b.id">
+                                <div class="cwom-jt-item">
+                                    <t t-if="state.brandMgr.editId === b.id">
+                                        <input type="text" class="cwom-form-input cwom-jt-edit-input"
+                                            t-att-value="state.brandMgr.editNama"
+                                            t-on-input="(ev) => state.brandMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditBrand()"/>
+                                        <button class="cwom-ico cwom-ico-simpan" title="Save"
+                                            t-on-click="simpanEditBrand"><i class="fa fa-check"/></button>
+                                        <button class="cwom-ico" title="Cancel"
+                                            t-on-click="batalEditBrand"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwom-jt-nama"><t t-esc="b.name"/></span>
+                                        <button class="cwom-ico cwom-ico-edit" title="Edit"
+                                            t-on-click="() => this.mulaiEditBrand(b)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwom-ico cwom-ico-hapus" title="Delete"
+                                            t-on-click="() => this.konfirmasiHapusBrand(b)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupBrandMgr">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA JOB TYPE ══════════ -->
+        <t t-if="state.jobTypeMgr.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-jt" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2>⚙ Manage Job Type</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupJobTypeMgr">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <!-- Tambah baru -->
+                        <div class="cwom-jt-tambah">
+                            <input type="text" class="cwom-form-input" placeholder="New Job Type name..."
+                                t-att-value="state.jobTypeMgr.baru"
+                                t-on-input="(ev) => state.jobTypeMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahJobType()"/>
+                            <button class="cwom-tombol-utama" t-att-disabled="state.jobTypeMgr.proses"
+                                t-on-click="tambahJobType">+ Add</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwom-jt-daftar">
+                            <t t-if="state.daftarJobType.length === 0">
+                                <div class="cwom-picker-kosong">No Job Type yet.</div>
+                            </t>
+                            <t t-foreach="state.daftarJobType" t-as="jt" t-key="jt.id">
+                                <div class="cwom-jt-item">
+                                    <t t-if="state.jobTypeMgr.editId === jt.id">
+                                        <input type="text" class="cwom-form-input cwom-jt-edit-input"
+                                            t-att-value="state.jobTypeMgr.editNama"
+                                            t-on-input="(ev) => state.jobTypeMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditJobType()"/>
+                                        <button class="cwom-ico cwom-ico-simpan" title="Save"
+                                            t-on-click="simpanEditJobType"><i class="fa fa-check"/></button>
+                                        <button class="cwom-ico" title="Cancel"
+                                            t-on-click="batalEditJobType"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwom-jt-nama"><t t-esc="jt.name"/></span>
+                                        <button class="cwom-ico cwom-ico-edit" title="Edit"
+                                            t-on-click="() => this.mulaiEditJobType(jt)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwom-ico cwom-ico-hapus" title="Delete"
+                                            t-on-click="() => this.konfirmasiHapusJobType(jt)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupJobTypeMgr">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL KELOLA REQUESTOR / APPROVER ══════════ -->
+        <t t-if="state.personMgr.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-jt" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2>⚙ Manage Requestor / Approver</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupPersonMgr">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <p class="cwom-form-hint" style="margin: 0 0 12px;">This list is shared for both Requestor and Approver.</p>
+                        <!-- Tambah baru -->
+                        <div class="cwom-jt-tambah">
+                            <input type="text" class="cwom-form-input" placeholder="New name..."
+                                t-att-value="state.personMgr.baru"
+                                t-on-input="(ev) => state.personMgr.baru = ev.target.value"
+                                t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.tambahPerson()"/>
+                            <button class="cwom-tombol-utama" t-att-disabled="state.personMgr.proses"
+                                t-on-click="tambahPerson">+ Add</button>
+                        </div>
+
+                        <!-- Daftar + edit/hapus -->
+                        <div class="cwom-jt-daftar">
+                            <t t-if="state.daftarPerson.length === 0">
+                                <div class="cwom-picker-kosong">No names yet.</div>
+                            </t>
+                            <t t-foreach="state.daftarPerson" t-as="p" t-key="p.id">
+                                <div class="cwom-jt-item">
+                                    <t t-if="state.personMgr.editId === p.id">
+                                        <input type="text" class="cwom-form-input cwom-jt-edit-input"
+                                            t-att-value="state.personMgr.editNama"
+                                            t-on-input="(ev) => state.personMgr.editNama = ev.target.value"
+                                            t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.simpanEditPerson()"/>
+                                        <button class="cwom-ico cwom-ico-simpan" title="Save"
+                                            t-on-click="simpanEditPerson"><i class="fa fa-check"/></button>
+                                        <button class="cwom-ico" title="Cancel"
+                                            t-on-click="batalEditPerson"><i class="fa fa-times"/></button>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="cwom-jt-nama"><t t-esc="p.name"/></span>
+                                        <button class="cwom-ico cwom-ico-edit" title="Edit"
+                                            t-on-click="() => this.mulaiEditPerson(p)"><i class="fa fa-pencil"/></button>
+                                        <button class="cwom-ico cwom-ico-hapus" title="Delete"
+                                            t-on-click="() => this.konfirmasiHapusPerson(p)"><i class="fa fa-trash-o"/></button>
+                                    </t>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupPersonMgr">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP LIHAT GAMBAR ══════════ -->
+        <t t-if="state.imgPopup.buka">
+            <div class="cwom-overlay cwom-img-overlay" t-on-click="tutupImgPopup">
+                <div class="cwom-img-popup" t-on-click.stop="">
+                    <div class="cwom-img-popup-kepala">
+                        <span class="cwom-img-popup-judul">
+                            <t t-esc="state.imgPopup.judul"/>
+                            <span t-if="state.imgPopup.ref" class="cwom-img-tag cwom-img-tag-ref">Reference</span>
+                        </span>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupImgPopup">✕</button>
+                    </div>
+                    <div class="cwom-img-popup-isi">
+                        <img t-att-src="state.imgPopup.url"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL REJECT — DETAIL REVISION ══════════ -->
+        <t t-if="state.revisiForm.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-revisi" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2>✋ Reject — Revision Detail</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupRevisiForm">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <p class="cwom-revisi-info">
+                            Rejecting Work Order
+                            <b><t t-esc="state.revisiForm.rec and state.revisiForm.rec.wo_number"/></b>.
+                            The status will return to draft. Please describe in detail what needs to be revised:
+                        </p>
+                        <!-- Gambar pendukung revisi (opsional, drag-drop / upload) — DI ATAS deskripsi -->
+                        <label class="cwom-form-label">Attach Image <span class="cwom-form-hint">(optional)</span></label>
+                        <div t-attf-class="cwom-dropzone #{state.revisiForm.seret ? 'cwom-dropzone-aktif' : ''} #{state.revisiForm.image_preview ? 'cwom-dropzone-isi' : ''}"
+                            t-on-dragover="onSeretMasukRevisi" t-on-dragleave="onSeretKeluarRevisi" t-on-drop="onJatuhkanGambarRevisi">
+                            <t t-if="state.revisiForm.image_preview">
+                                <img class="cwom-dropzone-preview" t-att-src="state.revisiForm.image_preview"/>
+                                <div class="cwom-dropzone-nama"><t t-esc="state.revisiForm.namaFile"/></div>
+                                <button type="button" class="cwom-btn-hapus-img" t-on-click="hapusGambarRevisi">Remove Image</button>
+                            </t>
+                            <t t-else="">
+                                <div class="cwom-dropzone-ikon">🖼️</div>
+                                <div class="cwom-dropzone-teks">Drag &amp; drop an image, or</div>
+                                <label class="cwom-dropzone-pilih">
+                                    Choose file
+                                    <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambarRevisi"/>
+                                </label>
+                            </t>
+                        </div>
+
+                        <label class="cwom-form-label cwom-revisi-label" style="margin-top:14px;">Revision Detail <span class="cwom-wajib">*</span></label>
+                        <textarea class="cwom-form-input cwom-revisi-textarea" rows="6"
+                            placeholder="Describe the requested revisions clearly..."
+                            t-att-value="state.revisiForm.detail"
+                            t-on-input="(ev) => state.revisiForm.detail = ev.target.value"></textarea>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-att-disabled="state.revisiForm.proses"
+                            t-on-click="tutupRevisiForm">Cancel</button>
+                        <button class="cwom-tombol-konfirmasi cwom-konfirmasi-merah" t-att-disabled="state.revisiForm.proses"
+                            t-on-click="kirimRevisi">
+                            <t t-if="state.revisiForm.proses"><span class="cwom-spinner-tombol"/>Saving...</t>
+                            <t t-else="">Reject &amp; Save Revision</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP DAFTAR REVISIONS ══════════ -->
+        <t t-if="state.revisiList.buka">
+            <div class="cwom-overlay" t-on-click="tutupRevisiList">
+                <div class="cwom-modal cwom-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul">
+                            <h2><i class="fa fa-history"/> Revisions — <t t-esc="state.revisiList.judul"/></h2>
+                        </div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupRevisiList">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <t t-if="state.revisiList.memuat">
+                            <div class="cwom-loading"><div class="cwom-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.revisiList.items.length === 0">
+                            <div class="cwom-picker-kosong">No revisions yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwom-revisi-daftar">
+                                <t t-foreach="state.revisiList.items" t-as="rv" t-key="rv.id">
+                                    <div class="cwom-revisi-item">
+                                        <button class="cwom-ico cwom-ico-hapus cwom-hist-hapus" title="Delete this revision"
+                                            t-if="state.bisaUbah" t-on-click="() => this.hapusRevisiItem(rv)">
+                                            <i class="fa fa-trash-o"/>
+                                        </button>
+                                        <div class="cwom-revisi-gambar" t-if="rv.ada_gambar">
+                                            <img class="cwom-thumb-klik" title="Click to enlarge"
+                                                t-att-src="urlRevisiItem(rv.id)"
+                                                t-on-click="() => this.bukaGambarPopup(urlRevisiItem(rv.id), 'Revision — ' + state.revisiList.judul)"/>
+                                        </div>
+                                        <div class="cwom-revisi-isi">
+                                            <div class="cwom-revisi-meta">
+                                                <span class="cwom-revisi-oleh"><i class="fa fa-user"/> <t t-esc="rv.oleh"/></span>
+                                                <span class="cwom-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="rv.tanggal"/></span>
+                                            </div>
+                                            <div class="cwom-revisi-teks"><t t-esc="rv.detail"/></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupRevisiList">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP READY FOR APPROVAL — UPLOAD IMAGE DESIGNER ══════════ -->
+        <t t-if="state.readyForm.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-ready" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul">
+                            <h2>📤 Ready for Approval
+                                <t t-if="state.readyForm.rec"> — <t t-esc="state.readyForm.rec.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupReadyForm">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <p class="cwom-revisi-info">
+                            Submit this Work Order for approval. <b>Description is required</b>;
+                            the designer image is optional (if provided, it becomes the latest
+                            image shown on the Work Order).
+                        </p>
+
+                        <!-- Referensi dari pembuat WO (acuan) -->
+                        <div class="cwom-ready-ref" t-if="state.readyForm.rec and state.readyForm.rec.image_ada">
+                            <span class="cwom-form-label">Reference (from requestor)</span>
+                            <img class="cwom-ready-ref-img" t-att-src="urlRef(state.readyForm.rec)"
+                                t-on-click="() => this.bukaImgPopup(state.readyForm.rec)" title="Click to enlarge"/>
+                        </div>
+
+                        <!-- Dropzone: drag-drop atau klik untuk upload (opsional) -->
+                        <label class="cwom-form-label">Designer Image <span class="cwom-form-hint">(optional)</span></label>
+                        <div t-attf-class="cwom-dropzone #{state.readyForm.seret ? 'cwom-dropzone-aktif' : ''} #{state.readyForm.image_preview ? 'cwom-dropzone-isi' : ''}"
+                            t-on-dragover="onSeretMasuk" t-on-dragleave="onSeretKeluar" t-on-drop="onJatuhkanGambar">
+                            <t t-if="state.readyForm.image_preview">
+                                <img class="cwom-dropzone-preview" t-att-src="state.readyForm.image_preview"/>
+                                <div class="cwom-dropzone-nama"><t t-esc="state.readyForm.namaFile"/></div>
+                                <button type="button" class="cwom-btn-hapus-img" t-on-click="hapusGambarReady">Remove Image</button>
+                            </t>
+                            <t t-else="">
+                                <div class="cwom-dropzone-ikon">🖼️</div>
+                                <div class="cwom-dropzone-teks">Drag &amp; drop an image here, or</div>
+                                <label class="cwom-dropzone-pilih">
+                                    Choose file
+                                    <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambarReady"/>
+                                </label>
+                            </t>
+                        </div>
+
+                        <!-- Deskripsi (WAJIB) -->
+                        <label class="cwom-form-label" style="margin-top:14px;">Description <span class="cwom-wajib">*</span></label>
+                        <textarea class="cwom-form-input cwom-form-textarea" rows="4"
+                            placeholder="Describe the design / what was done..."
+                            t-att-value="state.readyForm.description"
+                            t-on-input="(ev) => state.readyForm.description = ev.target.value"></textarea>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-att-disabled="state.readyForm.proses"
+                            t-on-click="tutupReadyForm">Cancel</button>
+                        <button class="cwom-tombol-utama" t-att-disabled="state.readyForm.proses"
+                            t-on-click="kirimReady">
+                            <t t-if="state.readyForm.proses"><span class="cwom-spinner-tombol"/>Submitting...</t>
+                            <t t-else="">Submit for Approval</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP RIWAYAT IMAGE DESIGNER ══════════ -->
+        <t t-if="state.designList.buka">
+            <div class="cwom-overlay" t-on-click="tutupDesignList">
+                <div class="cwom-modal cwom-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul">
+                            <h2><i class="fa fa-clone"/> Designer Images — <t t-esc="state.designList.judul"/></h2>
+                        </div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupDesignList">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <t t-if="state.designList.memuat">
+                            <div class="cwom-loading"><div class="cwom-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.designList.items.length === 0">
+                            <div class="cwom-picker-kosong">No designer images yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwom-design-daftar">
+                                <t t-foreach="state.designList.items" t-as="di" t-key="di.id">
+                                    <div class="cwom-design-item">
+                                        <button class="cwom-ico cwom-ico-hapus cwom-hist-hapus" title="Delete this image"
+                                            t-if="state.bisaUbah" t-on-click="() => this.hapusDesignItem(di)">
+                                            <i class="fa fa-trash-o"/>
+                                        </button>
+                                        <div class="cwom-design-gambar" t-if="di.ada_gambar">
+                                            <img class="cwom-thumb-klik" title="Click to enlarge"
+                                                t-att-src="urlDesignItem(di.id)"
+                                                t-on-click="() => this.bukaGambarPopup(urlDesignItem(di.id), 'Designer Image — ' + state.designList.judul)"/>
+                                        </div>
+                                        <div class="cwom-design-isi">
+                                            <div class="cwom-revisi-meta">
+                                                <span class="cwom-revisi-oleh"><i class="fa fa-user"/> <t t-esc="di.oleh"/></span>
+                                                <span class="cwom-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="di.tanggal"/></span>
+                                            </div>
+                                            <div class="cwom-revisi-teks" t-if="di.description"><t t-esc="di.description"/></div>
+                                            <div class="cwom-revisi-teks cwom-sel-kosong" t-else="">No description</div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupDesignList">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP FILTER (gabungan) ══════════ -->
+        <t t-if="state.filterPopup.buka">
+            <div class="cwom-overlay" t-on-click="tutupFilter">
+                <div class="cwom-modal cwom-modal-filter" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2><i class="fa fa-sliders"/> Filter</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupFilter">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <!-- Status -->
+                        <label class="cwom-form-label">Status</label>
+                        <div class="cwom-filter-status">
+                            <button t-attf-class="cwom-fs-btn #{state.filterStatus === '' ? 'cwom-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('')">All</button>
+                            <button t-attf-class="cwom-fs-btn #{state.filterStatus === 'ongoing' ? 'cwom-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('ongoing')">Ongoing</button>
+                            <button t-attf-class="cwom-fs-btn #{state.filterStatus === 'finished' ? 'cwom-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('finished')">Finished</button>
+                        </div>
+
+                        <!-- Period (rentang tanggal) -->
+                        <label class="cwom-form-label" style="margin-top:14px;">📅 Period</label>
+                        <select class="cwom-form-input cwom-filter-sel" t-on-change="setFilterTglField">
+                            <option value="request_date" t-att-selected="state.filterTglField === 'request_date'">Req Date</option>
+                            <option value="target_date" t-att-selected="state.filterTglField === 'target_date'">Target</option>
+                            <option value="finish_date" t-att-selected="state.filterTglField === 'finish_date'">Finish Date</option>
+                            <option value="approval_date" t-att-selected="state.filterTglField === 'approval_date'">Approval Date</option>
+                        </select>
+                        <div class="cwom-filter-tgl-baris">
+                            <input type="date" class="cwom-form-input" title="From"
+                                t-att-value="state.filterTglDari" t-on-change="setFilterTglDari"/>
+                            <span class="cwom-filter-sampai">→</span>
+                            <input type="date" class="cwom-form-input" title="To"
+                                t-att-value="state.filterTglSampai" t-on-change="setFilterTglSampai"/>
+                        </div>
+
+                        <!-- Designer (Full & Read-only) -->
+                        <t t-if="state.bolehFilterDesigner">
+                            <label class="cwom-form-label" style="margin-top:14px;">👤 Designer</label>
+                            <select class="cwom-form-input cwom-filter-sel" t-on-change="setFilterDesigner">
+                                <option value="" t-att-selected="state.filterDesigner === ''">All designers</option>
+                                <t t-foreach="state.daftarDesignerFilter" t-as="d" t-key="d.key">
+                                    <option t-att-value="d.key" t-att-selected="state.filterDesigner === d.key">
+                                        <t t-esc="d.label"/>
+                                    </option>
+                                </t>
+                            </select>
+                        </t>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="resetCari">Reset</button>
+                        <button class="cwom-tombol-utama" t-on-click="tutupFilter">Done</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP HISTORY (audit) — akses Full ══════════ -->
+        <t t-if="state.history.buka">
+            <div class="cwom-overlay" t-on-click="tutupHistory">
+                <div class="cwom-modal cwom-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <div class="cwom-modal-judul"><h2><i class="fa fa-history"/> Work Order History</h2></div>
+                        <button class="cwom-tombol-tutup" t-on-click="tutupHistory">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <t t-if="state.history.memuat">
+                            <div class="cwom-loading"><div class="cwom-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.history.items.length === 0">
+                            <div class="cwom-picker-kosong">No activity yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwom-audit-daftar">
+                                <t t-foreach="state.history.items" t-as="a" t-key="a.id">
+                                    <div class="cwom-audit-item">
+                                        <span t-attf-class="cwom-aud-badge #{kelasAksiAudit(a.aksi)}"><t t-esc="labelAksiAudit(a.aksi)"/></span>
+                                        <div class="cwom-audit-isi">
+                                            <div class="cwom-audit-baris1">
+                                                <span class="cwom-audit-wo"><t t-esc="a.wo"/></span>
+                                                <span class="cwom-audit-tgl"><i class="fa fa-clock-o"/> <t t-esc="a.waktu"/></span>
+                                            </div>
+                                            <div class="cwom-audit-ket"><t t-esc="a.keterangan"/></div>
+                                            <div class="cwom-audit-oleh"><i class="fa fa-user"/> <t t-esc="a.oleh"/></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupHistory">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ KONFIRMASI ══════════ -->
+        <t t-if="state.konfirmasi.buka">
+            <div class="cwom-overlay cwom-overlay-konfirmasi">
+                <div class="cwom-modal-konfirmasi" t-on-click.stop="">
+                    <h3><t t-esc="state.konfirmasi.judul"/></h3>
+                    <p t-out="konfirmasiPesan"/>
+                    <div class="cwom-konfirmasi-aksi">
+                        <button class="cwom-tombol-sekunder" t-on-click="tutupKonfirmasi">Cancel</button>
+                        <button class="cwom-tombol-konfirmasi cwom-konfirmasi-merah"
+                            t-on-click="jalankanKonfirmasi">
+                            <t t-esc="state.konfirmasi.labelYa"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+<!-- Kontrol alur approval (dipakai di tabel desktop & kartu mobile).
+     'rec' diambil dari scope pemanggil (t-foreach). -->
+<t t-name="custom_work_orders_mold.ApprovalCtrl">
+    <div class="cwom-apr">
+        <span t-attf-class="cwom-badge-apr #{kelasApproval(rec.approval_state)}">
+            <t t-esc="labelApproval(rec.approval_state)"/>
+        </span>
+        <div class="cwom-apr-aksi">
+            <button t-if="showReady(rec)" class="cwom-apr-btn cwom-apr-btn-ready"
+                t-on-click="() => this.setReady(rec)">Ready for Approval</button>
+            <button t-if="showCancel(rec)" class="cwom-apr-btn cwom-apr-btn-cancel"
+                t-on-click="() => this.cancelReady(rec)">Cancel</button>
+            <button t-if="showApprove(rec)" class="cwom-apr-btn cwom-apr-btn-approve"
+                t-on-click="() => this.approve(rec)">Approve</button>
+            <button t-if="showTolak(rec)" class="cwom-apr-btn cwom-apr-btn-tolak"
+                t-on-click="() => this.reject(rec)">Reject</button>
+            <button class="cwom-apr-btn cwom-apr-btn-revisi" title="View Revisions"
+                t-on-click="() => this.bukaRevisiList(rec)">
+                <i class="fa fa-history"/> Revisions<t t-if="rec.revisi_count"> (<t t-esc="rec.revisi_count"/>)</t>
+            </button>
+        </div>
+    </div>
+</t>
+
+<!-- Panel picker field generik (Job Type / Lokal-RRC / Requestor / Approver):
+     search + maks 5 + prev/next -->
+<t t-name="custom_work_orders_mold.FieldPickerPanel">
+    <div class="cwom-picker-panel">
+        <input type="text" class="cwom-picker-cari" placeholder="Search..."
+            t-att-value="state.fieldPicker.cari" t-on-input="fieldInput"/>
+        <div class="cwom-picker-item cwom-picker-clear" t-on-click="() => this.pilihFieldItem(false)">— Clear —</div>
+        <t t-if="fieldHalaman.length === 0">
+            <div class="cwom-picker-kosong">No options.</div>
+        </t>
+        <t t-else="">
+            <t t-foreach="fieldHalaman" t-as="it" t-key="it.key">
+                <div class="cwom-picker-item" t-on-click="() => this.pilihFieldItem(it)">
+                    <t t-esc="it.label"/>
+                </div>
+            </t>
+        </t>
+        <div class="cwom-picker-nav" t-if="fieldTotalHalaman > 1">
+            <button class="cwom-picker-navbtn" t-on-click="fieldPrev"
+                t-att-disabled="state.fieldPicker.halaman &lt;= 1">‹ Prev</button>
+            <span class="cwom-picker-info"><t t-esc="state.fieldPicker.halaman"/> / <t t-esc="fieldTotalHalaman"/></span>
+            <button class="cwom-picker-navbtn" t-on-click="fieldNext"
+                t-att-disabled="state.fieldPicker.halaman >= fieldTotalHalaman">Next ›</button>
+        </div>
+    </div>
+</t>
+
+<!-- Panel picker user (dipakai untuk Designer) -->
+<t t-name="custom_work_orders_mold.UserPickerPanel">
+    <div class="cwom-picker-panel">
+        <input type="text" class="cwom-picker-cari" placeholder="Search user..."
+            t-att-value="state.userPicker.cari" t-on-input="userInput"/>
+        <div class="cwom-picker-item cwom-picker-clear" t-on-click="() => this.pilihUser(false)">— Clear —</div>
+        <t t-if="userHalaman.length === 0">
+            <div class="cwom-picker-kosong">No users.</div>
+        </t>
+        <t t-else="">
+            <t t-foreach="userHalaman" t-as="u" t-key="u.id">
+                <div class="cwom-picker-item" t-on-click="() => this.pilihUser(u)">
+                    <t t-esc="u.name"/>
+                </div>
+            </t>
+        </t>
+        <div class="cwom-picker-nav" t-if="userTotalHalaman > 1">
+            <button class="cwom-picker-navbtn" t-on-click="userPrev"
+                t-att-disabled="state.userPicker.halaman &lt;= 1">‹ Prev</button>
+            <span class="cwom-picker-info"><t t-esc="state.userPicker.halaman"/> / <t t-esc="userTotalHalaman"/></span>
+            <button class="cwom-picker-navbtn" t-on-click="userNext"
+                t-att-disabled="state.userPicker.halaman >= userTotalHalaman">Next ›</button>
+        </div>
+        <!-- Input nama designer custom (ketik bebas) — hanya untuk target Designer -->
+        <t t-if="state.userPicker.target === 'incharge'">
+            <div class="cwom-picker-custom">
+                <div class="cwom-picker-custom-judul">Or type a custom name</div>
+                <div class="cwom-picker-custom-baris">
+                    <input type="text" class="cwom-picker-cari" placeholder="e.g. Vendor X / freelancer..."
+                        t-att-value="state.userPicker.custom" t-on-input="userCustomInput"
+                        t-on-keydown="(ev) => ev.key === 'Enter' &amp;&amp; this.pakaiDesignerCustom()"/>
+                    <button class="cwom-picker-custom-btn" t-on-click="pakaiDesignerCustom">Use</button>
+                </div>
+            </div>
+        </t>
+    </div>
+</t>
+
+</templates>

@@ -208,8 +208,10 @@
 .cwo-thumb-klik { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
 .cwo-thumb-klik:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
 
-/* Popup lihat gambar (klik thumbnail) */
-.cwo-img-overlay { z-index: 1065; padding: 24px; }
+/* Popup lihat gambar (klik thumbnail).
+   Selektor 2-class (specificity lebih tinggi) agar SELALU di atas overlay lain
+   — termasuk saat dibuka dari dalam popup Revisions / Designer Images. */
+.cwo-overlay.cwo-img-overlay { z-index: 1090; padding: 24px; }
 .cwo-img-popup {
     background: white; border-radius: 14px; width: auto; max-width: 90vw; max-height: 92vh;
     display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.35);
@@ -432,3 +434,166 @@
     .cwo-overlay-konfirmasi { padding: 20px; align-items: center; }
     .cwo-modal-konfirmasi { max-width: 100%; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   IMAGE DESIGNER, DESIGNER CUSTOM, REQUESTOR LOGIN, READY UPLOAD
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Sel image di tabel: thumbnail + badge kecil */
+.cwo-img-sel { position: relative; display: inline-flex; align-items: center; gap: 6px; }
+.cwo-img-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 10px; font-weight: 700; line-height: 1;
+    padding: 3px 6px; border-radius: 6px; white-space: nowrap;
+}
+.cwo-img-tag-ref { background: #fef3c7; color: #92400e; }
+.cwo-img-tag-hist { background: #ede9fe; color: #5b21b6; cursor: pointer; }
+.cwo-img-tag-hist:hover { background: #ddd6fe; }
+
+/* Baris kecil "diinput oleh" di kolom Requestor */
+.cwo-input-oleh {
+    margin-top: 3px; font-size: 11px; color: #6b7280;
+    display: flex; align-items: center; gap: 4px;
+}
+
+/* Input nama designer custom di dalam picker */
+.cwo-picker-custom { border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
+.cwo-picker-custom-judul { font-size: 11px; color: #6b7280; margin-bottom: 6px; font-weight: 600; }
+.cwo-picker-custom-baris { display: flex; gap: 6px; }
+.cwo-picker-custom-baris .cwo-picker-cari { flex: 1; margin: 0; }
+.cwo-picker-custom-btn {
+    border: none; background: #714B67; color: #fff; font-weight: 600;
+    border-radius: 8px; padding: 0 14px; cursor: pointer; font-size: 13px;
+}
+.cwo-picker-custom-btn:hover { background: #5d3d55; }
+
+/* Modal Ready / referensi */
+.cwo-modal-ready { max-width: 560px; }
+.cwo-ready-ref { margin-bottom: 14px; }
+.cwo-ready-ref-img {
+    display: block; max-height: 120px; max-width: 100%; margin-top: 6px;
+    border: 1px solid #e5e7eb; border-radius: 8px; cursor: zoom-in; object-fit: contain;
+}
+
+/* Dropzone drag-drop */
+.cwo-dropzone {
+    border: 2px dashed #cbd5e1; border-radius: 12px; padding: 22px 16px;
+    text-align: center; background: #f8fafc; transition: border-color .15s, background .15s;
+}
+.cwo-dropzone-aktif { border-color: #714B67; background: #f3effa; }
+.cwo-dropzone-isi { padding: 16px; }
+.cwo-dropzone-ikon { font-size: 34px; line-height: 1; }
+.cwo-dropzone-teks { color: #6b7280; font-size: 13px; margin: 8px 0; }
+.cwo-dropzone-pilih {
+    display: inline-block; cursor: pointer; background: #714B67; color: #fff;
+    font-weight: 600; font-size: 13px; padding: 8px 16px; border-radius: 8px;
+}
+.cwo-dropzone-pilih:hover { background: #5d3d55; }
+.cwo-dropzone-preview {
+    max-height: 220px; max-width: 100%; border-radius: 8px; object-fit: contain;
+    border: 1px solid #e5e7eb;
+}
+.cwo-dropzone-nama { font-size: 12px; color: #6b7280; margin: 8px 0; word-break: break-all; }
+
+/* Daftar riwayat image designer */
+.cwo-design-daftar { display: flex; flex-direction: column; gap: 12px; }
+.cwo-design-item {
+    display: flex; gap: 12px; padding: 12px; border: 1px solid #e5e7eb;
+    border-radius: 10px; background: #fff;
+}
+.cwo-design-gambar { flex: 0 0 110px; }
+.cwo-design-gambar img {
+    width: 110px; height: 110px; object-fit: cover; border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+.cwo-design-isi { flex: 1; min-width: 0; }
+
+@media (max-width: 768px) {
+    .cwo-design-item { flex-direction: column; }
+    .cwo-design-gambar, .cwo-design-gambar img { width: 100%; flex: none; }
+    .cwo-design-gambar img { height: auto; max-height: 240px; }
+    .cwo-kartu-gambar { position: relative; }
+    .cwo-kartu-gambar .cwo-img-tag { position: absolute; top: 8px; left: 8px; }
+    .cwo-kartu-gambar .cwo-img-tag-hist { left: auto; right: 8px; }
+}
+
+/* ── Filter baris 2: rentang tanggal + designer ── */
+.cwo-filterbar2 { margin-top: -8px; flex-wrap: wrap; gap: 16px; }
+.cwo-filter-tgl, .cwo-filter-designer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cwo-filter-lbl { font-size: 12px; font-weight: 700; color: #6b7280; white-space: nowrap; }
+.cwo-filter-sel { cursor: pointer; }
+.cwo-filterbar2 .cwo-filter-input { padding: 8px 10px; min-width: 0; }
+.cwo-filter-sampai { color: #9ca3af; font-weight: 700; }
+
+/* ── Revisi item: gambar di samping teks ── */
+.cwo-revisi-item { display: flex; gap: 12px; }
+.cwo-revisi-gambar { flex: 0 0 96px; }
+.cwo-revisi-gambar img {
+    width: 96px; height: 96px; object-fit: cover; border-radius: 8px;
+    border: 1px solid #e5e7eb; cursor: zoom-in;
+}
+.cwo-revisi-isi { flex: 1; min-width: 0; }
+
+@media (max-width: 768px) {
+    .cwo-filterbar2 { margin-top: 0; }
+    .cwo-filter-tgl, .cwo-filter-designer { width: 100%; }
+    .cwo-filter-tgl .cwo-filter-input, .cwo-filter-designer .cwo-filter-sel { flex: 1; }
+    .cwo-revisi-item { flex-direction: column; }
+    .cwo-revisi-gambar, .cwo-revisi-gambar img { width: 100%; flex: none; }
+    .cwo-revisi-gambar img { height: auto; max-height: 240px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLBAR FILTER/HISTORY, POPUP FILTER, AUDIT (HISTORY)
+   ═══════════════════════════════════════════════════════════════ */
+.cwo-toolbar-aksi { display: flex; align-items: center; gap: 8px; }
+.cwo-btn-filter, .cwo-btn-history {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid #e5e7eb; background: #fff; color: #374151;
+    font-weight: 600; font-size: 13px; padding: 9px 14px; border-radius: 8px;
+    cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap;
+}
+.cwo-btn-filter:hover, .cwo-btn-history:hover { background: #f9fafb; border-color: #d1d5db; }
+.cwo-filter-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: #714B67; color: #fff; font-size: 11px; font-weight: 700;
+}
+.cwo-btn-history { color: #5b21b6; }
+
+/* Popup Filter */
+.cwo-modal-filter { max-width: 460px; }
+.cwo-modal-filter .cwo-filter-status { display: flex; gap: 8px; }
+.cwo-modal-filter .cwo-fs-btn { flex: 1; }
+.cwo-filter-tgl-baris { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.cwo-filter-tgl-baris .cwo-form-input { flex: 1; }
+
+/* History (audit) */
+.cwo-audit-daftar { display: flex; flex-direction: column; gap: 10px; }
+.cwo-audit-item {
+    display: flex; gap: 10px; padding: 12px; border: 1px solid #e5e7eb;
+    border-radius: 10px; background: #fff;
+}
+.cwo-aud-badge {
+    flex: 0 0 auto; align-self: flex-start; font-size: 11px; font-weight: 700;
+    padding: 4px 9px; border-radius: 6px; white-space: nowrap;
+}
+.cwo-aud-create { background: #dcfce7; color: #166534; }
+.cwo-aud-edit   { background: #dbeafe; color: #1e40af; }
+.cwo-aud-delete { background: #fee2e2; color: #991b1b; }
+.cwo-audit-isi { flex: 1; min-width: 0; }
+.cwo-audit-baris1 { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.cwo-audit-wo { font-weight: 700; color: #111827; font-size: 13px; }
+.cwo-audit-tgl { font-size: 12px; color: #6b7280; white-space: nowrap; }
+.cwo-audit-ket { font-size: 13px; color: #374151; margin: 2px 0; }
+.cwo-audit-oleh { font-size: 12px; color: #6b7280; }
+
+@media (max-width: 768px) {
+    .cwo-toolbar-aksi { width: 100%; flex-wrap: wrap; }
+    .cwo-btn-filter, .cwo-btn-history, .cwo-toolbar-aksi .cwo-btn-reset { flex: 1; justify-content: center; }
+}
+
+/* Tombol hapus per-entri di popup history (Revisions / Designer Images) — akses Full */
+.cwo-design-item, .cwo-revisi-item { position: relative; }
+.cwo-hist-hapus { position: absolute; top: 8px; right: 8px; z-index: 2; }
+.cwo-design-isi, .cwo-revisi-isi { padding-right: 30px; }
