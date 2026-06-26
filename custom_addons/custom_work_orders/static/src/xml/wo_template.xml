@@ -10,10 +10,8 @@
             <div class="cwo-header-lingkaran cwo-ling-2"/>
             <div class="cwo-header-konten">
                 <div class="cwo-header-judul">
-                    <div class="cwo-header-ikon">🛠️</div>
                     <div>
                         <h1>Work Orders</h1>
-                        <p>Product · IN CHARGE · Requestor · Timeline · Approval</p>
                     </div>
                 </div>
                 <div class="cwo-header-aksi" t-if="state.bisaUbah">
@@ -42,9 +40,25 @@
                     <i class="fa fa-sliders"/> Filter
                     <span class="cwo-filter-badge" t-if="filterAktifJumlah"><t t-esc="filterAktifJumlah"/></span>
                 </button>
-                <button class="cwo-btn-history" t-if="state.bisaUbah" t-on-click="bukaHistory">
-                    <i class="fa fa-history"/> History
-                </button>
+                <div class="cwo-aksi-bungkus">
+                    <button class="cwo-btn-history" t-on-click="toggleAksiMenu" title="More actions">
+                        <i class="fa fa-bolt"/> Action <i class="fa fa-caret-down"/>
+                    </button>
+                    <t t-if="state.aksiMenuBuka">
+                        <div class="cwo-aksi-backdrop" t-on-click="tutupAksiMenu"/>
+                        <div class="cwo-aksi-menu">
+                            <button t-if="state.bisaUbah" class="cwo-aksi-item" t-on-click="aksiMerge">
+                                <i class="fa fa-code-fork"/> Merge
+                            </button>
+                            <button t-if="state.bisaUbah" class="cwo-aksi-item" t-on-click="aksiHistory">
+                                <i class="fa fa-history"/> History
+                            </button>
+                            <button class="cwo-aksi-item" t-on-click="aksiDownload">
+                                <i class="fa fa-download"/> Download
+                            </button>
+                        </div>
+                    </t>
+                </div>
                 <button class="cwo-btn-reset" t-on-click="resetCari">Reset</button>
             </div>
         </div>
@@ -142,9 +156,17 @@
                                                     title="View designer image history"
                                                     t-on-click="() => this.bukaDesignList(rec)">
                                                     <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
+                                                <span t-if="state.bisaUbah and !rec.design_count" class="cwo-img-tag cwo-img-tag-add"
+                                                    title="Add approval image"
+                                                    t-on-click="() => this.bukaDesignList(rec)">
+                                                    <i class="fa fa-plus"/></span>
                                             </div>
                                         </t>
-                                        <t t-else=""><span class="cwo-sel-kosong">—</span></t>
+                                        <t t-else="">
+                                            <button t-if="state.bisaUbah" class="cwo-img-add-btn" title="Add approval image"
+                                                t-on-click="() => this.bukaDesignList(rec)"><i class="fa fa-plus"/> Image</button>
+                                            <span t-else="" class="cwo-sel-kosong">—</span>
+                                        </t>
                                     </td>
                                     <td data-label="Executor"><t t-esc="namaDesigner(rec) or '—'"/></td>
                                     <td data-label="Section">
@@ -209,7 +231,12 @@
                                     <span class="cwo-kartu-chevron">▾</span>
                                 </div>
                                 <div class="cwo-kartu-nama"><t t-esc="rec.name"/></div>
-                                <div class="cwo-kartu-sub"><t t-esc="barisProduk(rec)"/></div>
+                                <div class="cwo-kartu-sub">
+                                    <span class="cwo-kartu-sub-kiri"><t t-esc="barisProduk(rec)"/></span>
+                                    <span class="cwo-kartu-sub-rq" t-if="rec.requestor_id or rec.request_date">
+                                        <i class="fa fa-user-o"/> <t t-esc="barisRequestor(rec)"/>
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- ISI (muncul saat kartu dibuka) -->
@@ -221,10 +248,15 @@
                                     <span t-if="rec.design_count" class="cwo-img-tag cwo-img-tag-hist"
                                         t-on-click="() => this.bukaDesignList(rec)">
                                         <i class="fa fa-clone"/> <t t-esc="rec.design_count"/></span>
+                                    <span t-if="state.bisaUbah and !rec.design_count" class="cwo-img-tag cwo-img-tag-add"
+                                        t-on-click="() => this.bukaDesignList(rec)">
+                                        <i class="fa fa-plus"/></span>
                                 </div>
                                 <div class="cwo-kartu-baris" t-else="">
                                     <span class="cwo-kartu-label">Image</span>
-                                    <span class="cwo-sel-kosong">No image</span>
+                                    <button t-if="state.bisaUbah" class="cwo-img-add-btn"
+                                        t-on-click="() => this.bukaDesignList(rec)"><i class="fa fa-plus"/> Image</button>
+                                    <span t-else="" class="cwo-sel-kosong">No image</span>
                                 </div>
                                 <!-- Production - Qty (jika ada) -->
                                 <div class="cwo-kartu-baris" t-if="rec.production_id or rec.qty">
@@ -576,7 +608,7 @@
                             <ul class="cwo-impor-tips">
                                 <li><b>Name</b> is required. <b>No.</b> is generated automatically (not needed in CSV).</li>
                                 <li><b>Type</b>: Design / Mold / Maintenance / Utility (default Design). <b>Production</b> &amp; <b>Section</b>: created automatically if not exist.</li>
-                                <li><b>Executor</b> filled with a user name; matched against users with Work Orders access.</li>
+                                <li><b>Executor</b> filled with a user name; matched against users with Work Orders access. If no user matches, it is saved as a custom name (you can later use <b>Merge Executor</b> to link it to a registered user).</li>
                                 <li><b>Requestor/Approver</b> filled with a name (e.g. P. Setiadi); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Job Type</b> filled with a name (e.g. Box, Layer); created automatically as a new option if it does not exist yet.</li>
                                 <li><b>Local/RRC</b>: Local / RRC. <b>Status</b>: Ongoing / Finished. <b>Date</b>: YYYY-MM-DD or DD/MM/YYYY.</li>
@@ -610,6 +642,115 @@
                             t-on-click="lakukanImpor">
                             <t t-if="state.impor.proses"><span class="cwo-spinner-tombol"/>Importing...</t>
                             <t t-else="">Import Now</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ MODAL MERGE (Executor / Requestor) ══════════ -->
+        <t t-if="state.gabung.buka">
+            <div class="cwo-overlay">
+                <div class="cwo-modal cwo-modal-gabung" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul"><h2>🔀 Merge</h2></div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupGabung">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <!-- Pilih bagian yang di-merge -->
+                        <div class="cwo-gabung-jenis">
+                            <button t-attf-class="cwo-gj-btn #{state.gabung.jenis === 'executor' ? 'cwo-gj-aktif' : ''}"
+                                t-on-click="() => this.setJenisGabung('executor')">Executor</button>
+                            <button t-attf-class="cwo-gj-btn #{state.gabung.jenis === 'requestor' ? 'cwo-gj-aktif' : ''}"
+                                t-on-click="() => this.setJenisGabung('requestor')">Requestor</button>
+                        </div>
+
+                        <!-- ── EXECUTOR: nama custom → user sistem ── -->
+                        <t t-if="state.gabung.jenis === 'executor'">
+                            <p class="cwo-gabung-info">
+                                Merge a <b>custom Executor name</b> (e.g. from import, like "Bu Tina")
+                                into a <b>registered user</b> (e.g. "Tina"). All Work Orders with that
+                                custom name are reassigned to the chosen user.
+                            </p>
+                            <t t-if="!state.gabung.daftar.length">
+                                <div class="cwo-gabung-kosong">No custom Executor names found. Nothing to merge.</div>
+                            </t>
+                            <t t-else="">
+                                <div class="cwo-form-grup">
+                                    <label class="cwo-form-label">Custom Executor name</label>
+                                    <select class="cwo-form-input"
+                                        t-on-change="(ev) => state.gabung.nama = ev.target.value">
+                                        <option value="">— select —</option>
+                                        <t t-foreach="state.gabung.daftar" t-as="ex" t-key="ex.nama">
+                                            <option t-att-value="ex.nama" t-att-selected="state.gabung.nama === ex.nama">
+                                                <t t-esc="ex.nama"/> (<t t-esc="ex.jumlah"/> WO)
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="cwo-gabung-panah">↓ merge into ↓</div>
+                                <div class="cwo-form-grup">
+                                    <label class="cwo-form-label">Registered user</label>
+                                    <select class="cwo-form-input"
+                                        t-on-change="(ev) => state.gabung.userId = ev.target.value">
+                                        <option value="">— select —</option>
+                                        <t t-foreach="state.daftarUser" t-as="u" t-key="u.id">
+                                            <option t-att-value="u.id" t-att-selected="state.gabung.userId == u.id">
+                                                <t t-esc="u.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                            </t>
+                        </t>
+
+                        <!-- ── REQUESTOR: person sumber → person target ── -->
+                        <t t-else="">
+                            <p class="cwo-gabung-info">
+                                Merge a <b>Requestor</b> into another (e.g. "Bu Tina" → "Tina").
+                                All Work Orders using the source are reassigned to the target,
+                                then the source entry is removed.
+                            </p>
+                            <t t-if="!state.gabung.reqDaftar.length">
+                                <div class="cwo-gabung-kosong">No Requestor used yet. Nothing to merge.</div>
+                            </t>
+                            <t t-else="">
+                                <div class="cwo-form-grup">
+                                    <label class="cwo-form-label">Requestor to merge (source)</label>
+                                    <select class="cwo-form-input"
+                                        t-on-change="(ev) => state.gabung.reqSource = ev.target.value">
+                                        <option value="">— select —</option>
+                                        <t t-foreach="state.gabung.reqDaftar" t-as="rq" t-key="rq.id">
+                                            <option t-att-value="rq.id" t-att-selected="state.gabung.reqSource == rq.id">
+                                                <t t-esc="rq.nama"/> (<t t-esc="rq.jumlah"/> WO)
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="cwo-gabung-panah">↓ merge into ↓</div>
+                                <div class="cwo-form-grup">
+                                    <label class="cwo-form-label">Target Requestor</label>
+                                    <select class="cwo-form-input"
+                                        t-on-change="(ev) => state.gabung.reqTarget = ev.target.value">
+                                        <option value="">— select —</option>
+                                        <t t-foreach="state.daftarPerson" t-as="p" t-key="p.id">
+                                            <option t-att-value="p.id" t-att-selected="state.gabung.reqTarget == p.id">
+                                                <t t-esc="p.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.gabung.proses"
+                            t-on-click="tutupGabung">Close</button>
+                        <button class="cwo-tombol-utama"
+                            t-att-disabled="state.gabung.proses or (state.gabung.jenis === 'executor' ? !state.gabung.daftar.length : !state.gabung.reqDaftar.length)"
+                            t-on-click="lakukanGabung">
+                            <t t-if="state.gabung.proses"><span class="cwo-spinner-tombol"/>Merging...</t>
+                            <t t-else="">Merge</t>
                         </button>
                     </div>
                 </div>
@@ -1118,6 +1259,42 @@
                         <button class="cwo-tombol-tutup" t-on-click="tutupDesignList">✕</button>
                     </div>
                     <div class="cwo-modal-isi">
+                        <!-- Tambah Image Approval manual (akses Full) — untuk data impor tanpa gambar -->
+                        <div class="cwo-tdesign-box" t-if="state.bisaUbah">
+                            <div class="cwo-tdesign-judul"><i class="fa fa-plus-circle"/> Add Approval Image</div>
+                            <p class="cwo-tdesign-info">
+                                Add the executor's image manually (e.g. for imported data without an image).
+                                This becomes the latest image shown on the Work Order — separate from the Reference Image.
+                            </p>
+                            <div t-attf-class="cwo-dropzone #{state.designList.tSeret ? 'cwo-dropzone-aktif' : ''} #{state.designList.tPreview ? 'cwo-dropzone-isi' : ''}"
+                                t-on-dragover="onSeretMasukTambahDesign" t-on-dragleave="onSeretKeluarTambahDesign" t-on-drop="onJatuhkanGambarTambahDesign">
+                                <t t-if="state.designList.tPreview">
+                                    <img class="cwo-dropzone-preview" t-att-src="state.designList.tPreview"/>
+                                    <div class="cwo-dropzone-nama"><t t-esc="state.designList.tNama"/></div>
+                                    <button type="button" class="cwo-btn-hapus-img" t-on-click="hapusGambarTambahDesign">Remove Image</button>
+                                </t>
+                                <t t-else="">
+                                    <div class="cwo-dropzone-ikon">🖼️</div>
+                                    <div class="cwo-dropzone-teks">Drag &amp; drop an image here, or</div>
+                                    <label class="cwo-dropzone-pilih">
+                                        Choose file
+                                        <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambarTambahDesign"/>
+                                    </label>
+                                </t>
+                            </div>
+                            <textarea class="cwo-form-input cwo-tdesign-desc" rows="2"
+                                placeholder="Description (optional)"
+                                t-att-value="state.designList.tDesc"
+                                t-on-input="(ev) => state.designList.tDesc = ev.target.value"/>
+                            <div class="cwo-tdesign-aksi">
+                                <button class="cwo-tombol-utama" t-att-disabled="state.designList.tProses or !state.designList.tImage"
+                                    t-on-click="kirimTambahDesign">
+                                    <t t-if="state.designList.tProses"><span class="cwo-spinner-tombol"/>Adding...</t>
+                                    <t t-else="">Add Image</t>
+                                </button>
+                            </div>
+                        </div>
+
                         <t t-if="state.designList.memuat">
                             <div class="cwo-loading"><div class="cwo-spinner"/><p>Loading...</p></div>
                         </t>

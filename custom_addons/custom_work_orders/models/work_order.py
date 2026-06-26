@@ -284,6 +284,81 @@ class WoWorkOrder(models.Model):
         return self.env['wo.section'].daftar_section()
 
     @api.model
+    def daftar_executor_custom(self):
+        """Daftar nama Executor custom (incharge_custom) yang dipakai WO, beserta
+        jumlahnya — untuk fitur 'Gabung Executor' (akses Full). Nama custom muncul
+        bila saat impor user tidak cocok dengan user sistem mana pun."""
+        recs = self.search([('incharge_custom', '!=', False)])
+        agg = {}
+        for r in recs:
+            nm = (r.incharge_custom or '').strip()
+            if nm:
+                agg[nm] = agg.get(nm, 0) + 1
+        return [{'nama': n, 'jumlah': c}
+                for n, c in sorted(agg.items(), key=lambda x: x[0].lower())]
+
+    @api.model
+    def gabung_executor(self, nama_custom, user_id):
+        """Gabungkan semua Work Order ber-Executor custom `nama_custom` menjadi
+        user sistem `user_id` (mis. 'Bu Tina' → user 'Tina' yang baru daftar).
+        Hanya akses Full. Mengembalikan jumlah WO yang diperbarui."""
+        self._cek_full()
+        nama = (nama_custom or '').strip()
+        if not nama or not user_id:
+            return 0
+        u = self.env['res.users'].browse(int(user_id))
+        if not u.exists():
+            raise ValidationError("Target user tidak ditemukan.")
+        recs = self.search([('incharge_custom', '=', nama)])
+        n = len(recs)
+        if n:
+            recs.with_context(skip_wo_audit=True).write(
+                {'incharge_id': u.id, 'incharge_custom': False})
+            recs._catat_audit('edit', 'Gabung Executor "%s" → %s' % (nama, u.name))
+        return n
+
+    @api.model
+    def daftar_requestor_merge(self):
+        """Daftar Requestor (wo.person) yang dipakai di WO beserta jumlahnya —
+        untuk fitur 'Merge Requestor' (akses Full). Dipakai sebagai sumber gabung."""
+        recs = self.search([('requestor_id', '!=', False)])
+        agg = {}
+        for r in recs:
+            p = r.requestor_id
+            if p:
+                agg.setdefault(p.id, [p.name, 0])
+                agg[p.id][1] += 1
+        return [{'id': pid, 'nama': v[0], 'jumlah': v[1]}
+                for pid, v in sorted(agg.items(), key=lambda x: (x[1][0] or '').lower())]
+
+    @api.model
+    def gabung_requestor(self, source_id, target_id):
+        """Gabungkan Requestor `source_id` → `target_id` (wo.person). Semua WO yang
+        memakai source (sebagai Requestor atau Approver) dialihkan ke target, lalu
+        record person source dihapus (dedupe). Hanya akses Full.
+        Mengembalikan jumlah WO yang Requestor-nya diperbarui."""
+        self._cek_full()
+        if not source_id or not target_id:
+            return 0
+        sid, tid = int(source_id), int(target_id)
+        if sid == tid:
+            raise ValidationError("Source dan target tidak boleh sama.")
+        Person = self.env['wo.person']
+        src, tgt = Person.browse(sid), Person.browse(tid)
+        if not src.exists() or not tgt.exists():
+            raise ValidationError("Requestor tidak ditemukan.")
+        wo_req = self.search([('requestor_id', '=', sid)])
+        wo_apr = self.search([('approver_id', '=', sid)])
+        n = len(wo_req)
+        if wo_req:
+            wo_req.with_context(skip_wo_audit=True).write({'requestor_id': tid})
+            wo_req._catat_audit('edit', 'Gabung Requestor "%s" → %s' % (src.name, tgt.name))
+        if wo_apr:
+            wo_apr.with_context(skip_wo_audit=True).write({'approver_id': tid})
+        src.sudo().unlink()
+        return n
+
+    @api.model
     def daftar_designer_filter(self):
         """Daftar designer unik yang dipakai di WO (user sistem & nama custom),
         untuk dropdown filter (akses Full & Read-only). key: 'u:<id>' atau 'c:<nama>'."""
@@ -334,6 +409,26 @@ class WoWorkOrder(models.Model):
         })
         self.sudo().write({'approval_state': 'ready'})
         self._catat_audit('edit', 'Diajukan untuk approval (Ready)')
+        return True
+
+    def tambah_design_image(self, image=None, description=None):
+        """User Full menambahkan Image Approval (image hasil executor) secara
+        MANUAL — dipakai untuk data hasil impor yang tanpa gambar. Disimpan
+        sebagai wo.design.image (sama seperti yang di-upload executor saat Ready),
+        jadi menjadi image yang ditampilkan di daftar Work Order. Image wajib,
+        deskripsi opsional. Berbeda dari Reference Image (acuan dari pembuat WO)."""
+        self._cek_full()
+        self.ensure_one()
+        img = self._parse_image(image)
+        if not img:
+            raise ValidationError("Gambar wajib diisi.")
+        self.env['wo.design.image'].create({
+            'work_order_id': self.id,
+            'image': img,
+            'description': (description or '').strip() or False,
+        })
+        self._catat_audit('edit', 'Tambah Image Approval (manual)')
+        self._notify_changed()
         return True
 
     def simpan_jadwal(self, lead_time=None, finish_date=None):
@@ -537,11 +632,15 @@ class WoWorkOrder(models.Model):
             name = ambil(r, 'Name', 'name', 'Nama', 'NAMA')
             if not name:
                 continue  # baris tanpa Name dilewati
-            designer = ambil(r, 'Designer 2D/3D', 'Designer', 'designer', 'InCharge', 'incharge')
+            designer = ambil(r, 'Executor', 'executor', 'Designer 2D/3D', 'Designer', 'designer', 'InCharge', 'incharge')
+            # Cocokkan ke user sistem; bila tidak ada yang cocok, simpan sebagai
+            # nama Executor custom (bisa digabung ke user lewat 'Gabung Executor').
+            exec_uid = user_id(designer)
             requestor = ambil(r, 'Requestor', 'requestor')
             approver = ambil(r, 'Approver', 'approver')
             lr = ambil(r, 'Lokal/RRC', 'LokalRRC', 'Lokal RRC', 'lokal_rrc', 'lokal/rrc').lower()
             stat = ambil(r, 'Status', 'status').lower()
+            status_final = stat_map.get(stat, 'ongoing')
             tipe = ambil(r, 'Type', 'type', 'Jenis', 'jenis', 'Tab').lower()
             vals_list.append({
                 'name': name,
@@ -553,7 +652,8 @@ class WoWorkOrder(models.Model):
                 'qty': ambil(r, 'Qty', 'qty', 'Quantity', 'Jumlah') or False,
                 'details': ambil(r, 'Details', 'details') or False,
                 # Image TIDAK diimpor — dimasukkan/diedit manual lewat form.
-                'incharge_id': user_id(designer),
+                'incharge_id': exec_uid,
+                'incharge_custom': (designer if (designer and not exec_uid) else False),
                 'section_id': section_id(ambil(r, 'Section', 'section', 'Seksi')),
                 'lokal_rrc': lr_map.get(lr, False),
                 'requestor_id': person_id(requestor),
@@ -562,7 +662,9 @@ class WoWorkOrder(models.Model):
                 'finish_date': self._parse_tanggal(ambil(r, 'Target Finish (Date)', 'Target Finish', 'Finish Date', 'Finish', 'finish_date')),
                 'approver_id': person_id(approver),
                 'approval_date': self._parse_tanggal(ambil(r, 'Approval Date', 'Date', 'Approval', 'approval')),
-                'status': stat_map.get(stat, 'ongoing'),
+                'status': status_final,
+                # Data Finished hasil impor dianggap sudah disetujui (approved).
+                'approval_state': ('approved' if status_final == 'finished' else 'draft'),
                 'import_batch': batch,
             })
         if not vals_list:

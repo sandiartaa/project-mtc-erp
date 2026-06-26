@@ -109,6 +109,16 @@ class WoApp extends Component {
             },
 
             impor: { buka: false, file: null, namaFile: "", proses: false, batch: [] },
+            // Dropdown tombol "Action" (Merge / History / Download)
+            aksiMenuBuka: false,
+            // Popup Merge: gabungkan Executor (custom → user) atau Requestor (person → person). Akses Full.
+            gabung: {
+                buka: false, jenis: "executor", proses: false,
+                // Executor: nama custom → user sistem
+                daftar: [], nama: "", userId: "",
+                // Requestor: person sumber → person target
+                reqDaftar: [], reqSource: "", reqTarget: "",
+            },
             konfirmasi: { buka: false, judul: "", labelYa: "Ya", warnaYa: "merah" },
             // Kartu mobile yang sedang dibuka (accordion). Key = id work order → true.
             kartuTerbuka: {},
@@ -127,7 +137,11 @@ class WoApp extends Component {
                 image_data: "", image_preview: "", namaFile: "", description: "",
             },
             // Popup riwayat image designer tiap Work Order
-            designList: { buka: false, judul: "", items: [], memuat: false, woId: null },
+            // (t* = form tambah Image Approval manual oleh akses Full)
+            designList: {
+                buka: false, judul: "", items: [], memuat: false, woId: null,
+                tImage: "", tPreview: "", tNama: "", tDesc: "", tProses: false, tSeret: false,
+            },
             // Popup Designer isi Lead Time (Hour) + Target Finish (Date)
             jadwalForm: { buka: false, rec: null, lead_time: "", finish_date: "", proses: false },
             // Popup Filter (gabungan: status + period + designer)
@@ -186,7 +200,7 @@ class WoApp extends Component {
                 if (fd.startsWith("u:")) domain.push(["incharge_id", "=", parseInt(fd.slice(2))]);
                 else if (fd.startsWith("c:")) domain.push(["incharge_custom", "=", fd.slice(2)]);
             }
-            this.state.list = await this.orm.searchRead(
+            const list = await this.orm.searchRead(
                 "wo.work.order",
                 domain,
                 ["id", "wo_number", "wo_type", "name", "code", "brand_id", "job_type_id",
@@ -195,8 +209,17 @@ class WoApp extends Component {
                  "incharge_id", "incharge_custom", "section_id", "lokal_rrc", "requestor_id", "create_uid",
                  "request_date", "lead_time", "finish_date",
                  "approver_id", "approval_date", "status", "approval_state", "revisi_count"],
-                { order: "id desc" }
+                { order: "request_date desc, id desc" }
             );
+            // Urutkan: Req Date terbaru di atas → terlama di bawah.
+            // WO tanpa Req Date diletakkan paling bawah (tiebreak: id terbaru dulu).
+            this.state.list = list.sort((a, b) => {
+                const da = a.request_date || "", db = b.request_date || "";
+                if (da && db) return da < db ? 1 : da > db ? -1 : b.id - a.id;
+                if (da && !db) return -1;
+                if (!da && db) return 1;
+                return b.id - a.id;
+            });
         } catch (e) {
             console.error("Gagal memuat work order:", e);
             this.notification.add("Failed to load Work Order data.", { type: "danger" });
@@ -659,6 +682,8 @@ class WoApp extends Component {
         dl.buka = true; dl.woId = rec.id;
         dl.judul = rec.wo_number + (rec.name ? " — " + rec.name : "");
         dl.items = []; dl.memuat = true;
+        // reset form tambah image (akses Full)
+        dl.tImage = ""; dl.tPreview = ""; dl.tNama = ""; dl.tDesc = ""; dl.tProses = false; dl.tSeret = false;
         try {
             dl.items = await this.orm.call("wo.design.image", "riwayat_wo", [rec.id]);
         } catch (e) {
@@ -668,6 +693,53 @@ class WoApp extends Component {
         dl.memuat = false;
     }
     tutupDesignList() { this.state.designList.buka = false; }
+
+    // ── Tambah Image Approval manual (akses Full) — untuk data impor tanpa gambar ──
+    _bacaGambarTambahDesign(file) {
+        if (!file) return;
+        const dl = this.state.designList;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result || "";
+            dl.tPreview = dataUrl;
+            const idx = String(dataUrl).indexOf("base64,");
+            dl.tImage = idx !== -1 ? String(dataUrl).slice(idx + 7) : "";
+            dl.tNama = file.name || "image";
+        };
+        reader.readAsDataURL(file);
+    }
+    onPilihGambarTambahDesign(ev) { this._bacaGambarTambahDesign(ev.target.files && ev.target.files[0]); }
+    onSeretMasukTambahDesign(ev) { ev.preventDefault(); this.state.designList.tSeret = true; }
+    onSeretKeluarTambahDesign(ev) { ev.preventDefault(); this.state.designList.tSeret = false; }
+    onJatuhkanGambarTambahDesign(ev) {
+        ev.preventDefault();
+        this.state.designList.tSeret = false;
+        const file = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (file && /^image\//.test(file.type)) this._bacaGambarTambahDesign(file);
+        else this.notification.add("Drop an image file.", { type: "warning" });
+    }
+    hapusGambarTambahDesign() {
+        const dl = this.state.designList;
+        dl.tImage = ""; dl.tPreview = ""; dl.tNama = "";
+    }
+    async kirimTambahDesign() {
+        const dl = this.state.designList;
+        if (!dl.tImage) { this.notification.add("Please choose an image first.", { type: "warning" }); return; }
+        dl.tProses = true;
+        try {
+            await this.orm.call("wo.work.order", "tambah_design_image",
+                [[dl.woId], dl.tImage, (dl.tDesc || "").trim()]);
+            this.notification.add("Approval image added.", { type: "success" });
+            dl.tImage = ""; dl.tPreview = ""; dl.tNama = ""; dl.tDesc = "";
+            dl.items = await this.orm.call("wo.design.image", "riwayat_wo", [dl.woId]);
+            await this.muatData();
+        } catch (e) {
+            console.error("Gagal tambah image approval:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
+        }
+        dl.tProses = false;
+    }
     // Hapus 1 image designer (akses Full).
     hapusDesignItem(di) {
         this.tampilKonfirmasi({
@@ -1437,25 +1509,138 @@ class WoApp extends Component {
             this.notification.add("Failed to delete import result.", { type: "danger" });
         }
     }
-    unduhTemplate() {
-        const headers = ["Type", "Name", "Code", "Brand", "Job Type", "Production", "Qty", "Details",
-                         "Executor", "Section", "Lokal/RRC",
-                         "Requestor", "Req Date", "Lead Time (Hour)", "Target Finish (Date)",
-                         "Approver", "Approval Date", "Status"];
-        const contoh = ["Design", "Sample WO", "WO-001", "BrandX", "Box", "Line A", "100", "Note line 1",
-                        "Administrator", "2D", "Local",
-                        "Administrator", "2026-06-20", "48", "2026-07-01",
-                        "Administrator", "", "Ongoing"];
-        const cell = (v) => {
-            v = v == null ? "" : String(v);
-            return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
-        };
-        const csv = headers.join(",") + "\n" + contoh.map(cell).join(",") + "\n";
+    // Header kolom CSV (dipakai template impor & unduh daftar).
+    get _csvHeaders() {
+        return ["Type", "Name", "Code", "Brand", "Job Type", "Production", "Qty", "Details",
+                "Executor", "Section", "Lokal/RRC",
+                "Requestor", "Req Date", "Lead Time (Hour)", "Target Finish (Date)",
+                "Approver", "Approval Date", "Status"];
+    }
+    _csvCell(v) {
+        v = v == null ? "" : String(v);
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }
+    _unduhCsv(namaFile, headers, baris) {
+        const csv = headers.map((h) => this._csvCell(h)).join(",") + "\n"
+            + baris.map((r) => r.map((c) => this._csvCell(c)).join(",")).join("\n") + "\n";
         const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url; a.download = "template_work_orders.csv"; a.click();
+        a.href = url; a.download = namaFile; a.click();
         URL.revokeObjectURL(url);
+    }
+    unduhTemplate() {
+        // Template + 2 contoh baris yang benar & lengkap (semua kolom terisi).
+        const contoh = [
+            ["Design", "Front Cover Box", "WO-001", "STAR RIDER", "Box", "Line A", "100", "Full color, matte laminate",
+             "Izza", "2D", "Local",
+             "P. Apin", "2026-06-20", "48", "2026-07-01",
+             "P. Setiadi", "2026-07-02", "Ongoing"],
+            ["Mold", "Cavity Insert A3", "WO-002", "DAYTONA", "Insert", "Line B", "4", "Hardened steel, polish #3",
+             "Bu Tina", "INJ", "RRC",
+             "P. Apin", "2026-06-22", "120", "2026-07-10",
+             "P. Setiadi", "", "Finished"],
+        ];
+        this._unduhCsv("template_work_orders.csv", this._csvHeaders, contoh);
+    }
+    // Unduh daftar Work Order yang sedang tampil (sudah urut Req Date terbaru → terlama).
+    unduhDaftar() {
+        const list = this.state.list || [];
+        if (!list.length) {
+            this.notification.add("No data to download.", { type: "warning" });
+            return;
+        }
+        const lblType = { design: "Design", mold: "Mold", maintenance: "Maintenance", utility: "Utility" };
+        // "No." ditaruh di depan sebagai referensi (diabaikan bila di-impor kembali).
+        const headers = ["No.", ...this._csvHeaders];
+        const baris = list.map((rec) => [
+            rec.wo_number || "",
+            lblType[rec.wo_type] || rec.wo_type || "",
+            rec.name || "",
+            rec.code || "",
+            rec.brand_id ? rec.brand_id[1] : "",
+            rec.job_type_id ? rec.job_type_id[1] : "",
+            rec.production_id ? rec.production_id[1] : "",
+            rec.qty || "",
+            rec.details || "",
+            this.namaDesigner(rec) || "",
+            rec.section_id ? rec.section_id[1] : "",
+            rec.lokal_rrc ? this.labelLokalRrc(rec.lokal_rrc) : "",
+            rec.requestor_id ? rec.requestor_id[1] : "",
+            rec.request_date || "",
+            rec.lead_time || "",
+            rec.finish_date || "",
+            rec.approver_id ? rec.approver_id[1] : "",
+            rec.approval_date || "",
+            this.labelStatus(rec.status),
+        ]);
+        const tgl = new Date().toISOString().slice(0, 10);
+        this._unduhCsv(`work_orders_${tgl}.csv`, headers, baris);
+        this.notification.add(`Downloaded ${baris.length} Work Order(s).`, { type: "success" });
+    }
+
+    // ─── TOMBOL ACTION (dropdown: Merge / History / Download) ────────────────
+    toggleAksiMenu() { this.state.aksiMenuBuka = !this.state.aksiMenuBuka; }
+    tutupAksiMenu() { this.state.aksiMenuBuka = false; }
+    aksiMerge() { this.tutupAksiMenu(); this.bukaGabung(); }
+    aksiHistory() { this.tutupAksiMenu(); this.bukaHistory(); }
+    aksiDownload() { this.tutupAksiMenu(); this.unduhDaftar(); }
+
+    // ─── MERGE (Executor: custom → user; Requestor: person → person) — Full ───
+    async bukaGabung() {
+        const g = this.state.gabung;
+        g.buka = true; g.proses = false;
+        g.nama = ""; g.userId = ""; g.reqSource = ""; g.reqTarget = "";
+        await Promise.all([
+            this.muatExecutorCustom(), this.muatRequestorMerge(),
+            this.muatUser(), this.muatPerson(),
+        ]);
+    }
+    tutupGabung() { this.state.gabung.buka = false; }
+    setJenisGabung(j) { this.state.gabung.jenis = j; }
+    async muatExecutorCustom() {
+        try {
+            this.state.gabung.daftar = await this.orm.call(
+                "wo.work.order", "daftar_executor_custom", []
+            );
+        } catch (e) { console.error("Gagal memuat executor custom:", e); }
+    }
+    async muatRequestorMerge() {
+        try {
+            this.state.gabung.reqDaftar = await this.orm.call(
+                "wo.work.order", "daftar_requestor_merge", []
+            );
+        } catch (e) { console.error("Gagal memuat requestor merge:", e); }
+    }
+    async lakukanGabung() {
+        const g = this.state.gabung;
+        if (g.jenis === "executor") {
+            if (!g.nama) { this.notification.add("Select a custom Executor name.", { type: "warning" }); return; }
+            if (!g.userId) { this.notification.add("Select the registered user to merge into.", { type: "warning" }); return; }
+        } else {
+            if (!g.reqSource) { this.notification.add("Select the Requestor to merge.", { type: "warning" }); return; }
+            if (!g.reqTarget) { this.notification.add("Select the target Requestor.", { type: "warning" }); return; }
+            if (g.reqSource === g.reqTarget) { this.notification.add("Source and target must differ.", { type: "warning" }); return; }
+        }
+        g.proses = true;
+        try {
+            let n;
+            if (g.jenis === "executor") {
+                n = await this.orm.call("wo.work.order", "gabung_executor", [g.nama, parseInt(g.userId)]);
+                g.nama = ""; g.userId = "";
+                await Promise.all([this.muatExecutorCustom(), this.muatData(), this.muatDesignerFilter()]);
+            } else {
+                n = await this.orm.call("wo.work.order", "gabung_requestor", [parseInt(g.reqSource), parseInt(g.reqTarget)]);
+                g.reqSource = ""; g.reqTarget = "";
+                await Promise.all([this.muatRequestorMerge(), this.muatPerson(), this.muatData()]);
+            }
+            this.notification.add(`${n} Work Order(s) merged.`, { type: "success" });
+        } catch (e) {
+            console.error("Gagal merge:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
+        }
+        g.proses = false;
     }
 
     // ─── KONFIRMASI ──────────────────────────────────────────────────────────

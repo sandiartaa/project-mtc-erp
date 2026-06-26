@@ -381,7 +381,16 @@
 .cwo-kartu-chevron { color: #94a3b8; font-size: 14px; transition: transform 0.2s; }
 .cwo-kartu-buka .cwo-kartu-chevron { transform: rotate(180deg); }
 .cwo-kartu-nama { font-size: 16px; font-weight: 700; color: #1e293b; line-height: 1.3; word-break: break-word; }
-.cwo-kartu-sub { font-size: 13px; color: #64748b; margin-top: 3px; word-break: break-word; }
+.cwo-kartu-sub {
+    font-size: 13px; color: #64748b; margin-top: 3px;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+}
+.cwo-kartu-sub-kiri { min-width: 0; word-break: break-word; }
+.cwo-kartu-sub-rq {
+    margin-left: auto; flex: 0 0 auto; text-align: right; white-space: nowrap;
+    font-weight: 600; color: #475569; font-size: 12px;
+}
+.cwo-kartu-sub-rq .fa { color: #94a3b8; margin-right: 3px; }
 .cwo-kartu-isi { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; animation: cwo-buka 0.18s ease; }
 @keyframes cwo-buka { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 /* Gambar inline (ke bawah) saat kartu dibuka */
@@ -453,6 +462,16 @@
 .cwo-img-tag-ref { background: #fef3c7; color: #92400e; }
 .cwo-img-tag-hist { background: #ede9fe; color: #5b21b6; cursor: pointer; }
 .cwo-img-tag-hist:hover { background: #ddd6fe; }
+.cwo-img-tag-add { background: #dcfce7; color: #166534; cursor: pointer; }
+.cwo-img-tag-add:hover { background: #bbf7d0; }
+/* Tombol tambah image saat WO belum punya gambar sama sekali (akses Full) */
+.cwo-img-add-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; color: #166534;
+    background: #dcfce7; border: 1px dashed #86efac; border-radius: 7px;
+    padding: 5px 9px; cursor: pointer; transition: background .12s;
+}
+.cwo-img-add-btn:hover { background: #bbf7d0; }
 
 /* Baris kecil "diinput oleh" di kolom Requestor */
 .cwo-input-oleh {
@@ -596,6 +615,53 @@
     .cwo-toolbar-aksi { width: 100%; flex-wrap: wrap; }
     .cwo-btn-filter, .cwo-btn-history, .cwo-toolbar-aksi .cwo-btn-reset { flex: 1; justify-content: center; }
 }
+
+/* Tambah Image Approval manual (di popup Designer Images) — akses Full */
+.cwo-tdesign-box {
+    border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 12px;
+    padding: 14px; margin-bottom: 16px;
+}
+.cwo-tdesign-judul { font-weight: 700; font-size: 14px; color: #714B67; margin-bottom: 4px; }
+.cwo-tdesign-judul .fa { margin-right: 6px; }
+.cwo-tdesign-info { font-size: 12px; color: #6b7280; line-height: 1.45; margin: 0 0 10px; }
+.cwo-tdesign-desc { margin-top: 10px; resize: vertical; }
+.cwo-tdesign-aksi { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+/* Tombol Action + dropdown (Merge / History / Download) */
+.cwo-aksi-bungkus { position: relative; display: inline-flex; }
+.cwo-aksi-backdrop { position: fixed; inset: 0; z-index: 40; background: transparent; }
+.cwo-aksi-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 50;
+    min-width: 170px; background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 6px;
+    display: flex; flex-direction: column; gap: 2px;
+}
+.cwo-aksi-item {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
+    border: none; background: transparent; color: #374151;
+    font-weight: 600; font-size: 13px; padding: 9px 11px; border-radius: 7px;
+    cursor: pointer; transition: background .12s;
+}
+.cwo-aksi-item:hover { background: #f3f4f6; }
+.cwo-aksi-item .fa { width: 16px; text-align: center; color: #714B67; }
+
+/* Merge (Executor: custom name → user; Requestor: person → person) */
+.cwo-modal-gabung { max-width: 440px; }
+.cwo-gabung-jenis { display: flex; gap: 8px; margin-bottom: 14px; }
+.cwo-gj-btn {
+    flex: 1; padding: 9px 12px; border: 1px solid #e5e7eb; background: #fff;
+    color: #374151; font-weight: 600; font-size: 13px; border-radius: 8px; cursor: pointer;
+    transition: background .12s, border-color .12s, color .12s;
+}
+.cwo-gj-btn:hover { background: #f9fafb; }
+.cwo-gj-aktif { background: #714B67; border-color: #714B67; color: #fff; }
+.cwo-gj-aktif:hover { background: #5e3e55; }
+.cwo-gabung-info { font-size: 13px; color: #4b5563; line-height: 1.5; margin: 0 0 14px; }
+.cwo-gabung-kosong {
+    font-size: 13px; color: #6b7280; text-align: center;
+    padding: 18px; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 10px;
+}
+.cwo-gabung-panah { text-align: center; font-weight: 700; color: #714B67; margin: 6px 0; font-size: 13px; }
 
 /* Tombol hapus per-entri di popup history (Revisions / Designer Images) — akses Full */
 .cwo-design-item, .cwo-revisi-item { position: relative; }
