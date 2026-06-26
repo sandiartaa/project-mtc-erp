@@ -5,10 +5,10 @@
         <field name="tag">wom_app</field>
     </record>
 
-    <!-- Menu top-level, untuk pemilik grup Akses Work Order Mold (Full ATAU Read-only). -->
+    <!-- Menu top-level untuk pemilik grup Akses Work Order Mold (1 akses saja). -->
     <menuitem id="menu_wo_root" name="Work Order Mold" sequence="17"
-              groups="custom_work_orders_mold.group_wom_user,custom_work_orders_mold.group_wom_designer,custom_work_orders_mold.group_wom_readonly"/>
+              groups="custom_work_orders_mold.group_work_orders_mold"/>
     <menuitem id="menu_wo_daftar" name="Work Order Mold List"
               parent="menu_wo_root" action="action_wom_app" sequence="1"
-              groups="custom_work_orders_mold.group_wom_user,custom_work_orders_mold.group_wom_designer,custom_work_orders_mold.group_wom_readonly"/>
+              groups="custom_work_orders_mold.group_work_orders_mold"/>
 </odoo>

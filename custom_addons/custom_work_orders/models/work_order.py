@@ -202,12 +202,25 @@ class WoWorkOrder(models.Model):
                 labels.append(f.string or key)
         return ('Ubah: ' + ', '.join(labels)) if labels else ''
 
+    # Kode nomor per jenis WO: W + 2 huruf jenis + 4 digit (WDE/WMO/WMA/WUT).
+    _SEQ_BY_TYPE = {
+        'design': 'wo.work.order.design',
+        'mold': 'wo.work.order.mold',
+        'maintenance': 'wo.work.order.maintenance',
+        'utility': 'wo.work.order.utility',
+    }
+
     @api.model_create_multi
     def create(self, vals_list):
+        Seq = self.env['ir.sequence']
         for vals in vals_list:
             if vals.get('wo_number', 'New') in (False, 'New', ''):
+                tipe = vals.get('wo_type') or 'design'
+                kode = self._SEQ_BY_TYPE.get(tipe, 'wo.work.order')
                 vals['wo_number'] = (
-                    self.env['ir.sequence'].next_by_code('wo.work.order') or 'New'
+                    Seq.next_by_code(kode)
+                    or Seq.next_by_code('wo.work.order')
+                    or 'New'
                 )
         records = super().create(vals_list)
         records._rename_image_attachment()

@@ -1,12 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Nomor otomatis Work Order: WO00001, WO00002, ... -->
     <data noupdate="1">
+        <!-- Sequence lama (fallback bila jenis tak dikenal): WO00001, ... -->
         <record id="seq_wo_work_order" model="ir.sequence">
             <field name="name">Work Order Number</field>
             <field name="code">wo.work.order</field>
             <field name="prefix">WO</field>
             <field name="padding">5</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+
+        <!-- Nomor per JENIS Work Order: W + 2 huruf jenis + tanggal(YYMMDD) + 4 digit.
+             Contoh: WMO-260626-0012. Design=WDE, Mold=WMO, Maintenance=WMA, Utility=WUT.
+             %(y)s%(month)s%(day)s = tanggal pembuatan (otomatis dari ir.sequence). -->
+        <record id="seq_wo_design" model="ir.sequence">
+            <field name="name">Work Order Number - Design</field>
+            <field name="code">wo.work.order.design</field>
+            <field name="prefix">WDE-%(y)s%(month)s%(day)s-</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_wo_mold" model="ir.sequence">
+            <field name="name">Work Order Number - Mold</field>
+            <field name="code">wo.work.order.mold</field>
+            <field name="prefix">WMO-%(y)s%(month)s%(day)s-</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_wo_maintenance" model="ir.sequence">
+            <field name="name">Work Order Number - Maintenance</field>
+            <field name="code">wo.work.order.maintenance</field>
+            <field name="prefix">WMA-%(y)s%(month)s%(day)s-</field>
+            <field name="padding">4</field>
+            <field name="number_next">1</field>
+            <field name="number_increment">1</field>
+        </record>
+        <record id="seq_wo_utility" model="ir.sequence">
+            <field name="name">Work Order Number - Utility</field>
+            <field name="code">wo.work.order.utility</field>
+            <field name="prefix">WUT-%(y)s%(month)s%(day)s-</field>
+            <field name="padding">4</field>
             <field name="number_next">1</field>
             <field name="number_increment">1</field>
         </record>

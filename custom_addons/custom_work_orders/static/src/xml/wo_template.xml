@@ -1527,8 +1527,9 @@
             <button class="cwo-picker-navbtn" t-on-click="userNext"
                 t-att-disabled="state.userPicker.halaman >= userTotalHalaman">Next ›</button>
         </div>
-        <!-- Input nama designer custom (ketik bebas) — hanya untuk target Designer -->
-        <t t-if="state.userPicker.target === 'incharge'">
+        <!-- Input nama custom (ketik bebas) — untuk Executor, KECUALI tab Mold
+             (di Mold, Executor wajib dipilih dari daftar Teknisi). -->
+        <t t-if="state.userPicker.target === 'incharge' and state.form.wo_type != 'mold'">
             <div class="cwo-picker-custom">
                 <div class="cwo-picker-custom-judul">Or type a custom name</div>
                 <div class="cwo-picker-custom-baris">

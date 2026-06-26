@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Kredensial awal agar fitur tambah tidak terkunci di awal. noupdate=1:
+         hanya dibuat sekali; admin bebas mengubah/menghapus & menambah lewat
+         ikon kunci (Manage Mold Users) di app. -->
+    <data noupdate="1">
+        <!-- Requestor awal -->
+        <record id="cred_default" model="wom.credential">
+            <field name="username">Admin</field>
+            <field name="password">mold123</field>
+            <field name="role">requestor</field>
+        </record>
+        <!-- Teknisi (Executor) awal -->
+        <record id="cred_teknisi" model="wom.credential">
+            <field name="username">Teknisi</field>
+            <field name="password">tek123</field>
+            <field name="role">executor</field>
+        </record>
+
+        <!-- Pilihan deskripsi awal (bisa dikelola requestor) -->
+        <record id="desk_lengket" model="wom.deskripsi">
+            <field name="name">Lengket</field><field name="sequence">10</field>
+        </record>
+        <record id="desk_pen_putus" model="wom.deskripsi">
+            <field name="name">Pen Putus</field><field name="sequence">20</field>
+        </record>
+        <record id="desk_jembret" model="wom.deskripsi">
+            <field name="name">Jembret</field><field name="sequence">30</field>
+        </record>
+        <record id="desk_matras_bocor" model="wom.deskripsi">
+            <field name="name">Matras Bocor Air</field><field name="sequence">40</field>
+        </record>
+        <record id="desk_matras_gompal" model="wom.deskripsi">
+            <field name="name">Matras Gompal</field><field name="sequence">50</field>
+        </record>
+    </data>
+</odoo>

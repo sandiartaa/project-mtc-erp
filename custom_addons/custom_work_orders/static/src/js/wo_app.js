@@ -46,6 +46,7 @@ class WoApp extends Component {
             filterTglSampai: "",
             daftarDesignerFilter: [], // pilihan designer untuk dropdown filter
             daftarUser: [],   // user (akses Work Orders) untuk Executor
+            daftarTeknisiMold: [], // Teknisi (kredensial mold) untuk Executor di tab Mold
             daftarJobType: [], // pilihan Job Type (model wo.job.type, bisa di-CRUD)
             daftarPerson: [],  // pilihan Requestor/Approver (model wo.person, bisa di-CRUD)
             daftarBrand: [],   // pilihan Brand (model wo.brand, bisa di-CRUD)
@@ -156,7 +157,7 @@ class WoApp extends Component {
             this.bus.subscribe(this._WO_TYPE, this._onWoChanged);
             await Promise.all([this.muatHakAkses(), this.muatTab()]);
             await Promise.all([
-                this.muatData(), this.muatUser(),
+                this.muatData(), this.muatUser(), this.muatTeknisiMold(),
                 this.muatJobType(), this.muatPerson(), this.muatBrand(),
                 this.muatProduction(), this.muatSection(),
                 this.muatDesignerFilter(),
@@ -225,6 +226,17 @@ class WoApp extends Component {
             this.notification.add("Failed to load Work Order data.", { type: "danger" });
         }
         this.state.memuat = false;
+    }
+
+    async muatTeknisiMold() {
+        // Daftar Teknisi dari modul Work Order Mold (untuk Executor di tab Mold).
+        // Modul mold mungkin tidak terpasang → fallback daftar kosong.
+        try {
+            this.state.daftarTeknisiMold = await this.orm.call(
+                "wo.work.order", "daftar_teknisi_mold", []);
+        } catch (e) {
+            this.state.daftarTeknisiMold = [];
+        }
     }
 
     async muatUser() {
@@ -805,9 +817,13 @@ class WoApp extends Component {
     }
 
     // ─── PICKER USER GENERIK (Designer/Requestor/Approver) ───────────────────
+    // Khusus Executor di tab Mold: daftar diambil dari Teknisi (kredensial mold).
+    get isExecutorMold() {
+        return this.state.userPicker.target === "incharge" && this.state.form.wo_type === "mold";
+    }
     get userTerfilter() {
         const cari = (this.state.userPicker.cari || "").trim().toLowerCase();
-        const src = this.state.daftarUser;
+        const src = this.isExecutorMold ? this.state.daftarTeknisiMold : this.state.daftarUser;
         return cari ? src.filter((u) => (u.name || "").toLowerCase().includes(cari)) : src;
     }
     get userTotalHalaman() { return Math.max(1, Math.ceil(this.userTerfilter.length / 5)); }
@@ -829,6 +845,13 @@ class WoApp extends Component {
     pilihUser(u) {
         const t = this.state.userPicker.target;
         const f = this.state.form;
+        // Tab Mold: Executor = Teknisi (bukan user sistem) → simpan ke incharge_custom.
+        if (t === "incharge" && f.wo_type === "mold") {
+            f.incharge_id = ""; f.incharge_nama = "";
+            f.incharge_custom = u ? u.name : "";
+            this.tutupUserPicker();
+            return;
+        }
         if (u) { f[t + "_id"] = String(u.id); f[t + "_nama"] = u.name; }
         else { f[t + "_id"] = ""; f[t + "_nama"] = ""; }
         // Memilih user sistem membatalkan nama designer custom.
@@ -955,7 +978,7 @@ class WoApp extends Component {
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false; f.image_ada = false;
         this.tutupUserPicker();
         this.tutupFieldPicker();
-        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
+        await Promise.all([this.muatUser(), this.muatTeknisiMold(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
             this.muatProduction(), this.muatSection()]);
     }
 
@@ -993,7 +1016,7 @@ class WoApp extends Component {
         f.image_ada = !!rec.image_ada;
         this.tutupUserPicker();
         this.tutupFieldPicker();
-        await Promise.all([this.muatUser(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
+        await Promise.all([this.muatUser(), this.muatTeknisiMold(), this.muatJobType(), this.muatPerson(), this.muatBrand(),
             this.muatProduction(), this.muatSection()]);
     }
 
