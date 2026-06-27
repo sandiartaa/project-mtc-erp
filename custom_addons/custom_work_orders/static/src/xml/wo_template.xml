@@ -71,6 +71,10 @@
                     <t t-esc="tb.label"/>
                 </button>
             </t>
+            <!-- Total WO sesuai filter aktif, mepet kanan -->
+            <span class="cwo-tab-total" t-if="!state.memuat">
+                Total WO: <b t-esc="state.list.length"/>
+            </span>
         </div>
 
         <!-- LOADING -->

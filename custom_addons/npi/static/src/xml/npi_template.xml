@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+<t t-name="npi.NpiApp">
+    <div class="npi-wrapper">
+        <!-- ===== HEADER ===== -->
+        <div class="npi-header">
+            <div class="npi-ling npi-ling-1"></div>
+            <div class="npi-ling npi-ling-2"></div>
+            <div class="npi-header-konten">
+                <div class="npi-header-judul">
+                    <div class="npi-header-ikon">📦</div>
+                    <div>
+                        <h1>NPI</h1>
+                        <p>Kelola product dan sub item</p>
+                    </div>
+                </div>
+                <div class="npi-header-aksi">
+                    <button class="npi-btn-tambah" t-on-click="bukaTambah">+ Add Product</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOOLBAR ===== -->
+        <div class="npi-filterbar">
+            <div class="npi-filter-grup">
+                <input type="text" class="npi-filter-input npi-filter-cari"
+                       placeholder="Cari product (code, name, brand...)" t-model="state.cari"/>
+            </div>
+            <button class="npi-btn-reset" t-on-click="resetCari">Reset</button>
+        </div>
+
+        <!-- ===== LOADING ===== -->
+        <div t-if="state.memuat" class="npi-loading">
+            <div class="npi-spinner"></div>
+            <span>Memuat data...</span>
+        </div>
+
+        <!-- ===== EMPTY ===== -->
+        <div t-elif="listTerfilter.length === 0" class="npi-kosong">
+            <div class="npi-kosong-ikon">📦</div>
+            <h3>Belum ada product</h3>
+            <p>Mulai dengan menambahkan product baru.</p>
+            <button class="npi-btn-tambah npi-btn-tambah-kosong" t-on-click="bukaTambah">+ Add Product</button>
+        </div>
+
+        <!-- ===== TABEL UTAMA ===== -->
+        <div t-else="" class="npi-tabel-wrapper">
+            <table class="npi-tabel">
+                <thead>
+                    <tr class="npi-grup-row">
+                        <th class="npi-expand-col"></th>
+                        <th colspan="4" class="npi-tengah">Item</th>
+                        <th colspan="2" class="npi-tengah">Packing</th>
+                        <th colspan="2" class="npi-tengah">Production</th>
+                        <th class="npi-tengah" rowspan="2">Status</th>
+                        <th class="npi-tengah" rowspan="2">Action</th>
+                    </tr>
+                    <tr class="npi-sub-row">
+                        <th class="npi-expand-col"></th>
+                        <th>Code</th>
+                        <th>Photo</th>
+                        <th>Name</th>
+                        <th>Brand</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Place</th>
+                        <th>Batch 1</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="listTerfilter" t-as="rec" t-key="rec.id">
+                        <!-- Baris product -->
+                        <tr class="npi-baris-klik" t-att-class="state.terbuka[rec.id] ? 'npi-row-open' : ''"
+                            t-on-click="() => this.toggleBaris(rec.id)">
+                            <td class="npi-expand-col">
+                                <span class="npi-caret" t-esc="state.terbuka[rec.id] ? '▾' : '▸'"/>
+                            </td>
+                            <td t-esc="rec.code"/>
+                            <td>
+                                <img t-if="rec.photo_ada" class="npi-thumb" t-att-src="urlPhoto(rec.id)"/>
+                                <span t-else="" class="npi-nophoto">—</span>
+                            </td>
+                            <td class="npi-cell-name" t-esc="rec.name"/>
+                            <td t-esc="rec.brand"/>
+                            <td t-esc="rec.pack_type"/>
+                            <td t-esc="rec.pack_qty"/>
+                            <td t-esc="rec.prod_place"/>
+                            <td t-esc="rec.prod_batch1"/>
+                            <td class="npi-tengah">
+                                <span class="npi-badge" t-att-class="'npi-badge-' + rec.status"
+                                      t-esc="labelStatus(rec.status)"/>
+                            </td>
+                            <td class="npi-tengah" t-on-click.stop="">
+                                <div class="npi-aksi-grup">
+                                    <button class="npi-btn-edit" t-on-click.stop="() => this.bukaEdit(rec)">Edit</button>
+                                    <button class="npi-btn-hapus" t-on-click.stop="() => this.hapusProduct(rec)">Hapus</button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Panel dropdown detail (sub item baku) -->
+                        <tr t-if="state.terbuka[rec.id]" class="npi-detail-row">
+                            <td colspan="11">
+                                <div class="npi-detail">
+                                  <div class="npi-subtable-wrap">
+                                    <table class="npi-subtable">
+                                        <thead>
+                                            <tr>
+                                                <th>Sub Item</th>
+                                                <th>Status</th>
+                                                <th>Details</th>
+                                                <th>Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-if="!state.subData[rec.id]">
+                                                <tr><td colspan="4" class="npi-empty">Memuat...</td></tr>
+                                            </t>
+                                            <t t-foreach="state.subData[rec.id] or []" t-as="sub" t-key="sub.id">
+                                                <tr class="npi-subrow" t-on-click="() => this.bukaPopup(rec.id, sub)">
+                                                    <td class="npi-cell-name" t-esc="sub.name"/>
+                                                    <td>
+                                                        <span class="npi-badge" t-att-class="'npi-badge-' + sub.status"
+                                                              t-esc="labelStatus(sub.status)"/>
+                                                    </td>
+                                                    <td class="npi-cell-muted" t-esc="sub.details"/>
+                                                    <td class="npi-cell-muted" t-esc="sub.notes"/>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                  </div>
+                                    <div class="npi-hint">Klik baris sub item untuk membuka tabelnya.</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ MODAL: Form Product (klik background tidak menutup) ============ -->
+        <div t-if="state.form.buka" class="npi-overlay">
+            <div class="npi-modal">
+                <div class="npi-modal-kepala" t-att-class="state.form.mode === 'tambah' ? 'npi-kepala-tambah' : 'npi-kepala-edit'">
+                    <div class="npi-modal-judul">
+                        <h2 t-esc="state.form.mode === 'tambah' ? 'Add Product' : 'Edit Product'"/>
+                        <p class="npi-subkepala">Item · Packing · Production</p>
+                    </div>
+                    <button class="npi-tombol-tutup" t-on-click="tutupForm">✕</button>
+                </div>
+                <div class="npi-modal-isi">
+                    <fieldset class="npi-fs">
+                        <legend>Item</legend>
+                        <div class="npi-form-baris-2">
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Code</label>
+                                <input type="text" class="npi-form-input" t-model="state.form.code"/>
+                            </div>
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Name <span class="npi-wajib">*</span></label>
+                                <input type="text" class="npi-form-input" t-model="state.form.name"/>
+                            </div>
+                        </div>
+                        <div class="npi-form-baris-2">
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Brand</label>
+                                <input type="text" class="npi-form-input" t-model="state.form.brand"/>
+                            </div>
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Photo</label>
+                                <input type="file" class="npi-form-input" accept="image/*" t-on-change="onPhoto"/>
+                                <div class="npi-photo-prev">
+                                    <img t-if="state.form.photo" class="npi-thumb-lg"
+                                         t-att-src="'data:image/png;base64,' + state.form.photo"/>
+                                    <img t-elif="state.form.photo_ada and state.form.id" class="npi-thumb-lg"
+                                         t-att-src="urlPhoto(state.form.id)"/>
+                                    <button t-if="state.form.photo or state.form.photo_ada"
+                                            class="npi-btn-reset" t-on-click="hapusPhoto">Hapus Photo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="npi-fs">
+                        <legend>Packing</legend>
+                        <div class="npi-form-baris-2">
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Type</label>
+                                <input type="text" class="npi-form-input" t-model="state.form.pack_type"/>
+                            </div>
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Qty</label>
+                                <input type="number" class="npi-form-input" t-model="state.form.pack_qty"/>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="npi-fs">
+                        <legend>Production</legend>
+                        <div class="npi-form-baris-2">
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Place</label>
+                                <input type="text" class="npi-form-input" t-model="state.form.prod_place"/>
+                            </div>
+                            <div class="npi-form-grup">
+                                <label class="npi-form-label">Batch 1</label>
+                                <input type="text" class="npi-form-input" t-model="state.form.prod_batch1"/>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="npi-fs">
+                        <legend>Status</legend>
+                        <label class="npi-status-cek">
+                            <input type="checkbox" t-model="state.form.status_custom"/>
+                            <span>Custom (pilih status sendiri, abaikan sub item)</span>
+                        </label>
+                        <div class="npi-form-grup" style="margin-top: 10px;">
+                            <label class="npi-form-label">Status</label>
+                            <select class="npi-form-input" t-model="state.form.status_manual"
+                                    t-att-disabled="!state.form.status_custom">
+                                <t t-foreach="statusPilihan" t-as="s" t-key="s.value">
+                                    <option t-att-value="s.value" t-esc="s.label"/>
+                                </t>
+                            </select>
+                            <span t-if="!state.form.status_custom" class="npi-hint">
+                                Otomatis dari sub item: semua Finished → Finished, ada Ongoing → Ongoing.
+                            </span>
+                        </div>
+                    </fieldset>
+                    <div class="npi-modal-footer">
+                        <button class="npi-tombol-sekunder" t-on-click="tutupForm">Batal</button>
+                        <button class="npi-tombol-utama" t-att-disabled="state.form.proses" t-on-click="simpanForm">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MODAL: Tabel Sub Item (full screen, hanya X yang menutup) ============ -->
+        <div t-if="state.popup.buka" class="npi-overlay">
+            <div class="npi-modal npi-modal-full">
+                <div class="npi-modal-kepala npi-kepala-edit">
+                    <div class="npi-modal-judul">
+                        <h2 t-esc="state.popup.name"/>
+                        <p class="npi-subkepala">Tabel sub item</p>
+                    </div>
+                    <button class="npi-tombol-tutup" t-on-click="tutupPopup">✕</button>
+                </div>
+                <div class="npi-modal-isi">
+                    <!-- Tombol Edit Status (gabungan Status / Details / Notes) -->
+                    <div class="npi-status-bar">
+                        <div class="npi-status-info">
+                            <span class="npi-badge" t-att-class="'npi-badge-' + state.popup.status"
+                                  t-esc="labelStatus(state.popup.status)"/>
+                            <span t-if="state.popup.details" class="npi-cell-muted">Details: <t t-esc="state.popup.details"/></span>
+                            <span t-if="state.popup.notes" class="npi-cell-muted">Notes: <t t-esc="state.popup.notes"/></span>
+                        </div>
+                        <button class="npi-btn-edit" t-on-click="bukaEditStatus">Edit Status</button>
+                    </div>
+
+                    <!-- Tabel Matras (CRUD) -->
+                    <t t-if="state.popup.is_matras">
+                        <div class="npi-col-mgr-head">
+                            <span class="npi-detail-title">Data Matras</span>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBarisMatras">+ Baris</button>
+                        </div>
+                        <div class="npi-matras-wrap">
+                            <table class="npi-ctable npi-matras-tabel">
+                                <thead>
+                                    <tr>
+                                        <th class="npi-ctable-no" rowspan="2">No.</th>
+                                        <th colspan="6" class="npi-grp-det">Details</th>
+                                        <th colspan="3" class="npi-grp-tl">Timeline</th>
+                                        <th colspan="3" class="npi-grp-ct">Container</th>
+                                        <th class="npi-ctable-no" rowspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th>Mold Code</th>
+                                        <th>Description</th>
+                                        <th>Spec</th>
+                                        <th>Maker</th>
+                                        <th>Material</th>
+                                        <th>Qty</th>
+                                        <th>Req Date</th>
+                                        <th>Prod Date</th>
+                                        <th>Finished Date</th>
+                                        <th>Number</th>
+                                        <th>Stuffing Date</th>
+                                        <th>ARR Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.popup.rows" t-as="row" t-key="row_index">
+                                        <tr>
+                                            <td class="npi-ctable-no" t-esc="row_index + 1"/>
+                                            <td><input type="text" class="npi-cinput" t-model="row.mold_code"/></td>
+                                            <td class="npi-desc-td">
+                                                <div class="npi-desc-cell" t-on-click="() => this.bukaDesc(row_index)">
+                                                    <span t-if="row.description" t-esc="row.description"/>
+                                                    <span t-else="" class="npi-desc-ph">klik untuk isi…</span>
+                                                </div>
+                                            </td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.spec"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.maker"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.material"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.qty"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.req_date"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.prod_date"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.finished_date"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.number"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.stuffing_date"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.arr_date"/></td>
+                                            <td class="npi-ctable-no">
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBarisMatras(row_index)">🗑</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <tr t-if="state.popup.rows.length === 0">
+                                        <td colspan="14" class="npi-empty">Belum ada baris. Klik "+ Baris".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="npi-modal-footer">
+                            <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Matras</button>
+                        </div>
+                    </t>
+                    <div t-else="" class="npi-hint" style="margin: 12px 0;">
+                        Tabel detail untuk sub item ini belum didefinisikan.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MODAL: Edit Status / Details / Notes ============ -->
+        <div t-if="state.editStatus.buka" class="npi-overlay npi-overlay-atas" t-on-click="tutupEditStatus">
+            <div class="npi-modal npi-modal-sm" t-on-click.stop="">
+                <div class="npi-modal-kepala npi-kepala-edit">
+                    <div class="npi-modal-judul">
+                        <h2>Edit Status</h2>
+                        <p class="npi-subkepala" t-esc="state.popup.name"/>
+                    </div>
+                    <button class="npi-tombol-tutup" t-on-click="tutupEditStatus">✕</button>
+                </div>
+                <div class="npi-modal-isi">
+                    <div class="npi-form-grup">
+                        <label class="npi-form-label">Status</label>
+                        <select class="npi-form-input" t-model="state.editStatus.status">
+                            <t t-foreach="statusPilihan" t-as="s" t-key="s.value">
+                                <option t-att-value="s.value" t-esc="s.label"/>
+                            </t>
+                        </select>
+                    </div>
+                    <div class="npi-form-grup">
+                        <label class="npi-form-label">Details</label>
+                        <textarea class="npi-form-input" rows="3" t-model="state.editStatus.details"/>
+                    </div>
+                    <div class="npi-form-grup">
+                        <label class="npi-form-label">Notes</label>
+                        <textarea class="npi-form-input" rows="3" t-model="state.editStatus.notes"/>
+                    </div>
+                    <div class="npi-modal-footer">
+                        <button class="npi-tombol-sekunder" t-on-click="tutupEditStatus">Batal</button>
+                        <button class="npi-tombol-utama" t-att-disabled="state.editStatus.proses" t-on-click="simpanEditStatus">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MODAL: Editor Description (textarea besar) ============ -->
+        <div t-if="state.descEdit.buka" class="npi-overlay npi-overlay-atas" t-on-click="tutupDesc">
+            <div class="npi-modal" t-on-click.stop="">
+                <div class="npi-modal-kepala npi-kepala-edit">
+                    <div class="npi-modal-judul">
+                        <h2>Description</h2>
+                        <p class="npi-subkepala">Detail bisa panjang</p>
+                    </div>
+                    <button class="npi-tombol-tutup" t-on-click="tutupDesc">✕</button>
+                </div>
+                <div class="npi-modal-isi">
+                    <textarea class="npi-form-input npi-desc-area" rows="12"
+                              t-model="state.descEdit.value" placeholder="Tulis description…"/>
+                    <div class="npi-modal-footer">
+                        <button class="npi-tombol-sekunder" t-on-click="tutupDesc">Batal</button>
+                        <button class="npi-tombol-utama" t-on-click="simpanDesc">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</t>
+
+</templates>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_npi_app" model="ir.actions.client">
+        <field name="name">NPI</field>
+        <field name="tag">npi_app</field>
+    </record>
+
+    <!-- Menu top-level baru, untuk pemilik grup Akses NPI. -->
+    <menuitem id="menu_npi_root" name="NPI" sequence="17"
+              groups="npi.group_npi_user"/>
+    <menuitem id="menu_npi_list" name="NPI Products"
+              parent="menu_npi_root" action="action_npi_app" sequence="1"
+              groups="npi.group_npi_user"/>
+</odoo>

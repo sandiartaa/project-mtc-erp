@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_npi_product,npi.product user,model_npi_product,npi.group_npi_user,1,1,1,1
+access_npi_subitem,npi.subitem user,model_npi_subitem,npi.group_npi_user,1,1,1,1
+access_npi_matras,npi.matras user,model_npi_matras,npi.group_npi_user,1,1,1,1
