@@ -85,6 +85,9 @@ class WoWorkOrder(models.Model):
     # ── Approval ── (daftar custom wo.person, bukan res.users)
     approver_id = fields.Many2one('wo.person', 'Approver', ondelete='set null')
     approval_date = fields.Date('Approval Date')
+    # Tanggal "Ready for Approval" (saat WO diajukan). Di app Work Order Mold
+    # ditampilkan sebagai "Finish Repair": mengisinya = menekan Ready for Approval.
+    ready_date = fields.Date('Ready Date')
 
     # ── Status keseluruhan + filter ──
     status = fields.Selection(
@@ -210,6 +213,19 @@ class WoWorkOrder(models.Model):
         'utility': 'wo.work.order.utility',
     }
 
+    def _section_bengkel(self):
+        """Section khusus mold (BENGKEL). Dipakai untuk default otomatis WO Mold."""
+        return self.env.ref('custom_work_orders.section_bengkel', raise_if_not_found=False)
+
+    def _terapkan_default_mold(self, vals):
+        """WO Mold otomatis: Section=BENGKEL & Local/RRC=Local (Executor = Teknisi
+        Repair). Mengubah dict vals di tempat. Hanya berlaku bila wo_type='mold'."""
+        bengkel = self._section_bengkel()
+        if bengkel:
+            vals['section_id'] = bengkel.id
+        vals['lokal_rrc'] = 'lokal'
+        return vals
+
     @api.model_create_multi
     def create(self, vals_list):
         Seq = self.env['ir.sequence']
@@ -222,6 +238,8 @@ class WoWorkOrder(models.Model):
                     or Seq.next_by_code('wo.work.order')
                     or 'New'
                 )
+            if (vals.get('wo_type') or 'design') == 'mold':
+                self._terapkan_default_mold(vals)
         records = super().create(vals_list)
         records._rename_image_attachment()
         records._catat_audit('create', 'Work Order dibuat')
@@ -239,7 +257,26 @@ class WoWorkOrder(models.Model):
             if ket:
                 self._catat_audit('edit', ket)
         self._notify_changed()
+        # WO Mold dijaga tetap Section=BENGKEL & Local — hanya saat field terkait
+        # ikut diubah (hindari overhead & rekursi via flag context).
+        if (not self.env.context.get('skip_mold_default')
+                and any(k in vals for k in ('section_id', 'lokal_rrc', 'wo_type'))):
+            self._paksa_default_mold()
         return res
+
+    def _paksa_default_mold(self):
+        """Pastikan tiap WO Mold tetap Section=BENGKEL & Local/RRC=Local."""
+        bengkel = self._section_bengkel()
+        for rec in self:
+            if rec.wo_type != 'mold':
+                continue
+            upd = {}
+            if bengkel and rec.section_id.id != bengkel.id:
+                upd['section_id'] = bengkel.id
+            if rec.lokal_rrc != 'lokal':
+                upd['lokal_rrc'] = 'lokal'
+            if upd:
+                rec.with_context(skip_mold_default=True, skip_wo_audit=True).write(upd)
 
     def unlink(self):
         self._catat_audit('delete', 'Work Order dihapus')
@@ -466,15 +503,30 @@ class WoWorkOrder(models.Model):
         self._catat_audit('edit', 'Batal pengajuan approval (kembali Draft)')
         return True
 
-    def action_approve(self):
+    def action_approve(self, note=None):
         """User Full menyetujui WO yang sudah ready (ready → approved).
         Approved otomatis menandai status keseluruhan menjadi Finished
-        (status Finished juga tetap bisa diatur manual dari form)."""
+        (status Finished juga tetap bisa diatur manual dari form).
+        'note' (Approve Detail) opsional — dicatat ke riwayat approve."""
         self._cek_full()
-        self.with_context(skip_wo_audit=True).write(
-            {'approval_state': 'approved', 'status': 'finished'})
+        self.with_context(skip_wo_audit=True).write({
+            'approval_state': 'approved', 'status': 'finished',
+            'approval_date': fields.Date.context_today(self),
+        })
+        for rec in self:
+            rec._catat_approve(note=note)
         self._catat_audit('edit', 'Disetujui (Approved) → Finished')
         return True
+
+    def _catat_approve(self, note=None, approver=None):
+        """Tambahkan satu entri riwayat approve untuk WO ini. approver default =
+        nama user yang login (app umum); untuk mold diisi nama Requestor."""
+        self.ensure_one()
+        self.env['wo.approval'].sudo().create({
+            'work_order_id': self.id,
+            'approver': approver or self.env.user.name,
+            'note': (note or '').strip() or False,
+        })
 
     def action_reject(self, detail=None, image=None):
         """User Full menolak pengajuan (kembali ke draft) dengan catatan revisi.

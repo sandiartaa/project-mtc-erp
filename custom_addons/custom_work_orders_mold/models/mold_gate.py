@@ -161,15 +161,25 @@ class WoWorkOrderMold(models.Model):
 
     @api.model
     def wom_daftar(self):
-        """Daftar WO Mold (wo_type='mold') untuk app — urut Req Date terbaru dulu."""
+        """Daftar WO Mold (wo_type='mold') untuk app — urut Req Date terbaru dulu.
+
+        Catatan: "Finish Repair" di app Mold = field ready_date (tanggal Ready for
+        Approval), BUKAN finish_date (Target Finish) atau approval_date. Mengisi
+        Finish Repair sama dengan menekan "Ready for Approval". Nilai ready_date
+        dikembalikan dengan key finish_date supaya template/JS app Mold tetap
+        menampilkannya sebagai "Finish Repair" tanpa perubahan.
+        """
         self._wom_cek_grup()
         kolom = [
             'id', 'wo_number', 'name', 'code', 'job_type_id', 'qty',
             'details', 'requestor_id', 'request_date', 'incharge_id', 'incharge_custom',
-            'lead_time', 'finish_date', 'status', 'approval_state', 'wom_approve_note',
+            'lead_time', 'ready_date', 'status', 'approval_state', 'wom_approve_note',
         ]
-        return self.search_read(
+        rows = self.search_read(
             [('wo_type', '=', 'mold')], kolom, order='request_date desc, id desc')
+        for r in rows:
+            r['finish_date'] = r.pop('ready_date')
+        return rows
 
     @api.model
     def daftar_teknisi_mold(self):
@@ -187,7 +197,14 @@ class WoWorkOrderMold(models.Model):
     def wom_simpan_jadwal(self, lead_time=None, finish_date=None, password=None):
         """Isi Lead Time + Finish Repair — butuh password yang SAMA dengan Teknisi
         (executor) yang dipilih di WO ini. Executor ditentukan dari app Work Orders.
-        Dicatat ke History."""
+        Dicatat ke History.
+
+        Catatan: "Finish Repair" disimpan ke field ready_date (tanggal Ready for
+        Approval), BUKAN finish_date (Target Finish). Karena app Mold tidak punya
+        tombol "Ready for Approval", mengisi Finish Repair otomatis mengajukan WO
+        (approval_state → 'ready'); mengosongkannya membatalkan pengajuan (→ 'draft').
+        Approve dilakukan lewat app Work Orders (tab Mold) atau wom_approve.
+        Param tetap bernama finish_date karena itu yang dikirim dari app."""
         self._wom_cek_grup()
         self.ensure_one()
         if self.wo_type != 'mold':
@@ -204,33 +221,50 @@ class WoWorkOrderMold(models.Model):
             ('username', '=', teknisi), ('password', '=', password or '')], limit=1)
         if not cred:
             raise AccessError("Password harus sesuai Teknisi yang dipilih: %s." % teknisi)
-        self.with_context(skip_wo_audit=True).write({
+        tgl = finish_date or False
+        vals = {
             'lead_time': (lead_time or '').strip() or False,
-            'finish_date': finish_date or False,
-        })
-        self._catat_audit('edit', 'Isi Lead Time=%s, Finish Repair=%s — Teknisi: %s' % (
-            (lead_time or '-'), (finish_date or '-'), teknisi))
+            'ready_date': tgl,
+        }
+        # Mengisi Finish Repair = menekan "Ready for Approval"; bila dikosongkan,
+        # batalkan pengajuan (kembali draft). Jangan sentuh bila sudah approved.
+        if self.approval_state != 'approved':
+            vals['approval_state'] = 'ready' if tgl else 'draft'
+        self.with_context(skip_wo_audit=True).write(vals)
+        ket_ready = ' (Ready for Approval)' if tgl else ' (batal pengajuan)'
+        self._catat_audit('edit', 'Isi Lead Time=%s, Finish Repair=%s%s — Teknisi: %s' % (
+            (lead_time or '-'), (finish_date or '-'), ket_ready, teknisi))
         return True
 
     def wom_approve(self, note=None, password=None):
-        """Approve WO Mold (mirip Ready for Approval) — butuh password REQUESTOR.
-        Muncul setelah Finish Repair diisi. Note opsional. Set approval ke 'ready'."""
+        """Approve WO Mold oleh Requestor — butuh password REQUESTOR. Muncul setelah
+        Finish Repair (ready_date) diisi. Note opsional. Set Approved & Finished.
+        Alternatif: approve juga bisa dari app Work Orders (tab Mold)."""
         self._wom_cek_grup()
         self.ensure_one()
         if self.wo_type != 'mold':
             raise AccessError("Bukan Work Order Mold.")
-        if not self.finish_date:
+        if not self.ready_date:
             raise ValidationError("Finish Repair belum diisi.")
         requestor = self.wom_cek_password(password, role='requestor')
         if not requestor:
             raise AccessError("Password Requestor salah.")
         teks = (note or '').strip()
+        # Requestor yang approve dicatat sebagai Approver (wo.person), dan tanggal
+        # approve otomatis = hari ini → muncul di app Work Orders (tab Mold).
+        Person = self.env['wo.person'].sudo()
+        person = Person.search([('name', '=', requestor)], limit=1) \
+            or Person.create({'name': requestor})
         # Disetujui requestor → otomatis Approved & Finished.
         self.with_context(skip_wo_audit=True).write({
             'approval_state': 'approved',
             'status': 'finished',
+            'approver_id': person.id,
+            'approval_date': fields.Date.context_today(self),
             'wom_approve_note': teks or False,
         })
+        # Catat ke riwayat approve bersama (muncul di popup Approve Detail app umum).
+        self._catat_approve(note=teks, approver=requestor)
         ket = 'Approved & Finished oleh Requestor: %s' % requestor
         if teks:
             ket += ' — Note: ' + teks

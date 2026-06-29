@@ -148,6 +148,15 @@
 .cwo-apr-ready { background: #fef3c7; color: #b45309; }
 .cwo-apr-approved { background: #dcfce7; color: #15803d; }
 .cwo-badge-apr-mini { font-size: 10px; padding: 2px 8px; }
+/* Badge "Approved" yang bisa diklik untuk lihat detail approve */
+.cwo-badge-apr-klik { cursor: pointer; transition: filter .15s, box-shadow .15s; }
+.cwo-badge-apr-klik:hover { filter: brightness(0.97); box-shadow: 0 1px 4px rgba(21,128,61,0.25); }
+.cwo-badge-apr-klik .fa { font-size: 10px; opacity: 0.85; margin-left: 1px; }
+/* Baris detail di popup Approve Detail */
+.cwo-apr-detail-baris { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.cwo-apr-detail-baris:last-child { border-bottom: none; }
+.cwo-apr-detail-baris .cwo-form-label { min-width: 110px; margin: 0; color: #6b7280; }
+.cwo-apr-detail-judul { margin: 14px 0 8px; font-weight: 700; font-size: 13px; color: #374151; display: flex; align-items: center; gap: 6px; }
 .cwo-apr-aksi { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .cwo-apr-btn {
     padding: 5px 11px; border-radius: 7px; border: 1.5px solid transparent;

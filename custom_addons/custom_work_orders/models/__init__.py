@@ -4,6 +4,7 @@ from . import brand
 from . import production
 from . import section
 from . import revision
+from . import approval
 from . import design_image
 from . import audit
 from . import work_order

@@ -131,8 +131,9 @@ class WomApp extends Component {
     // Executor (Teknisi Repair) ditentukan dari app Work Orders utama
     // (mold disimpan di incharge_custom = username teknisi).
     adaExecutor(rec) { return !!(rec.incharge_id || rec.incharge_custom); }
-    // Approve muncul saat Finish Repair sudah diisi & belum diajukan.
-    showApprove(rec) { return this.adaExecutor(rec) && !!rec.finish_date && rec.approval_state === "draft"; }
+    // Mengisi Finish Repair = Ready for Approval (approval_state → 'ready').
+    // Tombol Approve (Requestor) muncul saat sudah diajukan & belum disetujui.
+    showApprove(rec) { return this.adaExecutor(rec) && !!rec.finish_date && rec.approval_state !== "approved"; }
     // Sudah Finished → tidak bisa edit dari app Mold (hanya di app Work Orders).
     selesai(rec) { return rec.status === "finished"; }
     bisaEditJadwal(rec) { return this.adaExecutor(rec) && !this.selesai(rec); }

@@ -100,6 +100,7 @@ class WoApp extends Component {
                 request_date: "",
                 lead_time: "",
                 finish_date: "",
+                ready_date: "",   // mold: "Finish Repair" (tanggal Ready for Approval)
                 // Approval
                 approver_id: "", approver_nama: "",
                 approval_date: "",
@@ -145,6 +146,11 @@ class WoApp extends Component {
             },
             // Popup Designer isi Lead Time (Hour) + Target Finish (Date)
             jadwalForm: { buka: false, rec: null, lead_time: "", finish_date: "", proses: false },
+            // Popup detail approve (klik badge "Approved" di kolom Ready Approval).
+            // items = riwayat approve (approver, waktu, detail/note) — termasuk dari Mold.
+            approveDetail: { buka: false, rec: null, items: [], memuat: false },
+            // Popup saat menekan Approve: isi Approve Detail (opsional) lalu setujui.
+            approveForm: { buka: false, rec: null, note: "", proses: false },
             // Popup Filter (gabungan: status + period + designer)
             filterPopup: { buka: false },
             // Popup History (audit) — khusus akses Full
@@ -208,7 +214,7 @@ class WoApp extends Component {
                  "production_id", "qty", "details", "image_ada",
                  "design_image_ada", "last_design_image_id", "design_count",
                  "incharge_id", "incharge_custom", "section_id", "lokal_rrc", "requestor_id", "create_uid",
-                 "request_date", "lead_time", "finish_date",
+                 "request_date", "lead_time", "finish_date", "ready_date",
                  "approver_id", "approval_date", "status", "approval_state", "revisi_count"],
                 { order: "request_date desc, id desc" }
             );
@@ -425,6 +431,25 @@ class WoApp extends Component {
     kelasApproval(s) {
         return { draft: "cwo-apr-draft", ready: "cwo-apr-ready", approved: "cwo-apr-approved" }[s] || "";
     }
+    // Detail approve hanya bisa dilihat setelah WO disetujui (Approved).
+    adaDetailApprove(rec) { return rec.approval_state === "approved"; }
+    async bukaApproveDetail(rec) {
+        const ad = this.state.approveDetail;
+        ad.buka = true; ad.rec = rec; ad.items = []; ad.memuat = true;
+        // Muat riwayat approve (approver, waktu, detail) — termasuk approve dari Mold.
+        try {
+            ad.items = await this.orm.call("wo.approval", "riwayat_wo", [rec.id]);
+        } catch (e) {
+            console.error("Gagal memuat riwayat approve:", e);
+            this.notification.add("Failed to load approval history.", { type: "danger" });
+        }
+        ad.memuat = false;
+    }
+    tutupApproveDetail() {
+        this.state.approveDetail.buka = false;
+        this.state.approveDetail.rec = null;
+        this.state.approveDetail.items = [];
+    }
     // Apakah user yang login adalah Designer 2D/3D dari WO ini
     isDesigner(rec) {
         return !!(rec.incharge_id && rec.incharge_id[0] === user.userId);
@@ -544,13 +569,30 @@ class WoApp extends Component {
         }
         jf.proses = false;
     }
+    // Approve membuka form Approve Detail (note opsional) sebelum menyetujui.
     approve(rec) {
-        this.tampilKonfirmasi({
-            judul: "Approve Work Order",
-            pesan: `Approve Work Order <b>${rec.wo_number}</b> (${rec.name})?`,
-            labelYa: "Yes, Approve", warnaYa: "merah",
-            aksi: () => this._aksiApproval(rec, "action_approve", "Work Order approved."),
-        });
+        const af = this.state.approveForm;
+        af.buka = true; af.rec = rec; af.note = ""; af.proses = false;
+    }
+    tutupApproveForm() {
+        const af = this.state.approveForm;
+        af.buka = false; af.rec = null; af.note = "";
+    }
+    async kirimApprove() {
+        const af = this.state.approveForm;
+        af.proses = true;
+        try {
+            await this.orm.call("wo.work.order", "action_approve",
+                [[af.rec.id], (af.note || "").trim() || false]);
+            this.notification.add("Work Order approved.", { type: "success" });
+            af.buka = false; af.rec = null; af.note = "";
+            await this.muatData();
+        } catch (e) {
+            console.error("Gagal approve:", e);
+            const msg = e && e.data && e.data.message ? e.data.message : "Please try again.";
+            this.notification.add("Failed. " + msg, { type: "danger" });
+        }
+        af.proses = false;
     }
     // Reject membuka form Detail Revision (textarea besar) — bukan konfirmasi biasa.
     reject(rec) {
@@ -972,7 +1014,7 @@ class WoApp extends Component {
         f.incharge_id = ""; f.incharge_nama = ""; f.incharge_custom = "";
         f.section_id = ""; f.section_nama = ""; f.lokal_rrc = "";
         f.requestor_id = ""; f.requestor_nama = "";
-        f.request_date = ""; f.lead_time = ""; f.finish_date = "";
+        f.request_date = ""; f.lead_time = ""; f.finish_date = ""; f.ready_date = "";
         f.approver_id = ""; f.approver_nama = ""; f.approval_date = "";
         f.status = "ongoing";
         f.image_data = ""; f.image_preview = ""; f.image_hapus = false; f.image_ada = false;
@@ -1008,6 +1050,7 @@ class WoApp extends Component {
         f.request_date = rec.request_date || "";
         f.lead_time = rec.lead_time || "";
         f.finish_date = rec.finish_date || "";
+        f.ready_date = rec.ready_date || "";
         f.approver_id = rec.approver_id ? String(rec.approver_id[0]) : "";
         f.approver_nama = rec.approver_id ? rec.approver_id[1] : "";
         f.approval_date = rec.approval_date || "";
@@ -1068,6 +1111,7 @@ class WoApp extends Component {
                 request_date: f.request_date || false,
                 lead_time: f.lead_time ? f.lead_time.trim() : false,
                 finish_date: f.finish_date || false,
+                ready_date: f.ready_date || false,
                 approver_id: f.approver_id ? parseInt(f.approver_id) : false,
                 approval_date: f.approval_date || false,
                 status: f.status || "ongoing",

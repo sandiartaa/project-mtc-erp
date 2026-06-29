@@ -16,8 +16,13 @@ dan bisa diedit di sana.
 ## Fitur
 - **Add Work Order**: digembok **password** (diatur admin). Field yang bisa diisi:
   Name, Code, Job Type, Qty, Requestor, Req Date, Details, Reference Image. Sisanya kosong.
-- **Lead Time (Hour)** & **Target Finish (Date)**: diisi **langsung (inline)** di list
-  setelah WO masuk — tidak diisi saat menambah.
+- **Lead Time (Hour)** & **Finish Repair (Date)**: diisi **langsung (inline)** di list
+  setelah WO masuk — tidak diisi saat menambah. **Finish Repair = tanggal Ready for
+  Approval** (disimpan ke field `ready_date`, BUKAN Target Finish). Karena app Mold
+  tidak punya tombol "Ready for Approval", mengisi Finish Repair otomatis mengajukan
+  WO (status approval → "Awaiting Approval"); mengosongkannya membatalkan pengajuan.
+- **Approve**: bisa lewat **app Work Orders (tab Mold)** atau tombol **Approve** oleh
+  Requestor di app Mold (muncul setelah Finish Repair diisi).
 - **Action**: hanya berisi **History** (audit khusus WO mold).
 - Password tambah: default `mold123`. Admin bisa mengubah lewat ikon 🔑 di app, atau
   Settings → Technical → System Parameters (key: `custom_work_orders_mold.add_password`).

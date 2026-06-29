@@ -103,7 +103,7 @@
                                 <th colspan="8" class="cwo-grup cwo-grup-pd">Product</th>
                                 <th colspan="3" class="cwo-grup cwo-grup-ic">IN CHARGE</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-rq">Requestor</th>
-                                <th colspan="2" class="cwo-grup cwo-grup-tl">Timeline</th>
+                                <th t-att-colspan="state.tabAktif === 'mold' ? 2 : 1" class="cwo-grup cwo-grup-tl">Timeline</th>
                                 <th colspan="2" class="cwo-grup cwo-grup-ap">Approval</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-apr">Ready Approval</th>
                                 <th rowspan="2" class="cwo-tengah cwo-col-aksi" t-if="state.bisaUbah">Action</th>
@@ -122,8 +122,9 @@
                                 <th class="cwo-tengah">Local/RRC</th>
                                 <th>Name</th>
                                 <th>Date</th>
-                                <th>Lead Time (Hour)</th>
-                                <th>Target Finish (Date)</th>
+                                <th t-if="state.tabAktif === 'mold'">Lead Time (Hour)</th>
+                                <th t-if="state.tabAktif === 'mold'">Finish Repair</th>
+                                <th t-else="">Target Finish (Date)</th>
                                 <th>Approver</th>
                                 <th>Date</th>
                             </tr>
@@ -192,8 +193,9 @@
                                         </div>
                                     </td>
                                     <td data-label="Requestor Date"><t t-esc="formatTanggal(rec.request_date)"/></td>
-                                    <td class="cwo-tengah" data-label="Lead Time (Hour)"><t t-esc="rec.lead_time or '—'"/></td>
-                                    <td data-label="Target Finish (Date)"><t t-esc="formatTanggal(rec.finish_date)"/></td>
+                                    <td class="cwo-tengah" data-label="Lead Time (Hour)" t-if="state.tabAktif === 'mold'"><t t-esc="rec.lead_time or '—'"/></td>
+                                    <td t-if="state.tabAktif === 'mold'" data-label="Finish Repair"><t t-esc="formatTanggal(rec.ready_date)"/></td>
+                                    <td t-else="" data-label="Target Finish (Date)"><t t-esc="formatTanggal(rec.finish_date)"/></td>
                                     <td data-label="Approver"><t t-esc="rec.approver_id ? rec.approver_id[1] : '—'"/></td>
                                     <td data-label="Approval Date"><t t-esc="formatTanggal(rec.approval_date)"/></td>
                                     <td class="cwo-tengah" data-label="Ready Approval">
@@ -291,10 +293,12 @@
                                     <span class="cwo-kartu-label">Input by</span>
                                     <span><i class="fa fa-user-o"/> <t t-esc="rec.create_uid[1]"/></span>
                                 </div>
-                                <!-- Target / Finish (jika ada) -->
-                                <div class="cwo-kartu-baris" t-if="rec.lead_time or rec.finish_date">
-                                    <span class="cwo-kartu-label">Lead/Target</span>
-                                    <span><t t-esc="rec.lead_time or '—'"/> jam · <t t-esc="formatTanggal(rec.finish_date)"/></span>
+                                <!-- Mold: Lead Time + Finish Repair (ready_date). Tab lain: Target Finish. -->
+                                <div class="cwo-kartu-baris" t-if="(state.tabAktif === 'mold' and (rec.lead_time or rec.ready_date)) or (state.tabAktif !== 'mold' and rec.finish_date)">
+                                    <span class="cwo-kartu-label" t-if="state.tabAktif === 'mold'">Lead/Finish Repair</span>
+                                    <span class="cwo-kartu-label" t-else="">Target Finish</span>
+                                    <span t-if="state.tabAktif === 'mold'"><t t-esc="rec.lead_time or '—'"/> jam · <t t-esc="formatTanggal(rec.ready_date)"/></span>
+                                    <span t-else=""><t t-esc="formatTanggal(rec.finish_date)"/></span>
                                 </div>
                                 <!-- Approver - Approval Date (paling bawah) -->
                                 <div class="cwo-kartu-baris">
@@ -483,7 +487,12 @@
                                 </div>
                                 <span class="cwo-form-hint">Pick a system user, or type a custom executor name below.</span>
                             </div>
-                            <div class="cwo-form-grup">
+                            <!-- Section: untuk Mold otomatis BENGKEL (Executor = Teknisi Repair) -->
+                            <div class="cwo-form-grup" t-if="state.form.wo_type === 'mold'">
+                                <label class="cwo-form-label">Section</label>
+                                <input type="text" readonly="readonly" class="cwo-form-input" disabled="disabled" value="BENGKEL (otomatis)"/>
+                            </div>
+                            <div class="cwo-form-grup" t-else="">
                                 <label class="cwo-form-label">Section</label>
                                 <div class="cwo-jt-baris">
                                     <div class="cwo-picker">
@@ -500,7 +509,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="cwo-form-grup">
+                        <!-- Local/RRC: untuk Mold otomatis Local -->
+                        <div class="cwo-form-grup" t-if="state.form.wo_type === 'mold'">
+                            <label class="cwo-form-label">Local/RRC</label>
+                            <input type="text" readonly="readonly" class="cwo-form-input" disabled="disabled" value="Local (otomatis)"/>
+                        </div>
+                        <div class="cwo-form-grup" t-else="">
                             <label class="cwo-form-label">Local/RRC</label>
                             <div class="cwo-picker">
                                 <input type="text" readonly="readonly" class="cwo-form-input cwo-picker-input"
@@ -543,13 +557,21 @@
                         <!-- Timeline -->
                         <div class="cwo-seksi-judul cwo-sj-tl">Timeline</div>
                         <div class="cwo-form-baris-2">
-                            <div class="cwo-form-grup">
+                            <!-- Lead Time hanya untuk WO Mold; tab lain cukup Target Finish -->
+                            <div class="cwo-form-grup" t-if="state.form.wo_type === 'mold'">
                                 <label class="cwo-form-label">Lead Time (Hour)</label>
                                 <input type="text" class="cwo-form-input" placeholder="mis. 48"
                                     t-att-value="state.form.lead_time"
                                     t-on-input="(ev) => state.form.lead_time = ev.target.value"/>
                             </div>
-                            <div class="cwo-form-grup">
+                            <!-- Mold: "Finish Repair" (ready_date) — mengisinya = Ready for Approval -->
+                            <div class="cwo-form-grup" t-if="state.form.wo_type === 'mold'">
+                                <label class="cwo-form-label">Finish Repair</label>
+                                <input type="date" class="cwo-form-input"
+                                    t-att-value="state.form.ready_date"
+                                    t-on-change="(ev) => state.form.ready_date = ev.target.value"/>
+                            </div>
+                            <div class="cwo-form-grup" t-else="">
                                 <label class="cwo-form-label">Target Finish (Date)</label>
                                 <input type="date" class="cwo-form-input"
                                     t-att-value="state.form.finish_date"
@@ -1216,16 +1238,16 @@
                 <div class="cwo-modal cwo-modal-jadwal" t-on-click.stop="">
                     <div class="cwo-modal-kepala">
                         <div class="cwo-modal-judul">
-                            <h2>🕒 Lead Time &amp; Target Finish
+                            <h2>🕒 <t t-if="state.jadwalForm.rec and state.jadwalForm.rec.wo_type === 'mold'">Lead Time &amp; </t>Target Finish
                                 <t t-if="state.jadwalForm.rec"> — <t t-esc="state.jadwalForm.rec.wo_number"/></t>
                             </h2>
                         </div>
                         <button class="cwo-tombol-tutup" t-on-click="tutupJadwal">✕</button>
                     </div>
                     <div class="cwo-modal-isi">
-                        <p class="cwo-revisi-info">Isi sendiri perkiraan Lead Time (jam) dan tanggal Target Finish untuk Work Order ini.</p>
+                        <p class="cwo-revisi-info">Isi sendiri tanggal Target Finish<t t-if="state.jadwalForm.rec and state.jadwalForm.rec.wo_type === 'mold'"> dan perkiraan Lead Time (jam)</t> untuk Work Order ini.</p>
                         <div class="cwo-form-baris-2">
-                            <div class="cwo-form-grup">
+                            <div class="cwo-form-grup" t-if="state.jadwalForm.rec and state.jadwalForm.rec.wo_type === 'mold'">
                                 <label class="cwo-form-label">Lead Time (Hour)</label>
                                 <input type="text" class="cwo-form-input" placeholder="mis. 48"
                                     t-att-value="state.jadwalForm.lead_time"
@@ -1246,6 +1268,99 @@
                             t-on-click="simpanJadwal">
                             <t t-if="state.jadwalForm.proses"><span class="cwo-spinner-tombol"/>Saving...</t>
                             <t t-else="">Save</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP DETAIL APPROVE (klik badge "Approved") ══════════ -->
+        <t t-if="state.approveDetail.buka">
+            <div class="cwo-overlay" t-on-click="tutupApproveDetail">
+                <div class="cwo-modal cwo-modal-revisi-list" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2>✅ Approve Detail
+                                <t t-if="state.approveDetail.rec"> — <t t-esc="state.approveDetail.rec.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupApproveDetail">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi" t-if="state.approveDetail.rec">
+                        <div class="cwo-apr-detail-baris">
+                            <span class="cwo-form-label">Status</span>
+                            <span class="cwo-badge-apr cwo-apr-approved">Approved</span>
+                        </div>
+                        <div class="cwo-apr-detail-baris">
+                            <span class="cwo-form-label">Approver</span>
+                            <span><t t-esc="state.approveDetail.rec.approver_id ? state.approveDetail.rec.approver_id[1] : '—'"/></span>
+                        </div>
+                        <div class="cwo-apr-detail-baris">
+                            <span class="cwo-form-label">Approval Date</span>
+                            <span><t t-esc="formatTanggal(state.approveDetail.rec.approval_date) or '—'"/></span>
+                        </div>
+
+                        <!-- Riwayat approve (approver, waktu, detail) — termasuk dari Mold -->
+                        <div class="cwo-apr-detail-judul"><i class="fa fa-history"/> Approval History</div>
+                        <t t-if="state.approveDetail.memuat">
+                            <div class="cwo-loading"><div class="cwo-spinner"/><p>Loading...</p></div>
+                        </t>
+                        <t t-elif="state.approveDetail.items.length === 0">
+                            <div class="cwo-picker-kosong">No approval history yet.</div>
+                        </t>
+                        <t t-else="">
+                            <div class="cwo-design-daftar">
+                                <t t-foreach="state.approveDetail.items" t-as="ap" t-key="ap.id">
+                                    <div class="cwo-design-item">
+                                        <div class="cwo-design-isi">
+                                            <div class="cwo-revisi-meta">
+                                                <span class="cwo-revisi-oleh"><i class="fa fa-user"/> <t t-esc="ap.approver or '—'"/></span>
+                                                <span class="cwo-revisi-tgl"><i class="fa fa-clock-o"/> <t t-esc="ap.tanggal"/></span>
+                                            </div>
+                                            <div class="cwo-revisi-teks" t-if="ap.note"><t t-esc="ap.note"/></div>
+                                            <div class="cwo-revisi-teks cwo-sel-kosong" t-else="">No detail</div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-on-click="tutupApproveDetail">Close</button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP APPROVE (isi Approve Detail opsional) ══════════ -->
+        <t t-if="state.approveForm.buka">
+            <div class="cwo-overlay" t-on-click="tutupApproveForm">
+                <div class="cwo-modal cwo-modal-jadwal" t-on-click.stop="">
+                    <div class="cwo-modal-kepala">
+                        <div class="cwo-modal-judul">
+                            <h2>✅ Approve Work Order
+                                <t t-if="state.approveForm.rec"> — <t t-esc="state.approveForm.rec.wo_number"/></t>
+                            </h2>
+                        </div>
+                        <button class="cwo-tombol-tutup" t-on-click="tutupApproveForm">✕</button>
+                    </div>
+                    <div class="cwo-modal-isi">
+                        <p class="cwo-revisi-info">Approve this Work Order. You may add an optional Approve Detail (note) — it will be saved to the approval history.</p>
+                        <div class="cwo-form-grup">
+                            <label class="cwo-form-label">Approve Detail (optional)</label>
+                            <textarea class="cwo-form-input" rows="3"
+                                placeholder="Add a note... (optional)"
+                                t-att-value="state.approveForm.note"
+                                t-on-input="(ev) => state.approveForm.note = ev.target.value"/>
+                        </div>
+                    </div>
+                    <div class="cwo-modal-footer">
+                        <button class="cwo-tombol-sekunder" t-att-disabled="state.approveForm.proses"
+                            t-on-click="tutupApproveForm">Cancel</button>
+                        <button class="cwo-tombol-utama cwo-tombol-approve" t-att-disabled="state.approveForm.proses"
+                            t-on-click="kirimApprove">
+                            <t t-if="state.approveForm.proses"><span class="cwo-spinner-tombol"/>Approving...</t>
+                            <t t-else="">Approve</t>
                         </button>
                     </div>
                 </div>
@@ -1458,7 +1573,13 @@
      'rec' diambil dari scope pemanggil (t-foreach). -->
 <t t-name="custom_work_orders.ApprovalCtrl">
     <div class="cwo-apr">
-        <span t-attf-class="cwo-badge-apr #{kelasApproval(rec.approval_state)}">
+        <!-- Approved → badge bisa diklik untuk lihat detail approve -->
+        <span t-if="adaDetailApprove(rec)"
+            t-attf-class="cwo-badge-apr cwo-badge-apr-klik #{kelasApproval(rec.approval_state)}"
+            title="View approve detail" t-on-click="() => this.bukaApproveDetail(rec)">
+            <t t-esc="labelApproval(rec.approval_state)"/> <i class="fa fa-info-circle"/>
+        </span>
+        <span t-else="" t-attf-class="cwo-badge-apr #{kelasApproval(rec.approval_state)}">
             <t t-esc="labelApproval(rec.approval_state)"/>
         </span>
         <div class="cwo-apr-aksi">
