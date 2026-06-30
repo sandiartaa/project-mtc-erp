@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { Component, useState, onMounted, onWillUnmount } from "@odoo/owl";
+import { Component, useState, useRef, onMounted, onWillUnmount, onPatched } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
@@ -27,6 +27,7 @@ class WomApp extends Component {
             list: [],
             memuat: true,
             cari: "",
+            filterStatus: "all",   // all / ongoing / finished / rejected
             admin: false,
             adaRequestor: true,
             daftarDeskripsi: [],
@@ -48,18 +49,22 @@ class WomApp extends Component {
             descPilih: [],
             subDesc: "",
             descMgr: { buka: false, editId: null, name: "", proses: false },
-            // Popup isi Lead Time ATAU Finish Repair (mode), butuh password Teknisi
-            jadwal: { buka: false, rec: null, mode: "lead", password: "", lead_time: "", finish_date: "", proses: false },
-            // Popup Approve (butuh password Requestor) + note opsional
+            // Popup Teknisi: Checklist Detail + Lead Time + Finish Repair (butuh password)
+            jadwal: { buka: false, rec: null, mode: "lead", password: "", lead_time: "", finish_date: "", proses: false, poin: [], checklist: [] },
+            // Popup Approve (butuh password Requestor) + note opsional + keputusan Yes/No
             approve: { buka: false, rec: null, password: "", note: "", proses: false },
-            // Popup lihat detail approve per WO
-            approveDetail: { buka: false, rec: null },
             // Kelola user/password (admin) — dengan role
             kred: { buka: false, items: [], memuat: false, editId: null, username: "", password: "", role: "requestor", proses: false },
             // Master Mold (admin): CRUD Code+Name + import CSV + hapus per batch + centang massal
             master: { buka: false, items: [], batch: [], pilih: [], memuat: false, editId: null, code: "", name: "", proses: false, file: null, namaFile: "", importProses: false },
             history: { buka: false, items: [], memuat: false },
+            // Popup kamera (ambil foto langsung dari webcam/HP)
+            kamera: { buka: false, error: "" },
         });
+
+        // Ref elemen <video> + stream kamera (disimpan non-reactive).
+        this.kameraVideo = useRef("kameraVideo");
+        this._stream = null;
 
         onMounted(async () => {
             this.bus.addChannel(this._CHANNEL);
@@ -67,7 +72,10 @@ class WomApp extends Component {
             await this.muatInfo();
             await Promise.all([this.muatData(), this.muatDeskripsi(), this.muatMasterPilihan()]);
         });
+        // Saat popup kamera ter-render, pasang stream ke elemen video.
+        onPatched(() => this._pasangKamera());
         onWillUnmount(() => {
+            this._stopKamera();
             this.bus.unsubscribe(this._TYPE, this._onChanged);
             this.bus.deleteChannel(this._CHANNEL);
         });
@@ -91,13 +99,22 @@ class WomApp extends Component {
         catch (e) { console.error("Gagal memuat deskripsi:", e); }
     }
 
+    // Kategori status untuk filter: finished / rejected / ongoing.
+    statusKategori(r) {
+        if (r.status === "finished") return "finished";
+        if (r.wom_approve_hasil === "no") return "rejected";
+        return "ongoing";
+    }
     get listTersaring() {
         const cari = (this.state.cari || "").trim().toLowerCase();
-        if (!cari) return this.state.list;
-        return this.state.list.filter((r) =>
-            (r.wo_number || "").toLowerCase().includes(cari) ||
-            (r.name || "").toLowerCase().includes(cari) ||
-            (r.code || "").toLowerCase().includes(cari));
+        const fs = this.state.filterStatus || "all";
+        return this.state.list.filter((r) => {
+            if (fs !== "all" && this.statusKategori(r) !== fs) return false;
+            if (!cari) return true;
+            return (r.wo_number || "").toLowerCase().includes(cari) ||
+                (r.name || "").toLowerCase().includes(cari) ||
+                (r.code || "").toLowerCase().includes(cari);
+        });
     }
 
     // ── Label & util ──
@@ -105,11 +122,99 @@ class WomApp extends Component {
     kelasStatus(v) { return { ongoing: "cwom-st-ongoing", finished: "cwom-st-finished" }[v] || ""; }
     labelApproval(s) { return { draft: "Not Submitted", ready: "Awaiting Approval", approved: "Approved" }[s] || "—"; }
     kelasApproval(s) { return { draft: "cwom-apr-draft", ready: "cwom-apr-ready", approved: "cwom-apr-approved" }[s] || ""; }
+    // Format tanggal: dd/mm/yyyy (tgl/bulan/tahun) — dipakai di seluruh app Mold.
     formatTanggal(d) {
         if (!d) return "—";
         const dt = new Date(d + "T00:00:00");
         if (isNaN(dt)) return d;
-        return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+        return dt.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+    // 'YYYY-MM-DD' → 'DD/MM/YYYY' untuk ditampilkan di input teks.
+    isoToDmy(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+        return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+    }
+    // 'DD/MM/YYYY' (ketikan) → 'YYYY-MM-DD'. "" bila kosong, null bila tidak valid.
+    dmyToIso(s) {
+        s = (s || "").trim();
+        if (!s) return "";
+        const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+        if (!m) return null;
+        const d = m[1].padStart(2, "0"), mo = m[2].padStart(2, "0"), y = m[3];
+        const dt = new Date(`${y}-${mo}-${d}T00:00:00`);
+        if (isNaN(dt) || dt.getMonth() + 1 !== +mo || dt.getDate() !== +d) return null;
+        return `${y}-${mo}-${d}`;
+    }
+    // 'YYYY-MM-DD' valid untuk dipasang sebagai value <input type=date> (else "").
+    isoPicker(dmy) { const v = this.dmyToIso(dmy); return v || ""; }
+    // Ketik angka saja → otomatis sisipkan "/" jadi dd/mm/yyyy (tanpa perlu ketik /).
+    // Bulan dibatasi 01–12. Tanggal disesuaikan jumlah hari bulan & tahun SEBENARNYA
+    // (mis. 31/02/2026 → 28/02/2026, leap year 29/02/2028 diperbolehkan).
+    autoSlash(v) {
+        const d = (v || "").replace(/\D/g, "").slice(0, 8);
+        let dd = d.slice(0, 2), mm = d.slice(2, 4), yy = d.slice(4, 8);
+        if (mm.length === 2) mm = String(Math.min(Math.max(+mm, 1), 12)).padStart(2, "0");
+        // Maks hari: 31 saat tahun belum lengkap; jumlah hari nyata saat tahun lengkap.
+        let maxHari = 31;
+        if (mm.length === 2 && yy.length === 4) {
+            maxHari = new Date(+yy, +mm, 0).getDate();  // hari terakhir bulan tsb
+        }
+        if (dd.length === 2) dd = String(Math.min(Math.max(+dd, 1), maxHari)).padStart(2, "0");
+        let out = dd;
+        if (d.length > 2) out += "/" + mm;
+        if (d.length > 4) out += "/" + yy;
+        return out;
+    }
+    // Buka kalender (date picker) dari tombol di sebelah input teks.
+    bukaPicker(ev) {
+        const wrap = ev.currentTarget.closest(".cwom-tgl-wrap");
+        const inp = wrap && wrap.querySelector("input[type=date]");
+        if (!inp) return;
+        try { inp.showPicker(); } catch (e) { try { inp.focus(); inp.click(); } catch (e2) {} }
+    }
+    // ── Lead Time: tambahan jam (riwayat) ──
+    leadExtras(rec) {
+        try { return JSON.parse(rec.wom_lead_extra || "[]"); } catch (e) { return []; }
+    }
+    adaLeadExtra(rec) { return this.leadExtras(rec).length > 0; }
+    fmtWaktu(iso) {
+        const dt = new Date(iso);
+        if (isNaN(dt)) return iso || "";
+        const p = (n) => String(n).padStart(2, "0");
+        return `${p(dt.getDate())}/${p(dt.getMonth() + 1)}/${dt.getFullYear()} ${p(dt.getHours())}:${p(dt.getMinutes())}`;
+    }
+    // Sudah pernah isi Lead Time dasar?
+    sudahLead(rec) { return !!(rec.lead_time && String(rec.lead_time).trim()); }
+    // ── Checklist Detail (poin dari details) ──
+    poinList(rec) { return this.detailPoin(rec.details).opsi; }
+    checkedArr(rec) {
+        try { return JSON.parse(rec.wom_check || "[]").map((x) => +x); }
+        catch (e) { return []; }
+    }
+    isChecked(rec, idx) { return this.checkedArr(rec).includes(idx); }
+    // Semua poin tercentang (atau tidak ada poin) → Lead Time & Finish Repair boleh diisi.
+    semuaTercek(rec) {
+        const poin = this.poinList(rec);
+        if (!poin.length) return true;
+        const c = this.checkedArr(rec);
+        return poin.every((p, i) => c.includes(i));
+    }
+    // Badge & warna baris ikut keputusan approve Requestor (yes=hijau, no=merah).
+    labelApprovalRec(rec) {
+        if (rec.approval_state === "approved") return "Approved";
+        if (rec.wom_approve_hasil === "no") return "Rejected";
+        return this.labelApproval(rec.approval_state);
+    }
+    kelasApprovalRec(rec) {
+        if (rec.approval_state === "approved") return "cwom-apr-approved";
+        if (rec.wom_approve_hasil === "no") return "cwom-apr-rejected";
+        return this.kelasApproval(rec.approval_state);
+    }
+    // Warna baris/kartu: hijau bila disetujui, merah bila ditolak (opacity kecil via CSS).
+    kelasBaris(rec) {
+        if (rec.approval_state === "approved") return "cwom-baris-yes";
+        if (rec.wom_approve_hasil === "no") return "cwom-baris-no";
+        return "";
     }
     namaJobType(rec) { return rec.job_type_id ? rec.job_type_id[1] : ""; }
     namaRequestor(rec) { return rec.requestor_id ? rec.requestor_id[1] : ""; }
@@ -137,8 +242,8 @@ class WomApp extends Component {
     // Sudah Finished → tidak bisa edit dari app Mold (hanya di app Work Orders).
     selesai(rec) { return rec.status === "finished"; }
     bisaEditJadwal(rec) { return this.adaExecutor(rec) && !this.selesai(rec); }
-    // Detail approve bisa dilihat setelah disetujui.
-    adaDetailApprove(rec) { return rec.approval_state === "approved"; }
+    // Detail approve (note Requestor) — tampil inline di kolom kanan Status.
+    adaDetailApprove(rec) { return !!rec.wom_approve_note; }
     // Lead Time ditampilkan dengan satuan "Jam" bila berupa angka.
     tampilLeadTime(rec) {
         const v = (rec.lead_time || "").trim();
@@ -146,9 +251,6 @@ class WomApp extends Component {
         // Angka (termasuk desimal mis. 8.5 / 8,5) → tambahkan satuan "Jam".
         return /^\d+(?:[.,]\d+)?$/.test(v) ? v + " Jam" : v;
     }
-    bukaApproveDetail(rec) { this.state.approveDetail.buka = true; this.state.approveDetail.rec = rec; }
-    tutupApproveDetail() { this.state.approveDetail.buka = false; this.state.approveDetail.rec = null; }
-
     // ── Action dropdown (History) ──
     toggleAksiMenu() { this.state.aksiMenuBuka = !this.state.aksiMenuBuka; }
     tutupAksiMenu() { this.state.aksiMenuBuka = false; }
@@ -219,7 +321,7 @@ class WomApp extends Component {
         else { f.code = ""; f.name = ""; }
         this.state.masterPicker.buka = false;
     }
-    tutupForm() { this.state.form.buka = false; this.state.sandi = ""; this.state.penginput = ""; }
+    tutupForm() { this.tutupKamera(); this.state.form.buka = false; this.state.sandi = ""; this.state.penginput = ""; }
 
     // ── Deskripsi: pilih (boleh >1) + sub-deskripsi → details "A-B#sub" ──
     descDipilih(name) { return this.state.descPilih.includes(name); }
@@ -294,17 +396,69 @@ class WomApp extends Component {
     }
     hapusGambar() { const f = this.state.form; f.image_data = ""; f.image_preview = ""; f.namaFile = ""; }
 
+    // ── Ambil foto langsung dari kamera (webcam / kamera HP) ──
+    async bukaKamera() {
+        const k = this.state.kamera;
+        k.error = "";
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            this.notification.add("Camera not supported / needs HTTPS.", { type: "warning" });
+            return;
+        }
+        k.buka = true;
+        try {
+            this._stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } }, audio: false,
+            });
+            this._pasangKamera();
+        } catch (e) {
+            console.error("Camera error:", e);
+            k.error = "Cannot access camera. Allow camera permission (and use HTTPS), then try again.";
+        }
+    }
+    _pasangKamera() {
+        const v = this.kameraVideo.el;
+        if (this.state.kamera.buka && this._stream && v && v.srcObject !== this._stream) {
+            v.srcObject = this._stream;
+            v.play().catch(() => {});
+        }
+    }
+    _stopKamera() {
+        if (this._stream) {
+            this._stream.getTracks().forEach((t) => t.stop());
+            this._stream = null;
+        }
+    }
+    tutupKamera() { this._stopKamera(); this.state.kamera.buka = false; this.state.kamera.error = ""; }
+    ambilFoto() {
+        const v = this.kameraVideo.el;
+        if (!v || !v.videoWidth) { this.notification.add("Camera not ready yet.", { type: "warning" }); return; }
+        const canvas = document.createElement("canvas");
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+        canvas.getContext("2d").drawImage(v, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        const f = this.state.form;
+        f.image_preview = dataUrl;
+        const idx = dataUrl.indexOf("base64,");
+        f.image_data = idx !== -1 ? dataUrl.slice(idx + 7) : "";
+        f.namaFile = "camera_" + Date.now() + ".jpg";
+        this.tutupKamera();
+    }
+
     async simpanForm() {
         const f = this.state.form;
         if (!f.name.trim()) { this.notification.add("Mold Name is required.", { type: "warning" }); return; }
         if (!this.state.sandi) { this.notification.add("Session expired, please re-enter password.", { type: "warning" }); this.tutupForm(); return; }
+        // Req Date diketik dd/mm/yyyy → konversi ke ISO; validasi format.
+        const reqIso = this.dmyToIso(f.request_date);
+        if (reqIso === null) { this.notification.add("Req Date format must be tgl/bulan/tahun (e.g. 30/06/2026).", { type: "warning" }); return; }
         f.menyimpan = true;
         try {
             const vals = {
                 name: f.name.trim(),
                 code: f.code ? f.code.trim() : false,
                 qty: f.qty ? f.qty.trim() : false,
-                request_date: f.request_date || false,
+                request_date: reqIso || false,
                 details: this._susunDetails(),
             };
             if (f.image_data) vals.image = f.image_data;
@@ -320,21 +474,43 @@ class WomApp extends Component {
         f.menyimpan = false;
     }
 
-    // ── Isi Lead Time + Finish Repair (butuh password Teknisi) ──
+    // ── Isi Checklist + Lead Time + Finish Repair (butuh password Teknisi) ──
     bukaJadwal(rec, mode) {
         const j = this.state.jadwal;
         j.buka = true; j.rec = rec; j.mode = mode || "lead"; j.password = "";
-        j.lead_time = rec.lead_time || ""; j.finish_date = rec.finish_date || ""; j.proses = false;
+        j.lead_time = rec.lead_time || "";
+        j.finish_date = this.isoToDmy(rec.finish_date);   // tampil dd/mm/yyyy
+        j.poin = this.poinList(rec);
+        j.checklist = this.checkedArr(rec);
+        j.proses = false;
     }
     tutupJadwal() { this.state.jadwal.buka = false; this.state.jadwal.rec = null; }
+    // Toggle satu poin checklist di popup Teknisi.
+    toggleCek(idx) {
+        const arr = this.state.jadwal.checklist;
+        const i = arr.indexOf(idx);
+        if (i === -1) arr.push(idx); else arr.splice(i, 1);
+    }
+    // Semua poin di popup sudah dicentang?
+    jadwalLengkap() {
+        const j = this.state.jadwal;
+        return j.poin.length === 0 || j.poin.every((p, i) => j.checklist.includes(i));
+    }
     async simpanJadwal() {
         const j = this.state.jadwal;
         if (!j.password) { this.notification.add("Enter the Teknisi password.", { type: "warning" }); return; }
+        // Konversi Finish Repair dd/mm/yyyy → ISO; validasi format.
+        const iso = this.dmyToIso(j.finish_date);
+        if (iso === null) { this.notification.add("Finish Repair format must be tgl/bulan/tahun (e.g. 30/06/2026).", { type: "warning" }); return; }
+        const leadFirst = this.sudahLead(j.rec) ? "" : (j.lead_time || "").trim();
+        if ((leadFirst || iso) && !this.jadwalLengkap()) {
+            this.notification.add("Complete the Detail checklist first.", { type: "warning" }); return;
+        }
         j.proses = true;
         try {
             await this.orm.call("wo.work.order", "wom_simpan_jadwal",
-                [[j.rec.id], (j.lead_time || "").trim(), j.finish_date || false, j.password]);
-            this.notification.add("Lead Time / Finish Repair saved.", { type: "success" });
+                [[j.rec.id], (j.lead_time || "").trim(), iso || false, j.password, j.checklist]);
+            this.notification.add("Checklist / Lead Time / Finish Repair saved.", { type: "success" });
             this.tutupJadwal();
             await this.muatData();
         } catch (e) {
@@ -351,14 +527,17 @@ class WomApp extends Component {
         a.buka = true; a.rec = rec; a.password = ""; a.note = ""; a.proses = false;
     }
     tutupApprove() { this.state.approve.buka = false; this.state.approve.rec = null; }
-    async kirimApprove() {
+    // hasil: 'yes' (Approve → hijau) atau 'no' (Reject → merah).
+    async kirimApprove(hasil) {
         const a = this.state.approve;
         if (!a.password) { this.notification.add("Enter the Requestor password.", { type: "warning" }); return; }
         a.proses = true;
         try {
             await this.orm.call("wo.work.order", "wom_approve",
-                [[a.rec.id], (a.note || "").trim(), a.password]);
-            this.notification.add("Work Order approved (awaiting approval).", { type: "success" });
+                [[a.rec.id], (a.note || "").trim(), a.password, hasil || "yes"]);
+            this.notification.add(
+                hasil === "no" ? "Work Order rejected." : "Work Order approved.",
+                { type: "success" });
             this.tutupApprove();
             await this.muatData();
         } catch (e) {

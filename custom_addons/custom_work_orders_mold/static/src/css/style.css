@@ -29,6 +29,13 @@
 }
 .cwom-cari:focus { border-color: #16a34a; }
 .cwom-toolbar-kanan { display: flex; align-items: center; gap: 8px; }
+/* Filter status (di sebelah tombol Action) */
+.cwom-filter-status {
+    border: 1px solid #e5e7eb; background: #fff; color: #334155;
+    font-weight: 600; font-size: 13px; padding: 9px 12px; border-radius: 9px; cursor: pointer;
+}
+.cwom-filter-status:hover { background: #f9fafb; }
+.cwom-filter-status:focus { outline: none; border-color: #16a34a; }
 
 .cwom-aksi-bungkus { position: relative; display: inline-flex; }
 .cwom-btn-aksi {
@@ -73,6 +80,18 @@
 /* Details poin-poin */
 .cwom-poin { margin: 0; padding-left: 18px; }
 .cwom-poin li { font-size: 13px; color: #334155; line-height: 1.5; }
+/* Detail sebagai checklist (status read-only di kolom Details) */
+.cwom-poin-chk { list-style: none; padding-left: 0; }
+.cwom-poin-chk li { display: flex; align-items: baseline; gap: 6px; }
+.cwom-poin-chk li .fa-square-o { color: #cbd5e1; }
+.cwom-poin-chk li .fa-check-square { color: #16a34a; }
+.cwom-poin-chk li.cwom-poin-done { color: #166534; }
+/* Checklist di popup Teknisi */
+.cwom-checklist { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f8fafc; }
+.cwom-chk-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; cursor: pointer; }
+.cwom-chk-item input { width: 16px; height: 16px; cursor: pointer; accent-color: #16a34a; }
+.cwom-chk-status { margin-left: 6px; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fef9c3; color: #854d0e; }
+.cwom-chk-status.cwom-chk-ok { background: #dcfce7; color: #166534; }
 .cwom-poin-sub { font-size: 12px; color: #6b7280; margin-top: 4px; font-style: italic; }
 .cwom-poin-sub .fa { color: #cbd5e1; margin-right: 4px; }
 
@@ -127,6 +146,13 @@
 }
 .cwom-btn-approve:hover { background: #15803d; }
 .cwom-kartu-aksi .cwom-btn-approve { flex: 1; }
+/* Tombol Reject (No) di popup Approve */
+.cwom-btn-tolak {
+    border: none; background: #dc2626; color: #fff; font-weight: 700; font-size: 12px;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.cwom-btn-tolak:hover { background: #b91c1c; }
+.cwom-btn-tolak:disabled { opacity: .6; cursor: default; }
 
 /* Job Type tetap "Repair" di form Add */
 .cwom-jt-tetap {
@@ -201,6 +227,39 @@
 .cwom-apr-draft { background: #f1f5f9; color: #64748b; }
 .cwom-apr-ready { background: #fef9c3; color: #854d0e; }
 .cwom-apr-approved { background: #dcfce7; color: #166534; }
+.cwom-apr-rejected { background: #fee2e2; color: #b91c1c; }
+
+/* Warna baris/kartu menurut keputusan approve (opacity kecil) */
+.cwom-tabel tbody tr.cwom-baris-yes td { background: rgba(34,197,94,0.15); }
+.cwom-tabel tbody tr.cwom-baris-no td { background: rgba(239,68,68,0.15); }
+.cwom-tabel tbody tr.cwom-baris-yes:hover td { background: rgba(34,197,94,0.22); }
+.cwom-tabel tbody tr.cwom-baris-no:hover td { background: rgba(239,68,68,0.22); }
+.cwom-kartu.cwom-baris-yes { background: rgba(34,197,94,0.15); border-color: #bbf7d0; }
+.cwom-kartu.cwom-baris-no { background: rgba(239,68,68,0.15); border-color: #fecaca; }
+/* Kolom Approve Detail (inline) */
+.cwom-sel-apdetail { max-width: 240px; white-space: normal; word-break: break-word; color: #475569; }
+/* Approve Detail: note approve (hijau) + daftar catatan reject (Revision) */
+.cwom-apd-ok { display: block; color: #166534; font-weight: 600; margin-bottom: 6px; font-size: 12px; }
+.cwom-apd-rev { display: block; padding: 4px 0; border-top: 1px dashed #fecaca; }
+.cwom-apd-rev:first-of-type { border-top: none; }
+.cwom-apd-w { display: block; font-size: 11px; color: #b91c1c; font-weight: 600; }
+.cwom-apd-d { display: block; font-size: 12px; color: #475569; }
+
+/* Input tanggal: teks (auto "/") + tombol kalender + date picker tersembunyi */
+.cwom-tgl-wrap { position: relative; display: flex; align-items: stretch; gap: 6px; }
+.cwom-tgl-wrap > .cwom-input { flex: 1; }
+.cwom-tgl-btn {
+    flex: 0 0 auto; width: 38px; border: 1px solid #e5e7eb; background: #f8fafc;
+    border-radius: 8px; cursor: pointer; color: #16a34a; font-size: 14px;
+}
+.cwom-tgl-btn:hover { background: #dcfce7; }
+.cwom-tgl-btn:disabled { opacity: .5; cursor: default; }
+.cwom-tgl-native { position: absolute; right: 0; bottom: -2px; width: 1px; height: 1px; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+
+/* Lead Time: catatan tambahan jam */
+.cwom-lead-extra { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+.cwom-lead-extra-item { font-size: 11px; color: #b45309; font-weight: 600; }
+.cwom-lead-extra-w { color: #94a3b8; font-weight: 500; }
 
 /* Thumbnail */
 .cwom-thumb { width: 42px; height: 42px; object-fit: cover; border-radius: 7px; cursor: pointer; border: 1px solid #e5e7eb; }
@@ -256,7 +315,14 @@
 .cwom-dropzone-aktif { border-color: #16a34a; background: #f0fdf4; }
 .cwom-dropzone-ikon { font-size: 30px; }
 .cwom-dropzone-teks { font-size: 13px; margin: 6px 0; }
-.cwom-dropzone-pilih { display: inline-block; background: #16a34a; color: #fff; font-weight: 600; font-size: 12px; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+.cwom-dropzone-aksi { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.cwom-dropzone-pilih { display: inline-flex; align-items: center; gap: 6px; background: #16a34a; color: #fff; font-weight: 600; font-size: 12px; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+.cwom-dropzone-kamera { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #15803d; border: 1px solid #86efac; font-weight: 600; font-size: 12px; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+.cwom-dropzone-kamera:hover { background: #dcfce7; }
+/* Popup kamera */
+.cwom-modal-kamera { max-width: 520px; }
+.cwom-kamera-video { width: 100%; max-height: 60vh; background: #0f172a; border-radius: 10px; display: block; }
+.cwom-kamera-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 13px; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; }
 .cwom-dropzone-preview { max-width: 100%; max-height: 180px; border-radius: 10px; margin-bottom: 8px; }
 .cwom-dropzone-nama { font-size: 12px; color: #475569; margin-bottom: 8px; }
 .cwom-btn-hapus-img { border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; font-weight: 600; font-size: 12px; padding: 6px 12px; border-radius: 7px; cursor: pointer; }

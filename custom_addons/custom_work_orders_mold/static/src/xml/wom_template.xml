@@ -23,6 +23,12 @@
             <input type="text" class="cwom-cari" placeholder="Search No. / name / code..."
                 t-att-value="state.cari" t-on-input="(ev) => state.cari = ev.target.value"/>
             <div class="cwom-toolbar-kanan">
+                <select class="cwom-filter-status" t-on-change="(ev) => state.filterStatus = ev.target.value">
+                    <option value="all" t-att-selected="state.filterStatus === 'all'">All Status</option>
+                    <option value="ongoing" t-att-selected="state.filterStatus === 'ongoing'">Ongoing</option>
+                    <option value="finished" t-att-selected="state.filterStatus === 'finished'">Finished</option>
+                    <option value="rejected" t-att-selected="state.filterStatus === 'rejected'">Rejected</option>
+                </select>
                 <div class="cwom-aksi-bungkus">
                     <button class="cwom-btn-aksi" t-on-click="toggleAksiMenu">
                         <i class="fa fa-bolt"/> Action <i class="fa fa-caret-down"/>
@@ -59,11 +65,12 @@
                                 <th>Requestor</th><th>Teknisi Repair</th>
                                 <th>Lead Time (Hour)</th><th>Finish Repair</th>
                                 <th class="cwom-tengah">Status</th>
+                                <th>Approve Detail</th>
                             </tr>
                         </thead>
                         <tbody>
                             <t t-foreach="listTersaring" t-as="rec" t-key="rec.id">
-                                <tr>
+                                <tr t-attf-class="#{kelasBaris(rec)}">
                                     <td><span class="cwom-badge-no"><t t-esc="rec.wo_number"/></span></td>
                                     <td>
                                         <div class="cwom-mold-nama"><t t-esc="rec.name"/></div>
@@ -74,8 +81,10 @@
                                     <td class="cwom-sel-details">
                                         <t t-set="dp" t-value="detailPoin(rec.details)"/>
                                         <t t-if="dp.opsi.length or dp.sub">
-                                            <ul class="cwom-poin" t-if="dp.opsi.length">
-                                                <li t-foreach="dp.opsi" t-as="op" t-key="op_index"><t t-esc="op"/></li>
+                                            <ul class="cwom-poin cwom-poin-chk" t-if="dp.opsi.length">
+                                                <li t-foreach="dp.opsi" t-as="op" t-key="op_index"
+                                                    t-attf-class="#{isChecked(rec, op_index) ? 'cwom-poin-done' : ''}">
+                                                    <i t-attf-class="fa #{isChecked(rec, op_index) ? 'fa-check-square' : 'fa-square-o'}"/> <t t-esc="op"/></li>
                                             </ul>
                                             <div class="cwom-poin-sub" t-if="dp.sub"><i class="fa fa-sticky-note-o"/> <t t-esc="dp.sub"/></div>
                                         </t>
@@ -94,6 +103,11 @@
                                                 <button t-if="bisaEditJadwal(rec)" class="cwom-btn-jadwal" title="Fill Lead Time (Teknisi)"
                                                     t-on-click="() => this.bukaJadwal(rec, 'lead')"><i class="fa fa-pencil"/></button>
                                             </div>
+                                            <div class="cwom-lead-extra" t-if="adaLeadExtra(rec)">
+                                                <div class="cwom-lead-extra-item" t-foreach="leadExtras(rec)" t-as="ex" t-key="ex_index">
+                                                    +<t t-esc="ex.jam"/> jam <span class="cwom-lead-extra-w">(<t t-esc="fmtWaktu(ex.waktu)"/>)</span>
+                                                </div>
+                                            </div>
                                         </t>
                                         <span t-else="" class="cwom-lock-chip" title="Set Executor in Work Orders first"><i class="fa fa-lock"/></span>
                                     </td>
@@ -108,15 +122,26 @@
                                         </t>
                                         <span t-else="" class="cwom-lock-chip" title="Set Executor in Work Orders first"><i class="fa fa-lock"/></span>
                                     </td>
-                                    <!-- Status + Approval + Approve / lihat detail digabung -->
+                                    <!-- Status + Approval + tombol Approve (Yes/No via popup) -->
                                     <td class="cwom-tengah">
                                         <div class="cwom-status-sel">
                                             <span t-attf-class="cwom-badge-st #{kelasStatus(rec.status)}"><t t-esc="labelStatus(rec.status)"/></span>
-                                            <span t-attf-class="cwom-badge-apr #{kelasApproval(rec.approval_state)}"><t t-esc="labelApproval(rec.approval_state)"/></span>
+                                            <span t-attf-class="cwom-badge-apr #{kelasApprovalRec(rec)}"><t t-esc="labelApprovalRec(rec)"/></span>
                                             <button t-if="showApprove(rec)" class="cwom-btn-approve" t-on-click="() => this.bukaApprove(rec)">Approve</button>
-                                            <button t-if="adaDetailApprove(rec)" class="cwom-btn-detail" t-on-click="() => this.bukaApproveDetail(rec)">
-                                                <i class="fa fa-info-circle"/> Approve detail</button>
                                         </div>
+                                    </td>
+                                    <!-- Approve detail: note approve + semua catatan reject (Revision) + waktunya -->
+                                    <td class="cwom-sel-apdetail">
+                                        <t t-if="(rec.revisi and rec.revisi.length) or (rec.wom_approve_note and rec.approval_state === 'approved')">
+                                            <div class="cwom-apd-ok" t-if="rec.wom_approve_note and rec.approval_state === 'approved'">
+                                                <i class="fa fa-check-circle"/> <t t-esc="rec.wom_approve_note"/>
+                                            </div>
+                                            <div class="cwom-apd-rev" t-foreach="rec.revisi" t-as="rv" t-key="rv_index">
+                                                <span class="cwom-apd-w"><i class="fa fa-clock-o"/> <t t-esc="rv.waktu"/></span>
+                                                <span class="cwom-apd-d"><t t-esc="rv.detail"/></span>
+                                            </div>
+                                        </t>
+                                        <span t-else="" class="cwom-sel-kosong">—</span>
                                     </td>
                                 </tr>
                             </t>
@@ -127,12 +152,12 @@
                 <!-- KARTU (mobile) -->
                 <div class="cwom-kartu-list">
                     <t t-foreach="listTersaring" t-as="rec" t-key="rec.id">
-                        <div class="cwom-kartu">
+                        <div t-attf-class="cwom-kartu #{kelasBaris(rec)}">
                             <div class="cwom-kartu-atas">
                                 <span class="cwom-badge-no"><t t-esc="rec.wo_number"/></span>
                                 <span t-if="rec.approval_state != 'draft'"
-                                    t-attf-class="cwom-badge-apr #{kelasApproval(rec.approval_state)}">
-                                    <t t-esc="labelApproval(rec.approval_state)"/></span>
+                                    t-attf-class="cwom-badge-apr #{kelasApprovalRec(rec)}">
+                                    <t t-esc="labelApprovalRec(rec)"/></span>
                                 <span t-attf-class="cwom-badge-st #{kelasStatus(rec.status)}">
                                     <t t-esc="labelStatus(rec.status)"/></span>
                             </div>
@@ -144,8 +169,10 @@
                             </div>
                             <div class="cwom-kartu-detail" t-if="detailPoin(rec.details).opsi.length or detailPoin(rec.details).sub">
                                 <t t-set="dpm" t-value="detailPoin(rec.details)"/>
-                                <ul class="cwom-poin" t-if="dpm.opsi.length">
-                                    <li t-foreach="dpm.opsi" t-as="op" t-key="op_index"><t t-esc="op"/></li>
+                                <ul class="cwom-poin cwom-poin-chk" t-if="dpm.opsi.length">
+                                    <li t-foreach="dpm.opsi" t-as="op" t-key="op_index"
+                                        t-attf-class="#{isChecked(rec, op_index) ? 'cwom-poin-done' : ''}">
+                                        <i t-attf-class="fa #{isChecked(rec, op_index) ? 'fa-check-square' : 'fa-square-o'}"/> <t t-esc="op"/></li>
                                 </ul>
                                 <div class="cwom-poin-sub" t-if="dpm.sub"><i class="fa fa-sticky-note-o"/> <t t-esc="dpm.sub"/></div>
                             </div>
@@ -161,16 +188,35 @@
                                     <button t-if="bisaEditJadwal(rec)" class="cwom-btn-jadwal" t-on-click="() => this.bukaJadwal(rec, 'lead')">
                                         <i class="fa fa-pencil"/></button>
                                 </div>
+                                <div class="cwom-kartu-baris" t-if="adaLeadExtra(rec)">
+                                    <span class="cwom-kartu-label"></span>
+                                    <span class="cwom-lead-extra">
+                                        <span class="cwom-lead-extra-item" t-foreach="leadExtras(rec)" t-as="ex" t-key="ex_index">
+                                            +<t t-esc="ex.jam"/> jam <span class="cwom-lead-extra-w">(<t t-esc="fmtWaktu(ex.waktu)"/>)</span>
+                                        </span>
+                                    </span>
+                                </div>
                                 <div class="cwom-kartu-baris">
                                     <span class="cwom-kartu-label">Finish Repair</span>
                                     <span><t t-esc="rec.finish_date ? formatTanggal(rec.finish_date) : '—'"/></span>
                                     <button t-if="bisaEditJadwal(rec)" class="cwom-btn-jadwal" t-on-click="() => this.bukaJadwal(rec, 'finish')">
                                         <i class="fa fa-pencil"/></button>
                                 </div>
-                                <div class="cwom-kartu-aksi" t-if="showApprove(rec) or adaDetailApprove(rec)">
-                                    <button t-if="showApprove(rec)" class="cwom-btn-approve" t-on-click="() => this.bukaApprove(rec)">Approve</button>
-                                    <button t-if="adaDetailApprove(rec)" class="cwom-btn-detail" t-on-click="() => this.bukaApproveDetail(rec)">
-                                        <i class="fa fa-info-circle"/> Approve detail</button>
+                                <div class="cwom-kartu-baris cwom-kartu-baris-top"
+                                    t-if="(rec.revisi and rec.revisi.length) or (rec.wom_approve_note and rec.approval_state === 'approved')">
+                                    <span class="cwom-kartu-label">Approve Detail</span>
+                                    <span class="cwom-sel-apdetail">
+                                        <span class="cwom-apd-ok" t-if="rec.wom_approve_note and rec.approval_state === 'approved'">
+                                            <i class="fa fa-check-circle"/> <t t-esc="rec.wom_approve_note"/>
+                                        </span>
+                                        <span class="cwom-apd-rev" t-foreach="rec.revisi" t-as="rv" t-key="rv_index">
+                                            <span class="cwom-apd-w"><i class="fa fa-clock-o"/> <t t-esc="rv.waktu"/></span>
+                                            <span class="cwom-apd-d"><t t-esc="rv.detail"/></span>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="cwom-kartu-aksi" t-if="showApprove(rec)">
+                                    <button class="cwom-btn-approve" t-on-click="() => this.bukaApprove(rec)">Approve</button>
                                 </div>
                             </t>
                             <div class="cwom-kartu-baris" t-else="">
@@ -265,9 +311,16 @@
                                 <span class="cwom-form-hint">(set automatically — change it in Work Orders)</span></div>
                         </div>
                         <div class="cwom-form-grup">
-                            <label class="cwom-form-label">Req Date</label>
-                            <input type="date" class="cwom-input" t-att-value="state.form.request_date"
-                                t-on-input="(ev) => state.form.request_date = ev.target.value"/>
+                            <label class="cwom-form-label">Req Date <span class="cwom-form-hint">(tgl/bulan/tahun)</span></label>
+                            <div class="cwom-tgl-wrap">
+                                <input type="text" class="cwom-input" placeholder="tgl/bulan/tahun" inputmode="numeric" maxlength="10"
+                                    t-att-value="state.form.request_date"
+                                    t-on-input="(ev) => state.form.request_date = this.autoSlash(ev.target.value)"/>
+                                <button type="button" class="cwom-tgl-btn" title="Pick date" t-on-click="bukaPicker"><i class="fa fa-calendar"/></button>
+                                <input type="date" class="cwom-tgl-native" t-att-value="isoPicker(state.form.request_date)"
+                                    t-on-change="(ev) => state.form.request_date = this.isoToDmy(ev.target.value)"/>
+                            </div>
+                            <span class="cwom-form-hint">Cukup ketik angka — "/" otomatis. Atau klik kalender.</span>
                         </div>
                         <!-- Deskripsi: pilih (boleh >1) + sub-deskripsi → details "A-B#sub" -->
                         <div class="cwom-form-grup">
@@ -304,11 +357,16 @@
                                 </t>
                                 <t t-else="">
                                     <div class="cwom-dropzone-ikon">🖼️</div>
-                                    <div class="cwom-dropzone-teks">Drag &amp; drop an image here, or</div>
-                                    <label class="cwom-dropzone-pilih">
-                                        Choose file
-                                        <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambar"/>
-                                    </label>
+                                    <div class="cwom-dropzone-teks">Drag &amp; drop an image, or</div>
+                                    <div class="cwom-dropzone-aksi">
+                                        <label class="cwom-dropzone-pilih">
+                                            <i class="fa fa-upload"/> Choose file
+                                            <input type="file" accept="image/*" style="display:none;" t-on-change="onPilihGambar"/>
+                                        </label>
+                                        <button type="button" class="cwom-dropzone-kamera" t-on-click="bukaKamera">
+                                            <i class="fa fa-camera"/> Camera
+                                        </button>
+                                    </div>
                                 </t>
                             </div>
                         </div>
@@ -318,6 +376,30 @@
                         <button class="cwom-btn-utama" t-att-disabled="state.form.menyimpan" t-on-click="simpanForm">
                             <t t-if="state.form.menyimpan"><span class="cwom-spinner-kecil"/>Saving...</t>
                             <t t-else="">Add</t>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </t>
+
+        <!-- ══════════ POPUP KAMERA (ambil foto langsung) ══════════ -->
+        <t t-if="state.kamera.buka">
+            <div class="cwom-overlay">
+                <div class="cwom-modal cwom-modal-kecil cwom-modal-kamera" t-on-click.stop="">
+                    <div class="cwom-modal-kepala">
+                        <h2><i class="fa fa-camera"/> Take Photo</h2>
+                        <button class="cwom-tutup" t-on-click="tutupKamera">✕</button>
+                    </div>
+                    <div class="cwom-modal-isi">
+                        <div class="cwom-kamera-error" t-if="state.kamera.error">
+                            <i class="fa fa-exclamation-triangle"/> <t t-esc="state.kamera.error"/>
+                        </div>
+                        <video class="cwom-kamera-video" t-ref="kameraVideo" autoplay="autoplay" playsinline="playsinline" muted="muted"/>
+                    </div>
+                    <div class="cwom-modal-footer">
+                        <button class="cwom-btn-sekunder" t-on-click="tutupKamera">Cancel</button>
+                        <button class="cwom-btn-utama" t-att-disabled="!!state.kamera.error" t-on-click="ambilFoto">
+                            <i class="fa fa-camera"/> Capture
                         </button>
                     </div>
                 </div>
@@ -363,33 +445,61 @@
             </div>
         </t>
 
-        <!-- ══════════ POPUP ISI LEAD TIME / FINISH REPAIR (Teknisi) ══════════ -->
+        <!-- ══════════ POPUP TEKNISI: CHECKLIST + LEAD TIME + FINISH REPAIR ══════════ -->
         <t t-if="state.jadwal.buka">
             <div class="cwom-overlay">
                 <div class="cwom-modal cwom-modal-kecil" t-on-click.stop="">
                     <div class="cwom-modal-kepala">
-                        <h2><i class="fa fa-clock-o"/>
-                            <t t-if="state.jadwal.mode === 'lead'"> Lead Time</t>
-                            <t t-else=""> Finish Repair</t>
-                        </h2>
+                        <h2><i class="fa fa-wrench"/> Repair — Checklist &amp; Schedule</h2>
                         <button class="cwom-tutup" t-on-click="tutupJadwal">✕</button>
                     </div>
                     <div class="cwom-modal-isi">
-                        <p class="cwom-pwd-info">Enter the <b>Teknisi password</b> (the assigned technician) to fill this. Recorded in the Work Order history.</p>
+                        <p class="cwom-pwd-info">Enter the <b>Teknisi password</b>, complete the <b>Detail checklist</b>, then fill Lead Time &amp; Finish Repair. Recorded in the Work Order history.</p>
                         <div class="cwom-form-grup">
                             <label class="cwom-form-label">Teknisi password</label>
                             <input type="password" class="cwom-input" placeholder="Teknisi password" autocomplete="off"
                                 t-att-value="state.jadwal.password" t-on-input="(ev) => state.jadwal.password = ev.target.value"/>
                         </div>
-                        <div class="cwom-form-grup" t-if="state.jadwal.mode === 'lead'">
-                            <label class="cwom-form-label">Lead Time (Hour)</label>
-                            <input type="text" class="cwom-input" placeholder="e.g. 48"
+                        <!-- Checklist Detail (wajib lengkap sebelum isi Lead Time/Finish Repair) -->
+                        <div class="cwom-form-grup" t-if="state.jadwal.poin.length">
+                            <label class="cwom-form-label">Detail Checklist
+                                <span t-attf-class="cwom-chk-status #{jadwalLengkap() ? 'cwom-chk-ok' : ''}">
+                                    <t t-esc="state.jadwal.checklist.length"/>/<t t-esc="state.jadwal.poin.length"/></span>
+                            </label>
+                            <div class="cwom-checklist">
+                                <label class="cwom-chk-item" t-foreach="state.jadwal.poin" t-as="p" t-key="p_index">
+                                    <input type="checkbox" t-att-checked="state.jadwal.checklist.includes(p_index)"
+                                        t-on-change="() => this.toggleCek(p_index)"/>
+                                    <span><t t-esc="p"/></span>
+                                </label>
+                            </div>
+                            <span class="cwom-form-hint" t-if="!jadwalLengkap()">Complete all checklist items to enable Lead Time &amp; Finish Repair.</span>
+                        </div>
+                        <!-- Lead Time DASAR: hanya bisa diisi 1x -->
+                        <div class="cwom-form-grup" t-if="!sudahLead(state.jadwal.rec)">
+                            <label class="cwom-form-label">Lead Time (Hour) <span class="cwom-form-hint">(isi sekali)</span></label>
+                            <input type="text" class="cwom-input" placeholder="e.g. 48" inputmode="numeric"
+                                t-att-disabled="!jadwalLengkap()"
                                 t-att-value="state.jadwal.lead_time" t-on-input="(ev) => state.jadwal.lead_time = ev.target.value"/>
                         </div>
+                        <!-- Lead Time sudah terisi → terkunci. Tambahan jam dihitung otomatis. -->
                         <div class="cwom-form-grup" t-else="">
-                            <label class="cwom-form-label">Finish Repair</label>
-                            <input type="date" class="cwom-input"
-                                t-att-value="state.jadwal.finish_date" t-on-input="(ev) => state.jadwal.finish_date = ev.target.value"/>
+                            <label class="cwom-form-label">Lead Time (Hour) <span class="cwom-form-hint">(locked)</span></label>
+                            <input type="text" class="cwom-input" disabled="disabled"
+                                t-att-value="state.jadwal.lead_time + ' Jam (locked)'"/>
+                            <span class="cwom-form-hint">Tambahan jam dihitung otomatis saat mengisi Finish Repair lagi setelah reject.</span>
+                        </div>
+                        <div class="cwom-form-grup">
+                            <label class="cwom-form-label">Finish Repair <span class="cwom-form-hint">(tgl/bulan/tahun)</span></label>
+                            <div class="cwom-tgl-wrap">
+                                <input type="text" class="cwom-input" placeholder="tgl/bulan/tahun" inputmode="numeric" maxlength="10"
+                                    t-att-disabled="!jadwalLengkap()"
+                                    t-att-value="state.jadwal.finish_date" t-on-input="(ev) => state.jadwal.finish_date = this.autoSlash(ev.target.value)"/>
+                                <button type="button" class="cwom-tgl-btn" title="Pick date" t-att-disabled="!jadwalLengkap()" t-on-click="bukaPicker"><i class="fa fa-calendar"/></button>
+                                <input type="date" class="cwom-tgl-native" t-att-disabled="!jadwalLengkap()"
+                                    t-att-value="isoPicker(state.jadwal.finish_date)"
+                                    t-on-change="(ev) => state.jadwal.finish_date = this.isoToDmy(ev.target.value)"/>
+                            </div>
                         </div>
                     </div>
                     <div class="cwom-modal-footer">
@@ -412,23 +522,27 @@
                         <button class="cwom-tutup" t-on-click="tutupApprove">✕</button>
                     </div>
                     <div class="cwom-modal-isi">
-                        <p class="cwom-pwd-info">Enter the <b>Requestor password</b> to approve. Note is optional.</p>
+                        <p class="cwom-pwd-info">Enter the <b>Requestor password</b>, then choose <b>Approve</b> (Yes) or <b>Reject</b> (No). Detail is optional.</p>
                         <div class="cwom-form-grup">
                             <label class="cwom-form-label">Requestor password</label>
                             <input type="password" class="cwom-input" placeholder="Requestor password" autocomplete="off"
                                 t-att-value="state.approve.password" t-on-input="(ev) => state.approve.password = ev.target.value"/>
                         </div>
                         <div class="cwom-form-grup">
-                            <label class="cwom-form-label">Approve note <span class="cwom-form-hint">(optional)</span></label>
-                            <textarea class="cwom-input" rows="2" placeholder="Optional note"
+                            <label class="cwom-form-label">Approve Detail <span class="cwom-form-hint">(optional)</span></label>
+                            <textarea class="cwom-input" rows="2" placeholder="Optional detail / note"
                                 t-att-value="state.approve.note" t-on-input="(ev) => state.approve.note = ev.target.value"/>
                         </div>
                     </div>
                     <div class="cwom-modal-footer">
                         <button class="cwom-btn-sekunder" t-att-disabled="state.approve.proses" t-on-click="tutupApprove">Cancel</button>
-                        <button class="cwom-btn-utama" t-att-disabled="state.approve.proses" t-on-click="kirimApprove">
-                            <t t-if="state.approve.proses"><span class="cwom-spinner-kecil"/>Approving...</t>
-                            <t t-else="">Approve</t>
+                        <button class="cwom-btn-tolak" t-att-disabled="state.approve.proses" t-on-click="() => this.kirimApprove('no')">
+                            <t t-if="state.approve.proses"><span class="cwom-spinner-kecil"/>...</t>
+                            <t t-else="">✕ Reject (No)</t>
+                        </button>
+                        <button class="cwom-btn-utama" t-att-disabled="state.approve.proses" t-on-click="() => this.kirimApprove('yes')">
+                            <t t-if="state.approve.proses"><span class="cwom-spinner-kecil"/>...</t>
+                            <t t-else="">✓ Approve (Yes)</t>
                         </button>
                     </div>
                 </div>
@@ -515,31 +629,6 @@
                     </div>
                     <div class="cwom-modal-footer">
                         <button class="cwom-btn-sekunder" t-on-click="tutupMaster">Close</button>
-                    </div>
-                </div>
-            </div>
-        </t>
-
-        <!-- ══════════ POPUP DETAIL APPROVE ══════════ -->
-        <t t-if="state.approveDetail.buka">
-            <div class="cwom-overlay" t-on-click="tutupApproveDetail">
-                <div class="cwom-modal cwom-modal-kecil" t-on-click.stop="">
-                    <div class="cwom-modal-kepala">
-                        <h2>✅ Approve Detail
-                            <t t-if="state.approveDetail.rec"> — <t t-esc="state.approveDetail.rec.wo_number"/></t>
-                        </h2>
-                        <button class="cwom-tutup" t-on-click="tutupApproveDetail">✕</button>
-                    </div>
-                    <div class="cwom-modal-isi">
-                        <div class="cwom-penginput"><i class="fa fa-check-circle"/> Approved &amp; Finished</div>
-                        <label class="cwom-form-label">Approve note</label>
-                        <div class="cwom-desc-preview" t-if="state.approveDetail.rec and state.approveDetail.rec.wom_approve_note">
-                            <t t-esc="state.approveDetail.rec.wom_approve_note"/>
-                        </div>
-                        <div class="cwom-kosong" t-else="">No note.</div>
-                    </div>
-                    <div class="cwom-modal-footer">
-                        <button class="cwom-btn-sekunder" t-on-click="tutupApproveDetail">Close</button>
                     </div>
                 </div>
             </div>

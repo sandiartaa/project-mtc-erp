@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from odoo import models, fields, api
@@ -69,6 +70,15 @@ class WoWorkOrderMold(models.Model):
 
     # Catatan saat Approve oleh Requestor (untuk dilihat per WO).
     wom_approve_note = fields.Text('Mold Approve Note')
+    # Keputusan approve Requestor: 'yes' (disetujui, baris hijau) / 'no' (ditolak, merah).
+    wom_approve_hasil = fields.Selection(
+        [('yes', 'Approved'), ('no', 'Rejected')], string='Mold Approve Result')
+    # Checklist Detail (JSON daftar indeks poin yang sudah dicentang Teknisi).
+    # Semua poin harus tercentang sebelum Lead Time & Finish Repair boleh diisi.
+    wom_check = fields.Text('Mold Checklist')
+    # Riwayat tambahan jam Lead Time (JSON [{jam, waktu}]). Lead Time dasar hanya
+    # boleh diisi 1x; setelah itu hanya bisa menambah jam (mis. setelah di-reject).
+    wom_lead_extra = fields.Text('Mold Lead Extra')
 
     # Field yang BOLEH diisi dari app Mold saat menambah (Requestor & Job Type
     # otomatis di server, jadi tidak termasuk di sini).
@@ -173,12 +183,21 @@ class WoWorkOrderMold(models.Model):
         kolom = [
             'id', 'wo_number', 'name', 'code', 'job_type_id', 'qty',
             'details', 'requestor_id', 'request_date', 'incharge_id', 'incharge_custom',
-            'lead_time', 'ready_date', 'status', 'approval_state', 'wom_approve_note',
+            'lead_time', 'ready_date', 'status', 'approval_state',
+            'wom_approve_note', 'wom_approve_hasil', 'wom_check', 'wom_lead_extra',
         ]
         rows = self.search_read(
             [('wo_type', '=', 'mold')], kolom, order='request_date desc, id desc')
+        Rev = self.env['wo.revision'].sudo()
         for r in rows:
             r['finish_date'] = r.pop('ready_date')
+            # Riwayat revisi/reject (catatan + waktu) untuk ditampilkan di Approve Detail.
+            revs = Rev.search([('work_order_id', '=', r['id'])], order='id desc')
+            r['revisi'] = [{
+                'detail': rv.detail or '',
+                'waktu': (fields.Datetime.context_timestamp(rv, rv.create_date)
+                          .strftime('%d/%m/%Y %H:%M') if rv.create_date else ''),
+            } for rv in revs]
         return rows
 
     @api.model
@@ -194,17 +213,41 @@ class WoWorkOrderMold(models.Model):
         self.ensure_one()
         return self.incharge_custom or (self.incharge_id.name if self.incharge_id else '')
 
-    def wom_simpan_jadwal(self, lead_time=None, finish_date=None, password=None):
-        """Isi Lead Time + Finish Repair — butuh password yang SAMA dengan Teknisi
-        (executor) yang dipilih di WO ini. Executor ditentukan dari app Work Orders.
-        Dicatat ke History.
+    def _mold_poin(self):
+        """Daftar poin checklist dari details (bagian sebelum '#', dipisah '-')."""
+        self.ensure_one()
+        d = self.details or ''
+        h = d.find('#')
+        opsi = (d[:h] if h != -1 else d)
+        return [p.strip() for p in opsi.split('-') if p.strip()]
 
-        Catatan: "Finish Repair" disimpan ke field ready_date (tanggal Ready for
-        Approval), BUKAN finish_date (Target Finish). Karena app Mold tidak punya
-        tombol "Ready for Approval", mengisi Finish Repair otomatis mengajukan WO
-        (approval_state → 'ready'); mengosongkannya membatalkan pengajuan (→ 'draft').
-        Approve dilakukan lewat app Work Orders (tab Mold) atau wom_approve.
-        Param tetap bernama finish_date karena itu yang dikirim dari app."""
+    def _mold_check_set(self):
+        """Indeks poin yang sudah dicentang (dari field JSON wom_check)."""
+        self.ensure_one()
+        try:
+            return sorted({int(i) for i in json.loads(self.wom_check or '[]')})
+        except Exception:
+            return []
+
+    def _lead_extra_list(self):
+        """Riwayat tambahan jam Lead Time: [{'jam':..,'waktu':..}]."""
+        self.ensure_one()
+        try:
+            return list(json.loads(self.wom_lead_extra or '[]'))
+        except Exception:
+            return []
+
+    def wom_simpan_jadwal(self, lead_time=None, finish_date=None, password=None,
+                          checklist=None):
+        """Isi Checklist Detail + Lead Time + Finish Repair — butuh password yang SAMA
+        dengan Teknisi (executor) yang dipilih di WO ini. Dicatat ke History.
+
+        Semua poin Detail WAJIB dicentang dulu sebelum Lead Time / Finish Repair boleh
+        diisi. "Finish Repair" disimpan ke field ready_date (= Ready for Approval).
+
+        Lead Time DASAR hanya boleh diisi 1x. Setelah WO di-reject lalu Teknisi mengisi
+        Finish Repair lagi, tambahan jam DIHITUNG OTOMATIS (selisih waktu sejak reject)
+        dan dicatat — Lead Time dasar tidak berubah."""
         self._wom_cek_grup()
         self.ensure_one()
         if self.wo_type != 'mold':
@@ -221,25 +264,64 @@ class WoWorkOrderMold(models.Model):
             ('username', '=', teknisi), ('password', '=', password or '')], limit=1)
         if not cred:
             raise AccessError("Password harus sesuai Teknisi yang dipilih: %s." % teknisi)
+
+        poin = self._mold_poin()
+        if checklist is not None:
+            cek = sorted({int(i) for i in checklist if 0 <= int(i) < len(poin)})
+        else:
+            cek = self._mold_check_set()
+        lengkap = len(cek) >= len(poin)  # semua poin tercentang (atau tidak ada poin)
+
+        sudah_lead = bool((self.lead_time or '').strip())
+        lead_baru = (lead_time or '').strip()
+        was_rejected = self.wom_approve_hasil == 'no'   # WO ini baru saja di-reject
         tgl = finish_date or False
-        vals = {
-            'lead_time': (lead_time or '').strip() or False,
-            'ready_date': tgl,
-        }
+        # Lead Time / Finish Repair hanya boleh saat checklist lengkap.
+        aksi_isi = bool(tgl) or (not sudah_lead and lead_baru)
+        if aksi_isi and not lengkap:
+            raise ValidationError(
+                "Checklist Detail harus dilengkapi dulu sebelum mengisi Lead Time / Finish Repair.")
+
+        vals = {'ready_date': tgl, 'wom_check': json.dumps(cek)}
+        # Lead Time DASAR hanya sekali (saat masih kosong).
+        if not sudah_lead and lead_baru:
+            vals['lead_time'] = lead_baru
+        # Tambahan jam OTOMATIS: bila Lead Time sudah terkunci, WO sebelumnya
+        # di-reject, dan sekarang Teknisi mengisi Finish Repair lagi → catat jam
+        # yang berlalu sejak reject (revisi terakhir) sampai sekarang.
+        if sudah_lead and was_rejected and tgl:
+            last_rev = self.env['wo.revision'].sudo().search(
+                [('work_order_id', '=', self.id)], order='id desc', limit=1)
+            if last_rev and last_rev.create_date:
+                delta = fields.Datetime.now() - last_rev.create_date
+                jam = round(delta.total_seconds() / 3600.0, 1)
+                if jam <= 0:
+                    jam = 0
+                log = self._lead_extra_list()
+                log.append({'jam': ('%g' % jam), 'waktu': fields.Datetime.now().isoformat()})
+                vals['wom_lead_extra'] = json.dumps(log)
         # Mengisi Finish Repair = menekan "Ready for Approval"; bila dikosongkan,
         # batalkan pengajuan (kembali draft). Jangan sentuh bila sudah approved.
         if self.approval_state != 'approved':
             vals['approval_state'] = 'ready' if tgl else 'draft'
+            if tgl:
+                vals['wom_approve_hasil'] = False
+                vals['wom_approve_note'] = False
         self.with_context(skip_wo_audit=True).write(vals)
-        ket_ready = ' (Ready for Approval)' if tgl else ' (batal pengajuan)'
-        self._catat_audit('edit', 'Isi Lead Time=%s, Finish Repair=%s%s — Teknisi: %s' % (
-            (lead_time or '-'), (finish_date or '-'), ket_ready, teknisi))
+        ket_ready = ' (Ready for Approval)' if tgl else ''
+        ket_extra = ' [+jam otomatis]' if 'wom_lead_extra' in vals else ''
+        self._catat_audit('edit', 'Checklist %d/%d, Lead Time=%s%s, Finish Repair=%s%s — Teknisi: %s' % (
+            len(cek), len(poin), (self.lead_time or lead_baru or '-'), ket_extra,
+            (finish_date or '-'), ket_ready, teknisi))
         return True
 
-    def wom_approve(self, note=None, password=None):
-        """Approve WO Mold oleh Requestor — butuh password REQUESTOR. Muncul setelah
-        Finish Repair (ready_date) diisi. Note opsional. Set Approved & Finished.
-        Alternatif: approve juga bisa dari app Work Orders (tab Mold)."""
+    def wom_approve(self, note=None, password=None, hasil='yes'):
+        """Keputusan approve WO Mold oleh Requestor — butuh password REQUESTOR.
+        Muncul setelah Finish Repair (ready_date) diisi. Note opsional.
+        - hasil='yes' → disetujui: Approved & Finished (baris hijau di app Mold).
+        - hasil='no'  → ditolak  : tetap menunggu, bisa diajukan/diputuskan ulang
+          (baris merah di app Mold).
+        Alternatif approve juga bisa dari app Work Orders (tab Mold)."""
         self._wom_cek_grup()
         self.ensure_one()
         if self.wo_type != 'mold':
@@ -250,22 +332,38 @@ class WoWorkOrderMold(models.Model):
         if not requestor:
             raise AccessError("Password Requestor salah.")
         teks = (note or '').strip()
-        # Requestor yang approve dicatat sebagai Approver (wo.person), dan tanggal
-        # approve otomatis = hari ini → muncul di app Work Orders (tab Mold).
+        putusan = 'no' if hasil == 'no' else 'yes'
+        # Requestor yang memutuskan dicatat sebagai Approver (wo.person) + tanggalnya.
         Person = self.env['wo.person'].sudo()
         person = Person.search([('name', '=', requestor)], limit=1) \
             or Person.create({'name': requestor})
-        # Disetujui requestor → otomatis Approved & Finished.
-        self.with_context(skip_wo_audit=True).write({
-            'approval_state': 'approved',
-            'status': 'finished',
+        vals = {
             'approver_id': person.id,
             'approval_date': fields.Date.context_today(self),
             'wom_approve_note': teks or False,
-        })
-        # Catat ke riwayat approve bersama (muncul di popup Approve Detail app umum).
-        self._catat_approve(note=teks, approver=requestor)
-        ket = 'Approved & Finished oleh Requestor: %s' % requestor
+            'wom_approve_hasil': putusan,
+        }
+        if putusan == 'yes':
+            # Disetujui → otomatis Approved & Finished.
+            vals['approval_state'] = 'approved'
+            vals['status'] = 'finished'
+        else:
+            # Ditolak → reset Checklist + Finish Repair; Teknisi wajib mengulang.
+            vals['ready_date'] = False
+            vals['wom_check'] = False
+            vals['approval_state'] = 'draft'
+        self.with_context(skip_wo_audit=True).write(vals)
+        if putusan == 'yes':
+            # Catat ke riwayat approve bersama (popup Approve Detail app umum).
+            self._catat_approve(note=teks, approver=requestor)
+            ket = 'Approved & Finished oleh Requestor: %s' % requestor
+        else:
+            # Reject → catat ke Revision (tanggal + detail), tampil di app Work Orders.
+            self.env['wo.revision'].sudo().create({
+                'work_order_id': self.id,
+                'detail': teks or 'Rejected (tanpa detail)',
+            })
+            ket = 'Rejected oleh Requestor: %s' % requestor
         if teks:
             ket += ' — Note: ' + teks
         self._catat_audit('edit', ket)

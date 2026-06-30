@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Work Order Mold',
-    'version': '2.13.0',
+    'version': '2.18.2',
     'category': 'Custom',
     'summary': 'Work Order khusus jenis Mold (berbagi data dengan Work Orders)',
     'description': "Work Order khusus jenis Mold. Tidak punya tabel sendiri: "
