@@ -205,13 +205,42 @@ class WoWorkOrder(models.Model):
                 labels.append(f.string or key)
         return ('Ubah: ' + ', '.join(labels)) if labels else ''
 
-    # Kode nomor per jenis WO: W + 2 huruf jenis + 4 digit (WDE/WMO/WMA/WUT).
-    _SEQ_BY_TYPE = {
-        'design': 'wo.work.order.design',
-        'mold': 'wo.work.order.mold',
-        'maintenance': 'wo.work.order.maintenance',
-        'utility': 'wo.work.order.utility',
+    # Prefix nomor per jenis WO: W + 2 huruf jenis (WDE/WMO/WMA/WUT).
+    _PREFIX_BY_TYPE = {
+        'design': 'WDE',
+        'mold': 'WMO',
+        'maintenance': 'WMA',
+        'utility': 'WUT',
     }
+
+    def _seed_nomor(self, pre, yymm):
+        """Nomor urut TERTINGGI yang sudah dipakai untuk jenis ini di bulan yymm.
+        Dipakai sebagai titik mulai counter bulanan (deterministik dari data,
+        sehingga transisi dari penomoran lama mulus & tahan walau data dihapus)."""
+        pola = '%s-%s' % (pre, yymm)  # mis. 'WDE-2606' → cocok 'WDE-2606xx-####'
+        recs = self.sudo().with_context(active_test=False).search(
+            [('wo_number', '=like', pola + '%')])
+        maxn = 0
+        for r in recs:
+            ekor = (r.wo_number or '').rsplit('-', 1)[-1]
+            if ekor.isdigit():
+                maxn = max(maxn, int(ekor))
+        return maxn
+
+    def _alokasi_wo_number(self, tipe, jejak):
+        """Alokasikan nomor WO: <PREFIX>-<YYMMDD>-<#### urut bulanan>.
+        4 digit terakhir reset ke 0001 tiap bulan baru (otomatis karna dihitung
+        per periode YYMM). `jejak` melacak nomor dalam SATU batch create agar
+        beberapa WO sekaligus (mis. import) tidak bertabrakan."""
+        pre = self._PREFIX_BY_TYPE.get(tipe, 'WO')
+        lokal = fields.Datetime.context_timestamp(self, fields.Datetime.now())
+        yymm = lokal.strftime('%y%m')
+        yymmdd = lokal.strftime('%y%m%d')
+        kunci = (pre, yymm)
+        if kunci not in jejak:
+            jejak[kunci] = self._seed_nomor(pre, yymm)
+        jejak[kunci] += 1
+        return '%s-%s-%04d' % (pre, yymmdd, jejak[kunci])
 
     def _section_bengkel(self):
         """Section khusus mold (BENGKEL). Dipakai untuk default otomatis WO Mold."""
@@ -228,16 +257,11 @@ class WoWorkOrder(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        Seq = self.env['ir.sequence']
+        jejak = {}  # (prefix, YYMM) -> nomor terakhir dalam batch ini
         for vals in vals_list:
             if vals.get('wo_number', 'New') in (False, 'New', ''):
                 tipe = vals.get('wo_type') or 'design'
-                kode = self._SEQ_BY_TYPE.get(tipe, 'wo.work.order')
-                vals['wo_number'] = (
-                    Seq.next_by_code(kode)
-                    or Seq.next_by_code('wo.work.order')
-                    or 'New'
-                )
+                vals['wo_number'] = self._alokasi_wo_number(tipe, jejak)
             if (vals.get('wo_type') or 'design') == 'mold':
                 self._terapkan_default_mold(vals)
         records = super().create(vals_list)
