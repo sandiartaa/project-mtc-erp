@@ -9,11 +9,27 @@ Modul untuk mengelola NPI Product secara CRUD dengan tampilan bertingkat: daftar
 ## Model/tabel baru yang dibuat
 - `npi.product` — data product (Code, Photo, Name, Brand, Packing Type/Qty, Production Place/Batch 1)
 - `npi.subitem` — sub item baku per product (Sub Item, Status, Details, Notes)
+- `npi.row.base` — model abstrak (tanpa tabel) berisi logika baca/simpan baris bersama
+- `npi.matras` — baris tabel sub item **Matras** (Details · Timeline · Container)
+- `npi.packing` — baris tabel sub item **Packing** (Details · PO · Cont)
+- `npi.sparepart` — baris tabel sub item **Sparepart** (Details · PO · Cont)
+- `npi.deco` — baris tabel sub item **Deco** (Details, dengan kolom Photo per baris)
+- `npi.karton` — baris tabel sub item **Karton** (Details · PO)
 
 Sub item bersifat TETAP: tiap product otomatis punya 5 sub item — Matras, Packing,
 Sparepart, Deco, Karton. Tidak bisa ditambah atau dihapus, hanya diisi.
 
+Tabel baris per sub item (klik baris sub item → popup tabel CRUD):
+- **Matras** — Details: Mold Code, Description, Spec, Maker, Material, Qty · Timeline: Req/Prod/Finished Date · Container: Number, Stuffing Date, ARR Date
+- **Packing** — Details: Code, Item, Packing, Specification, Qty, Executor · PO: Date, Qty · Cont: No., Stuffing Date, Arrival Date
+- **Sparepart** — Details: Code, Item, Packing, Specification, Qty (tanpa Executor) · PO: Supplier, Date, Qty · Cont: No., Stuffing Date, Arrival Date
+- **Deco** — Details: Item, Qty, Executor, Photo (upload gambar per baris)
+- **Karton** — Details: Code, Item, Specification · PO: Date, Qty, Arrival Date
+
 Tidak menyentuh tabel/model bawaan Odoo sama sekali.
+
+> Modul ini **auto-install** (`auto_install: True`) — begitu di-deploy/Update Apps List,
+> NPI langsung terpasang otomatis tanpa perlu klik Install manual di menu Apps.
 
 ## Cara pakai
 1. Buka menu **NPI → NPI Products**.

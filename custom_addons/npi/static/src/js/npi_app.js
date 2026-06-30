@@ -36,9 +36,11 @@ class NpiApp extends Component {
                 proses: false,
             },
 
-            // Popup tabel sub item (Data Matras + tombol Edit Status)
+            // Popup tabel sub item (tabel baris + tombol Edit Status)
             popup: {
-                buka: false, productId: null, id: null, name: "", is_matras: false,
+                buka: false, productId: null, id: null, name: "", jenis: "",
+                is_matras: false, is_packing: false, is_sparepart: false,
+                is_deco: false, is_karton: false,
                 status: "ongoing", details: "", notes: "",
                 rows: [], proses: false,
             },
@@ -48,8 +50,8 @@ class NpiApp extends Component {
                 buka: false, status: "ongoing", details: "", notes: "", proses: false,
             },
 
-            // Popup editor Description (textarea besar)
-            descEdit: { buka: false, idx: null, value: "" },
+            // Popup editor teks panjang (Description / Specification)
+            descEdit: { buka: false, idx: null, field: "description", judul: "Description", value: "" },
         });
 
         // Snapshot untuk deteksi perubahan (dirty check)
@@ -214,30 +216,98 @@ class NpiApp extends Component {
     }
 
     async tutupPopup() {
-        // Konfirmasi jika ada perubahan Data Matras yang belum disimpan
+        // Konfirmasi jika ada perubahan baris tabel yang belum disimpan
         if (JSON.stringify(this.state.popup.rows) !== this._snapMatras) {
-            if (window.confirm("Ada perubahan pada Data Matras yang belum disimpan.\nSimpan perubahan?")) {
+            if (window.confirm("Ada perubahan pada tabel yang belum disimpan.\nSimpan perubahan?")) {
                 await this.simpanPopup();
             }
         }
         this.state.popup.buka = false;
     }
 
-    tambahBarisMatras() {
-        this.state.popup.rows.push({
-            id: null,
-            mold_code: "", description: "", spec: "", maker: "", material: "", qty: "",
-            req_date: "", prod_date: "", finished_date: "",
-            number: "", stuffing_date: "", arr_date: "",
-        });
+    // Template baris kosong sesuai jenis sub item yang sedang dibuka.
+    barisBaru() {
+        const j = this.state.popup.jenis;
+        if (j === "Matras") {
+            return {
+                id: null,
+                mold_code: "", description: "", spec: "", maker: "", material: "", qty: "",
+                req_date: "", prod_date: "", finished_date: "",
+                number: "", stuffing_date: "", arr_date: "",
+            };
+        }
+        if (j === "Packing") {
+            return {
+                id: null,
+                code: "", item: "", packing: "", specification: "", qty: "", executor: "",
+                po_date: "", po_qty: "",
+                cont_no: "", stuffing_date: "", arrival_date: "",
+            };
+        }
+        if (j === "Sparepart") {
+            return {
+                id: null,
+                code: "", item: "", packing: "", specification: "", qty: "",
+                supplier: "", po_date: "", po_qty: "",
+                cont_no: "", stuffing_date: "", arrival_date: "",
+            };
+        }
+        if (j === "Deco") {
+            return {
+                id: null,
+                item: "", qty: "", executor: "",
+                photo: "", photo_ada: false, photo_ubah: false,
+            };
+        }
+        if (j === "Karton") {
+            return {
+                id: null,
+                code: "", item: "", specification: "",
+                po_date: "", po_qty: "", arrival_date: "",
+            };
+        }
+        return { id: null };
     }
 
-    hapusBarisMatras(idx) {
+    // ── Photo per baris (mis. Deco) ──
+    urlRowPhoto(model, id, field) {
+        return "/web/image/" + model + "/" + id + "/" + (field || "photo");
+    }
+
+    onRowPhoto(idx, ev, field) {
+        field = field || "photo";
+        const file = ev.target.files[0];
+        if (!file) {
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const row = this.state.popup.rows[idx];
+            row[field] = reader.result.split(",")[1] || "";
+            row[field + "_ada"] = true;
+            row[field + "_ubah"] = true;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    hapusRowPhoto(idx, field) {
+        field = field || "photo";
+        const row = this.state.popup.rows[idx];
+        row[field] = "";
+        row[field + "_ada"] = false;
+        row[field + "_ubah"] = true;
+    }
+
+    tambahBaris() {
+        this.state.popup.rows.push(this.barisBaru());
+    }
+
+    hapusBaris(idx) {
         this.state.popup.rows.splice(idx, 1);
     }
 
     async simpanPopup() {
-        // Hanya menyimpan baris Data Matras (Status/Details/Notes via Edit Status).
+        // Hanya menyimpan baris tabel (Status/Details/Notes via Edit Status).
         const p = this.state.popup;
         p.proses = true;
         try {
@@ -245,17 +315,19 @@ class NpiApp extends Component {
             this._snapMatras = JSON.stringify(p.rows);
             await this.muatSub(p.productId);
             this.state.popup.buka = false;   // tutup popup setelah tersimpan
-            this.notification.add("Data Matras tersimpan.", { type: "success" });
+            this.notification.add("Tabel " + (p.name || "") + " tersimpan.", { type: "success" });
         } catch (e) {
             this.notification.add(this._pesanError(e), { type: "danger" });
         }
         p.proses = false;
     }
 
-    // ── Editor Description (textarea besar) ──
-    bukaDesc(idx) {
+    // ── Editor teks panjang (Description / Specification) ──
+    bukaDesc(idx, field, judul) {
+        field = field || "description";
         Object.assign(this.state.descEdit, {
-            buka: true, idx: idx, value: this.state.popup.rows[idx].description || "",
+            buka: true, idx: idx, field: field, judul: judul || "Description",
+            value: this.state.popup.rows[idx][field] || "",
         });
     }
 
@@ -265,7 +337,7 @@ class NpiApp extends Component {
 
     simpanDesc() {
         const d = this.state.descEdit;
-        this.state.popup.rows[d.idx].description = d.value;
+        this.state.popup.rows[d.idx][d.field] = d.value;
         d.buka = false;
     }
 

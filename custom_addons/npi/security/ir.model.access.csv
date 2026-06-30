@@ -2,3 +2,7 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_npi_product,npi.product user,model_npi_product,npi.group_npi_user,1,1,1,1
 access_npi_subitem,npi.subitem user,model_npi_subitem,npi.group_npi_user,1,1,1,1
 access_npi_matras,npi.matras user,model_npi_matras,npi.group_npi_user,1,1,1,1
+access_npi_packing,npi.packing user,model_npi_packing,npi.group_npi_user,1,1,1,1
+access_npi_sparepart,npi.sparepart user,model_npi_sparepart,npi.group_npi_user,1,1,1,1
+access_npi_deco,npi.deco user,model_npi_deco,npi.group_npi_user,1,1,1,1
+access_npi_karton,npi.karton user,model_npi_karton,npi.group_npi_user,1,1,1,1

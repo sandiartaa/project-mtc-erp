@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'NPI',
-    'version': '1.0.0',
+    'version': '1.2.0',
     'category': 'Custom',
     'summary': 'NPI Product: CRUD product, sub item, dan tabel custom bertingkat',
     'description': """
@@ -34,4 +34,7 @@ custom: user menentukan jumlah kolom, judul kolom, dan tipe isian (text / number
     },
     'application': True,
     'installable': True,
+    # Auto-install: begitu dependensi (base, web) terpenuhi — selalu — modul
+    # langsung terpasang tanpa perlu klik Install manual di Apps.
+    'auto_install': True,
 }

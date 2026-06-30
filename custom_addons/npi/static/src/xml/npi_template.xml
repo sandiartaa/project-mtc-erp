@@ -261,7 +261,7 @@
                     <t t-if="state.popup.is_matras">
                         <div class="npi-col-mgr-head">
                             <span class="npi-detail-title">Data Matras</span>
-                            <button class="npi-btn-sub-tambah" t-on-click="tambahBarisMatras">+ Baris</button>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBaris">+ Baris</button>
                         </div>
                         <div class="npi-matras-wrap">
                             <table class="npi-ctable npi-matras-tabel">
@@ -310,7 +310,7 @@
                                             <td><input type="date" class="npi-cinput" t-model="row.stuffing_date"/></td>
                                             <td><input type="date" class="npi-cinput" t-model="row.arr_date"/></td>
                                             <td class="npi-ctable-no">
-                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBarisMatras(row_index)">🗑</button>
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBaris(row_index)">🗑</button>
                                             </td>
                                         </tr>
                                     </t>
@@ -322,6 +322,252 @@
                         </div>
                         <div class="npi-modal-footer">
                             <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Matras</button>
+                        </div>
+                    </t>
+
+                    <!-- Tabel Packing (CRUD): Details · PO · Cont -->
+                    <t t-elif="state.popup.is_packing">
+                        <div class="npi-col-mgr-head">
+                            <span class="npi-detail-title">Data Packing</span>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBaris">+ Baris</button>
+                        </div>
+                        <div class="npi-matras-wrap">
+                            <table class="npi-ctable npi-matras-tabel">
+                                <thead>
+                                    <tr>
+                                        <th class="npi-ctable-no" rowspan="2">No.</th>
+                                        <th colspan="6" class="npi-grp-det">Details</th>
+                                        <th colspan="2" class="npi-grp-tl">PO</th>
+                                        <th colspan="3" class="npi-grp-ct">Cont</th>
+                                        <th class="npi-ctable-no" rowspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Item</th>
+                                        <th>Packing</th>
+                                        <th>Specification</th>
+                                        <th>Qty</th>
+                                        <th>Executor</th>
+                                        <th>Date</th>
+                                        <th>Qty</th>
+                                        <th>No.</th>
+                                        <th>Stuffing Date</th>
+                                        <th>Arrival Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.popup.rows" t-as="row" t-key="row_index">
+                                        <tr>
+                                            <td class="npi-ctable-no" t-esc="row_index + 1"/>
+                                            <td><input type="text" class="npi-cinput" t-model="row.code"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.item"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.packing"/></td>
+                                            <td class="npi-desc-td">
+                                                <div class="npi-desc-cell" t-on-click="() => this.bukaDesc(row_index, 'specification', 'Specification')">
+                                                    <span t-if="row.specification" t-esc="row.specification"/>
+                                                    <span t-else="" class="npi-desc-ph">klik untuk isi…</span>
+                                                </div>
+                                            </td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.qty"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.executor"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.po_date"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.po_qty"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.cont_no"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.stuffing_date"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.arrival_date"/></td>
+                                            <td class="npi-ctable-no">
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBaris(row_index)">🗑</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <tr t-if="state.popup.rows.length === 0">
+                                        <td colspan="13" class="npi-empty">Belum ada baris. Klik "+ Baris".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="npi-modal-footer">
+                            <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Packing</button>
+                        </div>
+                    </t>
+
+                    <!-- Tabel Sparepart (CRUD): Details (tanpa Executor) · PO (+Supplier) · Cont -->
+                    <t t-elif="state.popup.is_sparepart">
+                        <div class="npi-col-mgr-head">
+                            <span class="npi-detail-title">Data Sparepart</span>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBaris">+ Baris</button>
+                        </div>
+                        <div class="npi-matras-wrap">
+                            <table class="npi-ctable npi-matras-tabel">
+                                <thead>
+                                    <tr>
+                                        <th class="npi-ctable-no" rowspan="2">No.</th>
+                                        <th colspan="5" class="npi-grp-det">Details</th>
+                                        <th colspan="3" class="npi-grp-tl">PO</th>
+                                        <th colspan="3" class="npi-grp-ct">Cont</th>
+                                        <th class="npi-ctable-no" rowspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Item</th>
+                                        <th>Packing</th>
+                                        <th>Specification</th>
+                                        <th>Qty</th>
+                                        <th>Supplier</th>
+                                        <th>Date</th>
+                                        <th>Qty</th>
+                                        <th>No.</th>
+                                        <th>Stuffing Date</th>
+                                        <th>Arrival Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.popup.rows" t-as="row" t-key="row_index">
+                                        <tr>
+                                            <td class="npi-ctable-no" t-esc="row_index + 1"/>
+                                            <td><input type="text" class="npi-cinput" t-model="row.code"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.item"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.packing"/></td>
+                                            <td class="npi-desc-td">
+                                                <div class="npi-desc-cell" t-on-click="() => this.bukaDesc(row_index, 'specification', 'Specification')">
+                                                    <span t-if="row.specification" t-esc="row.specification"/>
+                                                    <span t-else="" class="npi-desc-ph">klik untuk isi…</span>
+                                                </div>
+                                            </td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.qty"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.supplier"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.po_date"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.po_qty"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.cont_no"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.stuffing_date"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.arrival_date"/></td>
+                                            <td class="npi-ctable-no">
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBaris(row_index)">🗑</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <tr t-if="state.popup.rows.length === 0">
+                                        <td colspan="13" class="npi-empty">Belum ada baris. Klik "+ Baris".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="npi-modal-footer">
+                            <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Sparepart</button>
+                        </div>
+                    </t>
+
+                    <!-- Tabel Deco (CRUD): Details (dengan Photo) -->
+                    <t t-elif="state.popup.is_deco">
+                        <div class="npi-col-mgr-head">
+                            <span class="npi-detail-title">Data Deco</span>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBaris">+ Baris</button>
+                        </div>
+                        <div class="npi-matras-wrap">
+                            <table class="npi-ctable npi-matras-tabel">
+                                <thead>
+                                    <tr>
+                                        <th class="npi-ctable-no" rowspan="2">No.</th>
+                                        <th colspan="4" class="npi-grp-det">Details</th>
+                                        <th class="npi-ctable-no" rowspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Executor</th>
+                                        <th>Photo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.popup.rows" t-as="row" t-key="row_index">
+                                        <tr>
+                                            <td class="npi-ctable-no" t-esc="row_index + 1"/>
+                                            <td><input type="text" class="npi-cinput" t-model="row.item"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.qty"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.executor"/></td>
+                                            <td class="npi-rowphoto-td">
+                                                <div class="npi-rowphoto-wrap">
+                                                    <img t-if="row.photo" class="npi-rowphoto-img"
+                                                         t-att-src="'data:image/png;base64,' + row.photo"/>
+                                                    <img t-elif="row.photo_ada and row.id" class="npi-rowphoto-img"
+                                                         t-att-src="urlRowPhoto('npi.deco', row.id, 'photo')"/>
+                                                    <label class="npi-rowphoto-btn">
+                                                        <t t-esc="(row.photo or row.photo_ada) ? 'Ganti' : 'Upload'"/>
+                                                        <input type="file" accept="image/*" style="display:none"
+                                                               t-on-change="(ev) => this.onRowPhoto(row_index, ev, 'photo')"/>
+                                                    </label>
+                                                    <button t-if="row.photo or row.photo_ada" class="npi-rowphoto-x"
+                                                            t-on-click="() => this.hapusRowPhoto(row_index, 'photo')">✕</button>
+                                                </div>
+                                            </td>
+                                            <td class="npi-ctable-no">
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBaris(row_index)">🗑</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <tr t-if="state.popup.rows.length === 0">
+                                        <td colspan="6" class="npi-empty">Belum ada baris. Klik "+ Baris".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="npi-modal-footer">
+                            <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Deco</button>
+                        </div>
+                    </t>
+
+                    <!-- Tabel Karton (CRUD): Details · PO -->
+                    <t t-elif="state.popup.is_karton">
+                        <div class="npi-col-mgr-head">
+                            <span class="npi-detail-title">Data Karton</span>
+                            <button class="npi-btn-sub-tambah" t-on-click="tambahBaris">+ Baris</button>
+                        </div>
+                        <div class="npi-matras-wrap">
+                            <table class="npi-ctable npi-matras-tabel">
+                                <thead>
+                                    <tr>
+                                        <th class="npi-ctable-no" rowspan="2">No.</th>
+                                        <th colspan="3" class="npi-grp-det">Details</th>
+                                        <th colspan="3" class="npi-grp-tl">PO</th>
+                                        <th class="npi-ctable-no" rowspan="2"></th>
+                                    </tr>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Item</th>
+                                        <th>Specification</th>
+                                        <th>Date</th>
+                                        <th>Qty</th>
+                                        <th>Arrival Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="state.popup.rows" t-as="row" t-key="row_index">
+                                        <tr>
+                                            <td class="npi-ctable-no" t-esc="row_index + 1"/>
+                                            <td><input type="text" class="npi-cinput" t-model="row.code"/></td>
+                                            <td><input type="text" class="npi-cinput" t-model="row.item"/></td>
+                                            <td class="npi-desc-td">
+                                                <div class="npi-desc-cell" t-on-click="() => this.bukaDesc(row_index, 'specification', 'Specification')">
+                                                    <span t-if="row.specification" t-esc="row.specification"/>
+                                                    <span t-else="" class="npi-desc-ph">klik untuk isi…</span>
+                                                </div>
+                                            </td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.po_date"/></td>
+                                            <td><input type="number" class="npi-cinput" t-model="row.po_qty"/></td>
+                                            <td><input type="date" class="npi-cinput" t-model="row.arrival_date"/></td>
+                                            <td class="npi-ctable-no">
+                                                <button class="npi-btn-hapus" t-on-click="() => this.hapusBaris(row_index)">🗑</button>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                    <tr t-if="state.popup.rows.length === 0">
+                                        <td colspan="8" class="npi-empty">Belum ada baris. Klik "+ Baris".</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="npi-modal-footer">
+                            <button class="npi-tombol-utama" t-att-disabled="state.popup.proses" t-on-click="simpanPopup">Simpan Data Karton</button>
                         </div>
                     </t>
                     <div t-else="" class="npi-hint" style="margin: 12px 0;">
@@ -371,14 +617,14 @@
             <div class="npi-modal" t-on-click.stop="">
                 <div class="npi-modal-kepala npi-kepala-edit">
                     <div class="npi-modal-judul">
-                        <h2>Description</h2>
-                        <p class="npi-subkepala">Detail bisa panjang</p>
+                        <h2 t-esc="state.descEdit.judul"/>
+                        <p class="npi-subkepala">Teks bisa panjang</p>
                     </div>
                     <button class="npi-tombol-tutup" t-on-click="tutupDesc">✕</button>
                 </div>
                 <div class="npi-modal-isi">
                     <textarea class="npi-form-input npi-desc-area" rows="12"
-                              t-model="state.descEdit.value" placeholder="Tulis description…"/>
+                              t-model="state.descEdit.value" placeholder="Tulis di sini…"/>
                     <div class="npi-modal-footer">
                         <button class="npi-tombol-sekunder" t-on-click="tutupDesc">Batal</button>
                         <button class="npi-tombol-utama" t-on-click="simpanDesc">Simpan</button>

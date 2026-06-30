@@ -19,6 +19,8 @@ MODUL_AKSES = [
     ('custom_work_orders.group_wo_type_utility', 'WO Tab: Utility'),
     # Work Order Mold — hanya 1 akses (berbagi data dengan Work Orders, tab Mold).
     ('custom_work_orders_mold.group_work_orders_mold', 'Work Order Mold'),
+    # NPI — satu akses untuk modul NPI.
+    ('npi.group_npi_user', 'NPI'),
 ]
 
 

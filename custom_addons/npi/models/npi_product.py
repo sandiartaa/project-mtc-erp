@@ -160,8 +160,21 @@ class NpiSubitem(models.Model):
     # Metadata tabel popup tiap sub item (untuk semua jenis sub item)
     table_name = fields.Char('Table Name')
     table_code = fields.Char('Code')
-    # Baris tabel khusus sub item Matras (CRUD)
+    # Baris tabel per jenis sub item (CRUD)
     matras_ids = fields.One2many('npi.matras', 'subitem_id', 'Matras Rows')
+    packing_ids = fields.One2many('npi.packing', 'subitem_id', 'Packing Rows')
+    sparepart_ids = fields.One2many('npi.sparepart', 'subitem_id', 'Sparepart Rows')
+    deco_ids = fields.One2many('npi.deco', 'subitem_id', 'Deco Rows')
+    karton_ids = fields.One2many('npi.karton', 'subitem_id', 'Karton Rows')
+
+    # Sub item yang punya tabel baris sendiri + model barisnya
+    _JENIS_TABEL = {
+        'Matras': 'npi.matras',
+        'Packing': 'npi.packing',
+        'Sparepart': 'npi.sparepart',
+        'Deco': 'npi.deco',
+        'Karton': 'npi.karton',
+    }
 
     # ====================================================================
     # API untuk OWL app
@@ -190,31 +203,119 @@ class NpiSubitem(models.Model):
     def npi_sub_buka(self, rec_id):
         """Data lengkap untuk popup tabel sebuah sub item."""
         r = self.browse(int(rec_id))
-        is_matras = (r.name or '') == 'Matras'
+        nm = r.name or ''
+        model = self._JENIS_TABEL.get(nm)
+        rows = self.env[model]._daftar_baris(r.id) if model else []
         return {
             'id': r.id,
-            'name': r.name or '',
+            'name': nm,
             'status': r.status or 'ongoing',
             'details': r.details or '',
             'notes': r.notes or '',
             'table_name': r.table_name or '',
             'table_code': r.table_code or '',
-            'is_matras': is_matras,
-            'rows': self.env['npi.matras'].npi_matras_daftar(r.id) if is_matras else [],
+            'jenis': nm if model else '',
+            'is_matras': nm == 'Matras',
+            'is_packing': nm == 'Packing',
+            'is_sparepart': nm == 'Sparepart',
+            'is_deco': nm == 'Deco',
+            'is_karton': nm == 'Karton',
+            'rows': rows,
         }
 
     @api.model
     def npi_sub_simpan_popup(self, rec_id, vals, rows=None):
         """Simpan metadata sub item (status/details/notes/table_name/code).
-        Bila sub item Matras, sekaligus simpan baris tabelnya.
+        Bila sub item punya tabel baris (Matras/Packing/Sparepart), sekaligus
+        simpan baris tabelnya.
         """
         r = self.browse(int(rec_id))
         izin = {'status', 'details', 'notes', 'table_name', 'table_code'}
         data = {k: v for k, v in (vals or {}).items() if k in izin}
         r.write(data)
-        if rows is not None and (r.name or '') == 'Matras':
-            self.env['npi.matras'].npi_matras_simpan_semua(r.id, rows)
+        model = self._JENIS_TABEL.get(r.name or '')
+        if rows is not None and model:
+            self.env[model]._simpan_baris(r.id, rows)
         return self.npi_sub_buka(r.id)
+
+
+class NpiRowBase(models.AbstractModel):
+    """Basis abstrak untuk semua tabel baris sub item (Matras/Packing/Sparepart).
+
+    Model turunan cukup mendefinisikan field + dua tuple `_F_CHAR` (kolom teks)
+    dan `_F_DATE` (kolom tanggal). Semua logika baca/simpan/sinkron baris dipakai
+    bersama dari sini.
+    """
+    _name = 'npi.row.base'
+    _description = 'NPI Row Base (abstrak)'
+    _order = 'sequence, id'
+
+    subitem_id = fields.Many2one(
+        'npi.subitem', 'Sub Item', required=True, ondelete='cascade', index=True
+    )
+    sequence = fields.Integer('Urutan', default=10)
+
+    # Diisi oleh model turunan
+    _F_CHAR = ()
+    _F_DATE = ()
+    _F_BIN = ()   # kolom gambar (Binary) — dikirim sebagai flag _ada, bukan datanya
+
+    def _ke_dict(self):
+        self.ensure_one()
+        row = {'id': self.id}
+        for f in self._F_CHAR:
+            row[f] = self[f] or ''
+        for f in self._F_DATE:
+            row[f] = self[f].isoformat() if self[f] else ''
+        for f in self._F_BIN:
+            # Jangan kirim base64 besar; cukup flag "ada gambar".
+            # Gambar ditampilkan via /web/image. Kolom data dikosongkan,
+            # flag _ubah=False supaya save tidak menimpa gambar lama.
+            row[f] = ''
+            row[f + '_ada'] = bool(self[f])
+            row[f + '_ubah'] = False
+        return row
+
+    @api.model
+    def _daftar_baris(self, subitem_id):
+        recs = self.search([('subitem_id', '=', int(subitem_id))])
+        return [r._ke_dict() for r in recs]
+
+    def _bersih_vals(self, r):
+        vals = {}
+        for f in self._F_CHAR:
+            v = r.get(f)
+            vals[f] = '' if v in (None, False) else str(v)  # number → str (kolom Char/Text)
+        for f in self._F_DATE:
+            vals[f] = r.get(f) or False  # '' → False agar Date valid
+        for f in self._F_BIN:
+            # Hanya tulis gambar bila benar-benar diubah user (upload/hapus).
+            if r.get(f + '_ubah'):
+                vals[f] = r.get(f) or False
+        return vals
+
+    @api.model
+    def _simpan_baris(self, subitem_id, rows):
+        """Sinkron baris: update yang ada, buat baru, hapus yang dibuang."""
+        sub_id = int(subitem_id)
+        ada = self.search([('subitem_id', '=', sub_id)])
+        simpan_ids = set()
+        seq = 10
+        for r in (rows or []):
+            vals = self._bersih_vals(r)
+            vals['sequence'] = seq
+            rid = r.get('id')
+            if rid:
+                self.browse(int(rid)).write(vals)
+                simpan_ids.add(int(rid))
+            else:
+                vals['subitem_id'] = sub_id
+                simpan_ids.add(self.create(vals).id)
+            seq += 10
+        buang = ada - self.browse(list(simpan_ids))
+        if buang:
+            buang.unlink()
+        return self._daftar_baris(sub_id)
 
 
 class NpiMatras(models.Model):
@@ -224,13 +325,8 @@ class NpiMatras(models.Model):
     - Container : Number, Stuffing Date, ARR Date
     """
     _name = 'npi.matras'
+    _inherit = 'npi.row.base'
     _description = 'NPI Matras Row'
-    _order = 'sequence, id'
-
-    subitem_id = fields.Many2one(
-        'npi.subitem', 'Sub Item', required=True, ondelete='cascade', index=True
-    )
-    sequence = fields.Integer('Urutan', default=10)
 
     # Details
     mold_code = fields.Char('Mold Code')
@@ -251,47 +347,102 @@ class NpiMatras(models.Model):
     _F_CHAR = ('mold_code', 'description', 'spec', 'maker', 'material', 'qty', 'number')
     _F_DATE = ('req_date', 'prod_date', 'finished_date', 'stuffing_date', 'arr_date')
 
-    @api.model
-    def npi_matras_daftar(self, subitem_id):
-        recs = self.search([('subitem_id', '=', int(subitem_id))])
-        hasil = []
-        for r in recs:
-            row = {'id': r.id}
-            for f in self._F_CHAR:
-                row[f] = r[f] or ''
-            for f in self._F_DATE:
-                row[f] = r[f].isoformat() if r[f] else ''
-            hasil.append(row)
-        return hasil
 
-    def _bersih_vals(self, r):
-        vals = {}
-        for f in self._F_CHAR:
-            v = r.get(f)
-            vals[f] = '' if v in (None, False) else str(v)  # number → str (kolom Char/Text)
-        for f in self._F_DATE:
-            vals[f] = r.get(f) or False  # '' → False agar Date valid
-        return vals
+class NpiPacking(models.Model):
+    """Baris tabel sub item Packing (CRUD), 3 kelompok kolom:
+    - Details : Code, Item, Packing, Specification, Qty, Executor
+    - PO      : Date, Qty
+    - Cont    : No., Stuffing Date, Arrival Date
+    """
+    _name = 'npi.packing'
+    _inherit = 'npi.row.base'
+    _description = 'NPI Packing Row'
 
-    @api.model
-    def npi_matras_simpan_semua(self, subitem_id, rows):
-        """Sinkron baris Matras: update yang ada, buat baru, hapus yang dibuang."""
-        sub_id = int(subitem_id)
-        ada = self.search([('subitem_id', '=', sub_id)])
-        simpan_ids = set()
-        seq = 10
-        for r in (rows or []):
-            vals = self._bersih_vals(r)
-            vals['sequence'] = seq
-            rid = r.get('id')
-            if rid:
-                self.browse(int(rid)).write(vals)
-                simpan_ids.add(int(rid))
-            else:
-                vals['subitem_id'] = sub_id
-                simpan_ids.add(self.create(vals).id)
-            seq += 10
-        buang = ada - self.browse(list(simpan_ids))
-        if buang:
-            buang.unlink()
-        return self.npi_matras_daftar(sub_id)
+    # Details
+    code = fields.Char('Code')
+    item = fields.Char('Item')
+    packing = fields.Char('Packing')
+    specification = fields.Text('Specification')  # bisa panjang → editor textarea
+    qty = fields.Char('Qty')
+    executor = fields.Char('Executor')
+    # PO
+    po_date = fields.Date('PO Date')
+    po_qty = fields.Char('PO Qty')
+    # Cont
+    cont_no = fields.Char('No.')
+    stuffing_date = fields.Date('Stuffing Date')
+    arrival_date = fields.Date('Arrival Date')
+
+    _F_CHAR = ('code', 'item', 'packing', 'specification', 'qty', 'executor', 'po_qty', 'cont_no')
+    _F_DATE = ('po_date', 'stuffing_date', 'arrival_date')
+
+
+class NpiSparepart(models.Model):
+    """Baris tabel sub item Sparepart (CRUD), 3 kelompok kolom — mirip Packing,
+    bedanya: Details TANPA Executor, dan PO ada Supplier sebelum Date.
+    - Details : Code, Item, Packing, Specification, Qty
+    - PO      : Supplier, Date, Qty
+    - Cont    : No., Stuffing Date, Arrival Date
+    """
+    _name = 'npi.sparepart'
+    _inherit = 'npi.row.base'
+    _description = 'NPI Sparepart Row'
+
+    # Details
+    code = fields.Char('Code')
+    item = fields.Char('Item')
+    packing = fields.Char('Packing')
+    specification = fields.Text('Specification')  # bisa panjang → editor textarea
+    qty = fields.Char('Qty')
+    # PO
+    supplier = fields.Char('Supplier')
+    po_date = fields.Date('PO Date')
+    po_qty = fields.Char('PO Qty')
+    # Cont
+    cont_no = fields.Char('No.')
+    stuffing_date = fields.Date('Stuffing Date')
+    arrival_date = fields.Date('Arrival Date')
+
+    _F_CHAR = ('code', 'item', 'packing', 'specification', 'qty', 'supplier', 'po_qty', 'cont_no')
+    _F_DATE = ('po_date', 'stuffing_date', 'arrival_date')
+
+
+class NpiDeco(models.Model):
+    """Baris tabel sub item Deco (CRUD), 1 kelompok kolom:
+    - Details : Item, Qty, Executor, Photo
+    """
+    _name = 'npi.deco'
+    _inherit = 'npi.row.base'
+    _description = 'NPI Deco Row'
+
+    # Details
+    item = fields.Char('Item')
+    qty = fields.Char('Qty')
+    executor = fields.Char('Executor')
+    photo = fields.Binary('Photo', attachment=True)
+
+    _F_CHAR = ('item', 'qty', 'executor')
+    _F_DATE = ()
+    _F_BIN = ('photo',)
+
+
+class NpiKarton(models.Model):
+    """Baris tabel sub item Karton (CRUD), 2 kelompok kolom:
+    - Details : Code, Item, Specification
+    - PO      : Date, Qty, Arrival Date
+    """
+    _name = 'npi.karton'
+    _inherit = 'npi.row.base'
+    _description = 'NPI Karton Row'
+
+    # Details
+    code = fields.Char('Code')
+    item = fields.Char('Item')
+    specification = fields.Text('Specification')  # bisa panjang → editor textarea
+    # PO
+    po_date = fields.Date('PO Date')
+    po_qty = fields.Char('PO Qty')
+    arrival_date = fields.Date('Arrival Date')
+
+    _F_CHAR = ('code', 'item', 'specification', 'po_qty')
+    _F_DATE = ('po_date', 'arrival_date')
