@@ -39,6 +39,7 @@ class WoApp extends Component {
             adalahDesigner: false,  // true = grup Designer (boleh Ready for Approval)
             bolehFilterDesigner: false, // true = Full / Read-only (filter per designer)
             divisiUser: "",         // divisi user (dari master) — mis. 'design'
+            gifPos: { set: false, left: 0, top: 0 }, // posisi GIF floating (bila digeser)
             cari: "",
             filterStatus: "",
             filterDesigner: "",     // key 'u:<id>' / 'c:<nama>' untuk filter designer
@@ -296,6 +297,39 @@ class WoApp extends Component {
     labelTab(value) {
         const t = this.state.tabTersedia.find((x) => x.value === value);
         return t ? t.label : value;
+    }
+
+    // Geser GIF floating (Divisi DESIGN): drag via handle, kiri↔kanan/atas↔bawah.
+    mulaiGeserGif(ev) {
+        ev.preventDefault();
+        const box = ev.currentTarget.closest(".cwo-gif-float");
+        if (!box) return;
+        const rect = box.getBoundingClientRect();
+        const dx = ev.clientX - rect.left;
+        const dy = ev.clientY - rect.top;
+        // mulai dari posisi sekarang supaya tidak meloncat
+        this.state.gifPos.set = true;
+        this.state.gifPos.left = rect.left;
+        this.state.gifPos.top = rect.top;
+        const onMove = (e) => {
+            const w = box.offsetWidth;
+            const h = box.offsetHeight;
+            this.state.gifPos.left = Math.max(0, Math.min(e.clientX - dx, window.innerWidth - w));
+            this.state.gifPos.top = Math.max(0, Math.min(e.clientY - dy, window.innerHeight - h));
+        };
+        const onUp = () => {
+            document.removeEventListener("pointermove", onMove);
+            document.removeEventListener("pointerup", onUp);
+        };
+        document.addEventListener("pointermove", onMove);
+        document.addEventListener("pointerup", onUp);
+    }
+
+    // Style inline posisi GIF floating (bila sudah pernah digeser).
+    get gayaGif() {
+        const g = this.state.gifPos;
+        if (!g.set) return "";
+        return `left:${g.left}px; top:${g.top}px; right:auto; bottom:auto;`;
     }
 
     async muatHakAkses() {
