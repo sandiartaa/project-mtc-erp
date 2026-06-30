@@ -1477,6 +1477,8 @@
                                 t-on-click="() => this.setFilterStatus('')">All</button>
                             <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'ongoing' ? 'cwo-fs-aktif' : ''}"
                                 t-on-click="() => this.setFilterStatus('ongoing')">Ongoing</button>
+                            <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'hold' ? 'cwo-fs-aktif' : ''}"
+                                t-on-click="() => this.setFilterStatus('hold')">Hold</button>
                             <button t-attf-class="cwo-fs-btn #{state.filterStatus === 'finished' ? 'cwo-fs-aktif' : ''}"
                                 t-on-click="() => this.setFilterStatus('finished')">Finished</button>
                         </div>

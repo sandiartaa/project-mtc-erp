@@ -91,7 +91,7 @@ class WoWorkOrder(models.Model):
 
     # ── Status keseluruhan + filter ──
     status = fields.Selection(
-        [('ongoing', 'Ongoing'), ('finished', 'Finished')],
+        [('ongoing', 'Ongoing'), ('hold', 'Hold'), ('finished', 'Finished')],
         string='Status', default='ongoing', index=True
     )
 
@@ -615,6 +615,7 @@ class WoWorkOrder(models.Model):
                  for u in self.users_incharge()}
         stat_map = {
             'ongoing': 'ongoing', 'berjalan': 'ongoing', 'jalan': 'ongoing', 'proses': 'ongoing',
+            'hold': 'hold', 'tahan': 'hold', 'tunda': 'hold', 'pending': 'hold',
             'finished': 'finished', 'selesai': 'finished', 'done': 'finished',
         }
         lr_map = {

@@ -134,6 +134,7 @@
 /* Badge status */
 .cwo-badge-st { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
 .cwo-st-ongoing { background: #fef3c7; color: #b45309; }
+.cwo-st-hold { background: #e5e7eb; color: #4b5563; }
 .cwo-st-finished { background: #dcfce7; color: #15803d; }
 
 /* ---- Alur APPROVAL ---- */

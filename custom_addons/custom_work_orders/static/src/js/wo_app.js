@@ -25,6 +25,7 @@ class WoApp extends Component {
 
         this.statusPilihan = [
             { value: "ongoing", label: "Ongoing" },
+            { value: "hold", label: "Hold" },
             { value: "finished", label: "Finished" },
         ];
         this.lokalRrcPilihan = [
@@ -454,7 +455,7 @@ class WoApp extends Component {
         return f ? f.label : "—";
     }
     kelasStatus(v) {
-        return { ongoing: "cwo-st-ongoing", finished: "cwo-st-finished" }[v] || "";
+        return { ongoing: "cwo-st-ongoing", hold: "cwo-st-hold", finished: "cwo-st-finished" }[v] || "";
     }
     labelLokalRrc(v) {
         const f = this.lokalRrcPilihan.find((x) => x.value === v);
