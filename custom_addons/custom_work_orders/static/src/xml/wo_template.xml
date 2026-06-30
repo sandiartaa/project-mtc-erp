@@ -77,16 +77,15 @@
             </span>
         </div>
 
-        <!-- GIF floating (Divisi DESIGN, tab Design): default pojok kiri bawah, bisa digeser -->
+        <!-- GIF floating (Divisi DESIGN, tab Design): tanpa kotak, default pojok kiri bawah, bisa digeser -->
         <div t-if="state.divisiUser === 'design' and state.tabAktif === 'design'"
              class="cwo-gif-float" t-att-style="gayaGif">
-            <div class="cwo-gif-handle" t-on-pointerdown="mulaiGeserGif" title="Geser kiri/kanan">
-                <i class="fa fa-arrows"/>
-            </div>
             <iframe class="cwo-gif-frame"
                     src="https://tenor.com/embed/10827715909119384800"
                     title="Usagi Chiikawa" frameborder="0" scrolling="no"
                     allowfullscreen="allowfullscreen"/>
+            <!-- lapisan transparan untuk menyeret (GIF tetap terlihat polos) -->
+            <div class="cwo-gif-drag" t-on-pointerdown="mulaiGeserGif" title="Geser kiri/kanan"/>
         </div>
 
         <!-- LOADING -->
