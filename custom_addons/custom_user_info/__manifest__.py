@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Custom User Info',
-    'version': '1.0',
+    'version': '1.1',
     'summary': 'Data tambahan user (kode, divisi, subdivisi) tanpa mengubah res.users',
     'description': """
 Menyimpan data tambahan untuk tiap user — kode (KR0001, ...), divisi, subdivisi —

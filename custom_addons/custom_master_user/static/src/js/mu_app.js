@@ -23,6 +23,7 @@ class MuApp extends Component {
             { value: "borongan_luar", label: "BORONGAN LUAR" },
             { value: "helper", label: "HELPER" },
             { value: "stock_keeper", label: "STOCK KEEPER" },
+            { value: "design", label: "DESIGN" },
         ];
         this.subdivisiPilihan = [
             { value: "borongan_dalam", label: "Borongan Dalam" },

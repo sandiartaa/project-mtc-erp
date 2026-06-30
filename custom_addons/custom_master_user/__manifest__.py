@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Master User',
-    'version': '1.4',
+    'version': '1.5',
     'summary': 'Kelola data master user (nama, kode, divisi, subdivisi) + riwayat, khusus Administrator',
     'description': """
 Master User

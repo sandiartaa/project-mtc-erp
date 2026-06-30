@@ -75,6 +75,12 @@
             <span class="cwo-tab-total" t-if="!state.memuat">
                 Total WO: <b t-esc="state.list.length"/>
             </span>
+            <!-- GIF khusus: muncul di sebelah Total WO bila user Divisi DESIGN & tab Design aktif -->
+            <iframe t-if="state.divisiUser === 'design' and state.tabAktif === 'design'"
+                    class="cwo-design-gif"
+                    src="https://tenor.com/embed/10827715909119384800"
+                    title="Usagi Chiikawa" frameborder="0" scrolling="no"
+                    allowfullscreen="allowfullscreen"/>
         </div>
 
         <!-- LOADING -->

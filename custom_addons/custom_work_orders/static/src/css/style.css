@@ -697,6 +697,11 @@
     font-size: 13px; color: #6b7280; white-space: nowrap;
 }
 .cwo-tab-total b { color: #714B67; font-size: 14px; }
+/* GIF Divisi DESIGN di tab bar (sebelah Total WO) */
+.cwo-design-gif {
+    width: 120px; height: 130px; border: 0; border-radius: 10px;
+    align-self: center; margin-left: 4px; overflow: hidden;
+}
 
 /* Toggle Type di form (4 tombol, boleh wrap) */
 .cwo-type-toggle { display: flex; flex-wrap: wrap; gap: 6px; }

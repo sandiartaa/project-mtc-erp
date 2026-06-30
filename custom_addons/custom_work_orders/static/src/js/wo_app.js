@@ -38,6 +38,7 @@ class WoApp extends Component {
             bisaUbah: false,        // true = grup Full (boleh CRUD)
             adalahDesigner: false,  // true = grup Designer (boleh Ready for Approval)
             bolehFilterDesigner: false, // true = Full / Read-only (filter per designer)
+            divisiUser: "",         // divisi user (dari master) — mis. 'design'
             cari: "",
             filterStatus: "",
             filterDesigner: "",     // key 'u:<id>' / 'c:<nama>' untuk filter designer
@@ -304,11 +305,13 @@ class WoApp extends Component {
             this.state.adalahDesigner = !!p.designer;
             // Filter per designer hanya untuk Full & Read-only (Designer cuma lihat WO sendiri).
             this.state.bolehFilterDesigner = !!(p.full || p.readonly);
+            this.state.divisiUser = p.divisi || "";
         } catch (e) {
             console.error("Gagal cek hak akses:", e);
             this.state.bisaUbah = false;
             this.state.adalahDesigner = false;
             this.state.bolehFilterDesigner = false;
+            this.state.divisiUser = "";
         }
     }
 

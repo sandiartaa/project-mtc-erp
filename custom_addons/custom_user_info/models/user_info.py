@@ -28,6 +28,7 @@ class CuiUserInfo(models.Model):
             ('borongan_luar', 'BORONGAN LUAR'),
             ('helper', 'HELPER'),
             ('stock_keeper', 'STOCK KEEPER'),
+            ('design', 'DESIGN'),
         ],
         string='Divisi'
     )

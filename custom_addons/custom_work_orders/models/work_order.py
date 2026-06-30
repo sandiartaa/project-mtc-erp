@@ -293,12 +293,20 @@ class WoWorkOrder(models.Model):
     @api.model
     def peran_akses(self):
         """Peran user untuk modul ini: full / designer / readonly.
-        Dipakai frontend untuk menentukan tombol & filter yang tampil."""
+        Dipakai frontend untuk menentukan tombol & filter yang tampil.
+        Sertakan juga 'divisi' user (dari data master, bila modulnya ada)."""
         u = self.env.user
+        divisi = ''
+        # cui.user.info modul terpisah — baca aman (sudo) bila terpasang.
+        if 'cui.user.info' in self.env:
+            info = self.env['cui.user.info'].sudo().search(
+                [('user_id', '=', u.id)], limit=1)
+            divisi = info.divisi or ''
         return {
             'full': u.has_group('custom_work_orders.group_work_orders_user'),
             'designer': u.has_group('custom_work_orders.group_work_orders_designer'),
             'readonly': u.has_group('custom_work_orders.group_work_orders_readonly'),
+            'divisi': divisi,
         }
 
     # Urutan & label jenis Work Order (penentu tab).
