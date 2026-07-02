@@ -8,8 +8,8 @@ import { Component, onWillStart, useState, useEffect, useRef } from "@odoo/owl";
 // Pilihan periode — 7 hari terakhir jadi default karena paling sering dilihat
 const PERIODE = [
     { value: "week", label: "7 Hari Terakhir" },
-    { value: "month", label: "Bulan Ini" },
-    { value: "year", label: "Tahun Ini" },
+    { value: "month", label: "MTD (Month-to-Date)" },
+    { value: "year", label: "YTD (Year-to-Date)" },
     { value: "custom", label: "Pilih Tanggal" },
 ];
 
@@ -158,14 +158,17 @@ export class OeeGraphDashboard extends Component {
                         yAxisID: "y",
                     },
                     {
-                        label: "Down Time (Menit)",
-                        data: d.daily.map((r) => r.downtime),
+                        // Down Time dalam persen (menit downtime / total waktu tersedia)
+                        // supaya satu sumbu % dengan Efficiency & Effectiveness;
+                        // menitnya tetap ditampilkan di tooltip.
+                        label: "Down Time (%)",
+                        data: d.daily.map((r) => r.downtime_pct),
                         borderColor: "#dc2626",
                         backgroundColor: "#dc2626",
                         borderDash: [6, 4],
                         tension: 0.3,
                         pointRadius: 3,
-                        yAxisID: "y1",
+                        yAxisID: "y",
                     },
                 ],
             },
@@ -173,15 +176,22 @@ export class OeeGraphDashboard extends Component {
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: "index", intersect: false },
-                plugins: { legend: { position: "bottom" } },
+                plugins: {
+                    legend: { position: "bottom" },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                if (ctx.dataset.label.startsWith("Down Time")) {
+                                    const menit = d.daily[ctx.dataIndex].downtime;
+                                    return " Down Time: " + ctx.parsed.y + "% (" + menit + " menit)";
+                                }
+                                return " " + ctx.dataset.label + ": " + ctx.parsed.y;
+                            },
+                        },
+                    },
+                },
                 scales: {
                     y: { beginAtZero: true, title: { display: true, text: "%" } },
-                    y1: {
-                        beginAtZero: true,
-                        position: "right",
-                        grid: { drawOnChartArea: false },
-                        title: { display: true, text: "Menit" },
-                    },
                 },
             },
         });

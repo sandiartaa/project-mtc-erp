@@ -20,7 +20,7 @@ Sub item bersifat TETAP: tiap product otomatis punya 5 sub item — Matras, Pack
 Sparepart, Deco, Karton. Tidak bisa ditambah atau dihapus, hanya diisi.
 
 Tabel baris per sub item (klik baris sub item → popup tabel CRUD):
-- **Matras** — Details: Mold Code, Description, Spec, Maker, Material, Qty · Timeline: Req/Prod/Finished Date · Container: Number, Stuffing Date, ARR Date
+- **Matras** — Details: Mold Code, Description, Spec, Maker, Material, Qty · Timeline: Req/Prod/Finished Date · Container: Number, Stuffing Date, Arrival Date
 - **Packing** — Details: Code, Item, Packing, Specification, Qty, Executor · PO: Date, Qty · Cont: No., Stuffing Date, Arrival Date
 - **Sparepart** — Details: Code, Item, Packing, Specification, Qty (tanpa Executor) · PO: Supplier, Date, Qty · Cont: No., Stuffing Date, Arrival Date
 - **Deco** — Details: Item, Qty, Executor, Photo (upload gambar per baris)

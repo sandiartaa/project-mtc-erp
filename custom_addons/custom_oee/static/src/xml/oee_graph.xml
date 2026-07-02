@@ -65,8 +65,8 @@
                     <div class="oee_stat_label">OEE</div>
                 </div>
                 <div class="oee_stat_card">
-                    <div class="oee_stat_value oee_red"><t t-esc="state.data.summary.downtime"/></div>
-                    <div class="oee_stat_label">Total Down Time (Menit)</div>
+                    <div class="oee_stat_value oee_red"><t t-esc="state.data.summary.downtime_pct"/>%</div>
+                    <div class="oee_stat_label">Down Time — <t t-esc="state.data.summary.downtime"/> menit</div>
                 </div>
             </div>
 
@@ -123,7 +123,9 @@
                                 </div>
                                 <div class="oee_hari_card_baris">
                                     <span>Down Time</span>
-                                    <strong class="oee_nilai_merah"><t t-esc="row.downtime"/> menit</strong>
+                                    <strong class="oee_nilai_merah">
+                                        <t t-esc="row.downtime_pct"/>% (<t t-esc="row.downtime"/> menit)
+                                    </strong>
                                 </div>
                             </div>
                         </div>
@@ -138,6 +140,7 @@
                                     <th t-esc="state.data.mode === 'harian' ? 'Tanggal' : 'Bulan'"/>
                                     <th class="oee_num">Efficiency (%)</th>
                                     <th class="oee_num">Effectiveness (%)</th>
+                                    <th class="oee_num">Down Time (%)</th>
                                     <th class="oee_num">Down Time (Menit)</th>
                                 </tr>
                             </thead>
@@ -148,6 +151,7 @@
                                     <td t-esc="row.tanggal"/>
                                     <td class="oee_num" t-esc="row.efficiency"/>
                                     <td class="oee_num" t-esc="row.effectiveness"/>
+                                    <td class="oee_num" t-esc="row.downtime_pct"/>
                                     <td class="oee_num" t-esc="row.downtime"/>
                                 </tr>
                             </tbody>

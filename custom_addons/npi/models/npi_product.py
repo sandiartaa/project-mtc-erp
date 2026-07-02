@@ -322,7 +322,7 @@ class NpiMatras(models.Model):
     """Baris tabel sub item Matras (CRUD), 3 kelompok kolom:
     - Details   : Mold Code, Description, Spec, Maker, Material, Qty
     - Timeline  : Req Date, Prod Date, Finished Date
-    - Container : Number, Stuffing Date, ARR Date
+    - Container : Number, Stuffing Date, Arrival Date
     """
     _name = 'npi.matras'
     _inherit = 'npi.row.base'
@@ -342,7 +342,7 @@ class NpiMatras(models.Model):
     # Container
     number = fields.Char('Number')
     stuffing_date = fields.Date('Stuffing Date')
-    arr_date = fields.Date('ARR Date')
+    arr_date = fields.Date('Arrival Date')
 
     _F_CHAR = ('mold_code', 'description', 'spec', 'maker', 'material', 'qty', 'number')
     _F_DATE = ('req_date', 'prod_date', 'finished_date', 'stuffing_date', 'arr_date')

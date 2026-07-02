@@ -306,6 +306,9 @@ class OeeEntry(models.Model):
                 'tanggal': tanggal_str,
                 'label': label,
                 'downtime': round(d['dt'], 1),
+                # persen downtime = menit downtime / total waktu tersedia
+                # (komplemen dari Effectiveness: DT% = 100% - Effectiveness%)
+                'downtime_pct': pct(d['dt'], d['total']),
                 'efficiency': pct(d['target'], d['real']),
                 'effectiveness': pct(d['planned'], d['total']),
             })
@@ -337,6 +340,7 @@ class OeeEntry(models.Model):
                 'effectiveness': av,
                 'oee': round(eff * av * fg / 10000.0, 2),
                 'downtime': round(tot['dt'], 1),
+                'downtime_pct': pct(tot['dt'], tot['total']),
             },
             'daily': daily_rows,
             'pareto_machine': pareto(machine),
