@@ -32,6 +32,8 @@ export class OeeGraphDashboard extends Component {
             customStart: isoTanggal(mingguLalu),
             customEnd: isoTanggal(hariIni),
             data: null,
+            // kartu per hari yang sedang terbuka (tampilan HP kecil)
+            terbuka: {},
         });
         this.charts = {};
         this.refDowntime = useRef("chartDowntime");
@@ -65,7 +67,17 @@ export class OeeGraphDashboard extends Component {
             : [period];
         const data = await this.orm.call("oee.entry", "get_graph_data", args);
         this.state.data = data;
+        this.state.terbuka = {};
         this.state.loading = false;
+    }
+
+    // buka/tutup kartu satu hari (tampilan HP kecil)
+    toggleHari(key) {
+        if (this.state.terbuka[key]) {
+            delete this.state.terbuka[key];
+        } else {
+            this.state.terbuka[key] = true;
+        }
     }
 
     setPeriode(period) {

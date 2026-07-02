@@ -102,7 +102,34 @@
             <div class="oee_section">
                 <h4>Efficiency &amp; Effectiveness <t t-esc="state.data.mode === 'harian' ? 'per Hari' : 'per Bulan'"/></h4>
                 <div class="oee_row">
-                    <div class="oee_table_wrap">
+                    <!-- Tampilan HP kecil: kartu per hari, sentuh untuk buka/tutup -->
+                    <div class="oee_card_list oee_only_hp">
+                        <div t-foreach="state.data.daily" t-as="row" t-key="row.tanggal" class="oee_hari_card">
+                            <button class="oee_hari_card_head" t-on-click="() => this.toggleHari(row.tanggal)">
+                                <span class="oee_hari_card_no" t-esc="row_index + 1"/>
+                                <span class="oee_hari_card_judul"
+                                      t-esc="row.hari ? (row.hari + ', ' + row.tanggal) : row.tanggal"/>
+                                <span class="oee_hari_card_caret"
+                                      t-esc="state.terbuka[row.tanggal] ? '▲' : '▼'"/>
+                            </button>
+                            <div t-if="state.terbuka[row.tanggal]" class="oee_hari_card_isi">
+                                <div class="oee_hari_card_baris">
+                                    <span>Efficiency</span>
+                                    <strong class="oee_nilai_hijau"><t t-esc="row.efficiency"/>%</strong>
+                                </div>
+                                <div class="oee_hari_card_baris">
+                                    <span>Effectiveness</span>
+                                    <strong class="oee_nilai_biru"><t t-esc="row.effectiveness"/>%</strong>
+                                </div>
+                                <div class="oee_hari_card_baris">
+                                    <span>Down Time</span>
+                                    <strong class="oee_nilai_merah"><t t-esc="row.downtime"/> menit</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="oee_table_wrap oee_hide_hp">
                         <table class="oee_table">
                             <thead>
                                 <tr>

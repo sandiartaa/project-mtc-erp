@@ -332,6 +332,46 @@
 .oee_table tbody tr:hover { background: #ecfdf3; }
 .oee_num { text-align: right; }
 
+/* ---- KARTU PER HARI (Graph, hanya HP kecil < 576px) ----
+   Tablet/iPad (>= 576px) tetap memakai tabel seperti desktop. */
+.oee_only_hp { display: none; }
+
+.oee_card_list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.oee_hari_card {
+    border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden;
+    background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.oee_hari_card_head {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 14px 16px; border: none; background: #f0fdf4;
+    cursor: pointer; text-align: left;
+}
+.oee_hari_card_head:active { background: #dcfce7; }
+.oee_hari_card_no {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: #16a34a; color: #fff; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.oee_hari_card_judul { flex: 1; font-size: 16px; font-weight: 700; color: #14532d; }
+.oee_hari_card_caret { color: #16a34a; font-size: 14px; font-weight: 700; }
+.oee_hari_card_isi { padding: 6px 16px 12px; border-top: 2px solid #e2e8f0; }
+.oee_hari_card_baris {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 2px; font-size: 15px; color: #374151;
+    border-bottom: 1px dashed #f1f5f9;
+}
+.oee_hari_card_baris:last-child { border-bottom: none; }
+.oee_hari_card_baris strong { font-size: 17px; }
+.oee_nilai_hijau { color: #15803d; }
+.oee_nilai_biru { color: #2563eb; }
+.oee_nilai_merah { color: #dc2626; }
+
+@media (max-width: 575px) {
+    /* HP kecil: tabel Efficiency & Effectiveness diganti kartu per hari */
+    .oee_hide_hp { display: none; }
+    .oee_only_hp { display: flex; }
+}
+
 /* =============================================
    RESPONSIVE — HP / layar kecil
    ============================================= */
