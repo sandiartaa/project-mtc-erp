@@ -1,7 +1,7 @@
 /** @odoo-module **/
 // Aplikasi menu Input OEE — tabel data bulanan + form tambah/edit/hapus (CRUD)
 // + popup History (riwayat siapa & kapan mengubah data).
-import { Component, useState, onMounted } from "@odoo/owl";
+import { Component, useState, onMounted, useRef, useExternalListener } from "@odoo/owl";
 import { registry } from "@web/core/registry";
 import { useService } from "@web/core/utils/hooks";
 
@@ -60,6 +60,15 @@ export class OeeInputApp extends Component {
             riwayat: { buka: false, memuat: false, rows: [] },
         });
 
+        // tutup panel dropdown mold saat user klik di luar panel/kotaknya
+        this.moldDd = useRef("moldDd");
+        useExternalListener(document, "click", (ev) => {
+            if (this.state.form.moldBuka && this.moldDd.el &&
+                !this.moldDd.el.contains(ev.target)) {
+                this.state.form.moldBuka = false;
+            }
+        });
+
         onMounted(() => {
             this.muatData();
             this.muatMolds();
@@ -109,13 +118,15 @@ export class OeeInputApp extends Component {
         );
     }
 
-    // ================= DROPDOWN MOLD (cari + prev/next) =================
+    // ================= DROPDOWN MOLD (cari kode/nama + prev/next) =================
     get moldTersaring() {
         const q = (this.state.form.mold || "").trim().toLowerCase();
         if (!q) {
             return this.state.molds;
         }
-        return this.state.molds.filter((m) => m.toLowerCase().includes(q));
+        // cocokkan ke KODE maupun NAMA mold
+        return this.state.molds.filter(
+            (m) => (m.code + " " + m.name).toLowerCase().includes(q));
     }
 
     get moldTotalHal() {
@@ -137,8 +148,8 @@ export class OeeInputApp extends Component {
         this.state.form.moldHal = 0;
     }
 
-    pilihMold(nama) {
-        this.state.form.mold = nama;
+    pilihMold(m) {
+        this.state.form.mold = m.name;
         this.state.form.moldBuka = false;
     }
 

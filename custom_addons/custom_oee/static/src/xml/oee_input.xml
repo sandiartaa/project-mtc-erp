@@ -142,9 +142,9 @@
                             </div>
                             <div class="oee_form_grup">
                                 <label class="oee_form_label">Nama Matras / Mold <span class="oee_wajib">*</span></label>
-                                <div class="oee_dd_wrap">
+                                <div class="oee_dd_wrap" t-ref="moldDd">
                                     <input type="text" class="oee_form_input oee_dd_input"
-                                           placeholder="Ketik untuk mencari mold..."
+                                           placeholder="Cari kode atau nama mold..."
                                            t-model="state.form.mold"
                                            t-on-input="onMoldInput"
                                            t-on-focus="() => state.form.moldBuka = true"/>
@@ -154,9 +154,11 @@
                                         <div t-if="!moldTersaring.length" class="oee_dd_kosong">
                                             Tidak ada mold yang cocok — nama tetap bisa diketik manual.
                                         </div>
-                                        <button t-foreach="moldHalaman" t-as="m" t-key="m"
-                                                class="oee_dd_item" t-on-click="() => this.pilihMold(m)"
-                                                t-esc="m"/>
+                                        <button t-foreach="moldHalaman" t-as="m" t-key="m.code + '|' + m.name"
+                                                class="oee_dd_item" t-on-click="() => this.pilihMold(m)">
+                                            <span t-if="m.code" class="oee_dd_kode" t-esc="m.code"/>
+                                            <span t-esc="m.name"/>
+                                        </button>
                                         <div t-if="moldTersaring.length" class="oee_dd_footer">
                                             <button class="oee_dd_nav" t-att-disabled="state.form.moldHal &lt;= 0"
                                                     t-on-click="moldPrev">◀ Prev</button>

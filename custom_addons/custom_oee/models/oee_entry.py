@@ -297,20 +297,27 @@ class OeeEntry(models.Model):
 
     @api.model
     def oee_daftar_mold(self):
-        """Daftar nama mold untuk dropdown form Input.
+        """Daftar mold (code + name) untuk dropdown form Input — bisa dicari
+        berdasarkan kode maupun nama.
 
         Sumber utama: Master Mold milik modul Work Order Mold (wom.master).
         Jika modul itu tidak terpasang / masternya kosong, fallback ke nama
-        mold yang sudah pernah dipakai di data OEE.
+        mold yang sudah pernah dipakai di data OEE (tanpa kode).
         """
         if 'wom.master' in self.env:
-            names = self.env['wom.master'].sudo().search([]).mapped('name')
-            hasil = sorted({(n or '').strip() for n in names if n and n.strip()})
+            hasil, terlihat = [], set()
+            for m in self.env['wom.master'].sudo().search([], order='name, code'):
+                nama = (m.name or '').strip()
+                kode = (m.code or '').strip()
+                if not nama or (kode, nama) in terlihat:
+                    continue
+                terlihat.add((kode, nama))
+                hasil.append({'code': kode, 'name': nama})
             if hasil:
                 return hasil
-        return sorted({
+        return [{'code': '', 'name': n} for n in sorted({
             e['mold'].strip() for e in self.search_read([], ['mold'])
-            if e['mold'] and e['mold'].strip()})
+            if e['mold'] and e['mold'].strip()})]
 
     # ==== DATA UNTUK DASHBOARD GRAPH ====
     @api.model
