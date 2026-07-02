@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_oee_entry_user,oee.entry.user,model_oee_entry,base.group_user,1,1,1,1
+access_oee_downtime_reason_user,oee.downtime.reason.user,model_oee_downtime_reason,base.group_user,1,1,1,1
+access_oee_import_batch_user,oee.import.batch.user,model_oee_import_batch,base.group_user,1,1,1,1

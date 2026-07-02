@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_oee.ImportApp">
+    <div class="oee_wrapper">
+
+        <!-- HEADER hijau ala NPI -->
+        <div class="oee_header">
+            <div class="oee_ling oee_ling_1"/>
+            <div class="oee_ling oee_ling_2"/>
+            <div class="oee_header_konten">
+                <div class="oee_header_judul">
+                    <div class="oee_header_ikon">📥</div>
+                    <div>
+                        <h1>Import Excel</h1>
+                        <p>Masukkan data OEE dari file rekap Excel</p>
+                    </div>
+                </div>
+                <div class="oee_header_aksi">
+                    <button class="oee_btn_tambah" t-att-disabled="state.proses" t-on-click="pilihFile">
+                        <t t-esc="state.proses ? 'Sedang memproses...' : '📂 Pilih File Excel'"/>
+                    </button>
+                    <input type="file" accept=".xlsx" class="oee_file_hidden"
+                           t-ref="fileInput" t-on-change="onFile"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- Petunjuk singkat -->
+        <div class="oee_petunjuk">
+            <strong>Cara pakai:</strong> tekan tombol <strong>"Pilih File Excel"</strong> di atas,
+            pilih file rekap OEE (.xlsx), lalu tunggu sampai selesai.
+            Data akan langsung muncul di menu <strong>Input</strong> dan <strong>Graph</strong>.
+            Kalau salah, tekan tombol <strong>Hapus</strong> pada baris file di bawah.
+        </div>
+
+        <!-- LOADING -->
+        <div t-if="state.memuat or state.proses" class="oee_loading">
+            <div class="oee_spinner"/>
+            <span t-esc="state.proses ? 'Sedang mengimport, mohon tunggu...' : 'Memuat daftar...'"/>
+        </div>
+
+        <!-- KOSONG -->
+        <div t-if="!state.memuat and !state.proses and !state.daftar.length" class="oee_kosong">
+            <div class="oee_kosong_ikon">📥</div>
+            <h3>Belum ada file yang diimport</h3>
+            <p>Tekan tombol putih di pojok kanan atas untuk memilih file Excel.</p>
+        </div>
+
+        <!-- DAFTAR RIWAYAT IMPORT -->
+        <div t-if="!state.memuat and !state.proses and state.daftar.length" class="oee_tabel_wrapper">
+            <table class="oee_tabel">
+                <thead>
+                    <tr>
+                        <th>Nama File</th>
+                        <th class="oee_tengah">Waktu Import</th>
+                        <th class="oee_tengah">Jumlah Baris</th>
+                        <th class="oee_tengah">Periode Data</th>
+                        <th class="oee_tengah">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="state.daftar" t-as="batch" t-key="batch.id" class="oee_baris">
+                        <td data-label="Nama File" class="oee_cell_kuat" t-esc="batch.name"/>
+                        <td data-label="Waktu Import" class="oee_tengah" t-esc="batch.tanggal"/>
+                        <td data-label="Jumlah Baris" class="oee_tengah" t-esc="batch.jumlah"/>
+                        <td data-label="Periode Data" class="oee_tengah" t-esc="batch.periode"/>
+                        <td data-label="Aksi" class="oee_tengah">
+                            <div class="oee_aksi_grup">
+                                <button class="oee_btn_hapus" t-on-click="() => this.hapusBatch(batch)">🗑️ Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</t>
+
+</templates>

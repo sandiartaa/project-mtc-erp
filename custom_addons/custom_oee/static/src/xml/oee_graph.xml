@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_oee.GraphDashboard">
+    <div class="oee_wrapper oee_dashboard">
+
+        <!-- HEADER hijau ala NPI -->
+        <div class="oee_header">
+            <div class="oee_ling oee_ling_1"/>
+            <div class="oee_ling oee_ling_2"/>
+            <div class="oee_header_konten">
+                <div class="oee_header_judul">
+                    <div class="oee_header_ikon">📊</div>
+                    <div>
+                        <h1>OEE Graph</h1>
+                        <p>Grafik Efficiency, Effectiveness, dan Down Time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pilihan periode: minggu berjalan (utama) / bulan / tahun -->
+        <div class="oee_filterbar oee_periodebar">
+            <div class="oee_periode_grup">
+                <t t-foreach="periodeList" t-as="p" t-key="p.value">
+                    <button t-att-class="'oee_periode_btn' + (state.period === p.value ? ' oee_periode_aktif' : '')"
+                            t-on-click="() => this.setPeriode(p.value)"
+                            t-esc="p.label"/>
+                </t>
+            </div>
+            <div t-if="state.data" class="oee_rentang">
+                📅 <t t-esc="state.data.range_label"/>
+            </div>
+
+            <!-- Pilih rentang tanggal sendiri -->
+            <div t-if="state.period === 'custom'" class="oee_custom_rentang">
+                <label class="oee_custom_label">Dari</label>
+                <input type="date" class="oee_filter_input" t-model="state.customStart"/>
+                <label class="oee_custom_label">Sampai</label>
+                <input type="date" class="oee_filter_input" t-model="state.customEnd"/>
+                <button class="oee_btn_tampilkan" t-on-click="terapkanTanggal">Tampilkan</button>
+            </div>
+        </div>
+
+        <t t-if="state.loading">
+            <div class="oee_loading">
+                <div class="oee_spinner"/>
+                <span>Memuat data...</span>
+            </div>
+        </t>
+
+        <t t-if="!state.loading and state.data">
+            <!-- Kartu statistik ringkasan -->
+            <div class="oee_stats">
+                <div class="oee_stat_card">
+                    <div class="oee_stat_value oee_blue"><t t-esc="state.data.summary.efficiency"/>%</div>
+                    <div class="oee_stat_label">Efficiency</div>
+                </div>
+                <div class="oee_stat_card">
+                    <div class="oee_stat_value oee_green"><t t-esc="state.data.summary.effectiveness"/>%</div>
+                    <div class="oee_stat_label">Effectiveness</div>
+                </div>
+                <div class="oee_stat_card">
+                    <div class="oee_stat_value oee_purple"><t t-esc="state.data.summary.oee"/>%</div>
+                    <div class="oee_stat_label">OEE</div>
+                </div>
+                <div class="oee_stat_card">
+                    <div class="oee_stat_value oee_red"><t t-esc="state.data.summary.downtime"/></div>
+                    <div class="oee_stat_label">Total Down Time (Menit)</div>
+                </div>
+            </div>
+
+            <!-- 1. Down Time per hari/bulan: tabel + line chart -->
+            <div class="oee_section">
+                <h4>Down Time <t t-esc="state.data.mode === 'harian' ? 'per Hari' : 'per Bulan'"/></h4>
+                <div class="oee_row">
+                    <div class="oee_table_wrap">
+                        <table class="oee_table">
+                            <thead>
+                                <tr>
+                                    <th t-if="state.data.mode === 'harian'">Hari</th>
+                                    <th t-esc="state.data.mode === 'harian' ? 'Tanggal' : 'Bulan'"/>
+                                    <th class="oee_num">Down Time (Menit)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.daily" t-as="row" t-key="row.tanggal">
+                                    <td t-if="state.data.mode === 'harian'" class="oee_hari" t-esc="row.hari"/>
+                                    <td t-esc="row.tanggal"/>
+                                    <td class="oee_num" t-esc="row.downtime"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="oee_chart_wrap">
+                        <canvas t-ref="chartDowntime"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Efficiency / Effectiveness / Down Time: tabel + line chart -->
+            <div class="oee_section">
+                <h4>Efficiency &amp; Effectiveness <t t-esc="state.data.mode === 'harian' ? 'per Hari' : 'per Bulan'"/></h4>
+                <div class="oee_row">
+                    <div class="oee_table_wrap">
+                        <table class="oee_table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th t-if="state.data.mode === 'harian'">Hari</th>
+                                    <th t-esc="state.data.mode === 'harian' ? 'Tanggal' : 'Bulan'"/>
+                                    <th class="oee_num">Efficiency (%)</th>
+                                    <th class="oee_num">Effectiveness (%)</th>
+                                    <th class="oee_num">Down Time (Menit)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.data.daily" t-as="row" t-key="row.tanggal">
+                                    <td t-esc="row_index + 1"/>
+                                    <td t-if="state.data.mode === 'harian'" class="oee_hari" t-esc="row.hari"/>
+                                    <td t-esc="row.tanggal"/>
+                                    <td class="oee_num" t-esc="row.efficiency"/>
+                                    <td class="oee_num" t-esc="row.effectiveness"/>
+                                    <td class="oee_num" t-esc="row.downtime"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="oee_chart_wrap">
+                        <canvas t-ref="chartEffi"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Pareto: Top 5 Worst No Machine -->
+            <div class="oee_section">
+                <h4>Top 5 Worst No Machine</h4>
+                <t t-if="!state.data.pareto_machine.length">
+                    <div class="oee_empty">Tidak ada data down time pada periode ini.</div>
+                </t>
+                <div t-if="state.data.pareto_machine.length" class="oee_chart_wrap oee_chart_full">
+                    <canvas t-ref="chartParetoMachine"/>
+                </div>
+            </div>
+
+            <!-- 4. Pareto: Top 5 Worst Name Matras -->
+            <div class="oee_section">
+                <h4>Top 5 Worst Name Matras</h4>
+                <t t-if="!state.data.pareto_mold.length">
+                    <div class="oee_empty">Tidak ada data down time pada periode ini.</div>
+                </t>
+                <div t-if="state.data.pareto_mold.length" class="oee_chart_wrap oee_chart_full">
+                    <canvas t-ref="chartParetoMold"/>
+                </div>
+            </div>
+
+            <!-- 5. Pareto: Top 5 Other Contribution (penyebab downtime) -->
+            <div class="oee_section">
+                <h4>Top 5 Other Contribution</h4>
+                <t t-if="!state.data.pareto_reason.length">
+                    <div class="oee_empty">
+                        Belum ada data. Isi kolom "Penyebab Downtime" di menu Input
+                        agar grafik ini terisi.
+                    </div>
+                </t>
+                <div t-if="state.data.pareto_reason.length" class="oee_chart_wrap oee_chart_full">
+                    <canvas t-ref="chartParetoReason"/>
+                </div>
+            </div>
+        </t>
+
+    </div>
+</t>
+
+</templates>

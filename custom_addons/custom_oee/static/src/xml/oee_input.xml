@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="custom_oee.InputApp">
+    <div class="oee_wrapper">
+
+        <!-- HEADER hijau ala NPI -->
+        <div class="oee_header">
+            <div class="oee_ling oee_ling_1"/>
+            <div class="oee_ling oee_ling_2"/>
+            <div class="oee_header_konten">
+                <div class="oee_header_judul">
+                    <div class="oee_header_ikon">⚙️</div>
+                    <div>
+                        <h1>Input OEE</h1>
+                        <p>Catat performa mesin dan matras setiap shift</p>
+                    </div>
+                </div>
+                <div class="oee_header_aksi">
+                    <button class="oee_btn_tambah" t-on-click="bukaTambah">+ Tambah Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="oee_filterbar">
+            <select class="oee_filter_input" t-model.number="state.month" t-on-change="onFilter">
+                <t t-foreach="bulanList" t-as="bulan" t-key="bulan_index">
+                    <option t-att-value="bulan_index + 1" t-esc="bulan"/>
+                </t>
+            </select>
+            <select class="oee_filter_input" t-model.number="state.year" t-on-change="onFilter">
+                <t t-foreach="state.years" t-as="thn" t-key="thn">
+                    <option t-att-value="thn" t-esc="thn"/>
+                </t>
+            </select>
+            <input class="oee_filter_input oee_filter_cari" type="text"
+                   placeholder="Cari mesin / matras..." t-model="state.cari"/>
+            <button class="oee_btn_reset" t-on-click="resetCari">Reset</button>
+        </div>
+
+        <!-- LOADING -->
+        <div t-if="state.memuat" class="oee_loading">
+            <div class="oee_spinner"/>
+            <span>Memuat data...</span>
+        </div>
+
+        <!-- KOSONG -->
+        <div t-if="!state.memuat and !rowsTerfilter.length" class="oee_kosong">
+            <div class="oee_kosong_ikon">📋</div>
+            <h3>Belum ada data bulan ini</h3>
+            <p>Tekan tombol hijau di bawah untuk menambah data baru.</p>
+            <button class="oee_btn_tambah oee_btn_tambah_kosong" t-on-click="bukaTambah">+ Tambah Data</button>
+        </div>
+
+        <!-- TABEL DATA -->
+        <div t-if="!state.memuat and rowsTerfilter.length" class="oee_tabel_wrapper">
+            <table class="oee_tabel">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th class="oee_tengah">Shift</th>
+                        <th class="oee_tengah">Mesin</th>
+                        <th>Nama Matras</th>
+                        <th class="oee_tengah">Down Time (Menit)</th>
+                        <th class="oee_tengah">Hasil (Pcs)</th>
+                        <th class="oee_tengah">Reject</th>
+                        <th class="oee_tengah">OEE (%)</th>
+                        <th class="oee_tengah">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="rowsTerfilter" t-as="row" t-key="row.id" class="oee_baris">
+                        <td data-label="Tanggal">
+                            <span class="oee_cell_kuat" t-esc="row.tanggal"/>
+                            <span t-if="row.dari_import" class="oee_badge_import" title="Data hasil import Excel">import</span>
+                        </td>
+                        <td data-label="Shift" class="oee_tengah" t-esc="row.shift"/>
+                        <td data-label="Mesin" class="oee_tengah" t-esc="row.no_mesin"/>
+                        <td data-label="Nama Matras" t-esc="row.mold"/>
+                        <td data-label="Down Time" class="oee_tengah">
+                            <span t-att-class="row.downtime > 0 ? 'oee_dt_merah' : ''" t-esc="row.downtime"/>
+                        </td>
+                        <td data-label="Hasil (Pcs)" class="oee_tengah" t-esc="row.hpr"/>
+                        <td data-label="Reject" class="oee_tengah" t-esc="row.reject"/>
+                        <td data-label="OEE (%)" class="oee_tengah">
+                            <span t-att-class="'oee_badge ' + (row.oee >= 80 ? 'oee_badge_bagus' : (row.oee >= 60 ? 'oee_badge_sedang' : 'oee_badge_buruk'))"
+                                  t-esc="row.oee + '%'"/>
+                        </td>
+                        <td data-label="Aksi" class="oee_tengah">
+                            <div class="oee_aksi_grup">
+                                <button class="oee_btn_edit" t-on-click="() => this.bukaEdit(row)">✏️ Edit</button>
+                                <button class="oee_btn_hapus" t-on-click="() => this.hapusEntry(row)">🗑️ Hapus</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MODAL FORM TAMBAH / EDIT -->
+        <div t-if="state.form.buka" class="oee_overlay" t-on-click.self="tutupForm">
+            <div class="oee_modal">
+                <div t-att-class="'oee_modal_kepala ' + (state.form.mode === 'tambah' ? 'oee_kepala_tambah' : 'oee_kepala_edit')">
+                    <div class="oee_modal_judul">
+                        <h2 t-esc="state.form.mode === 'tambah' ? 'Tambah Data OEE' : 'Ubah Data OEE'"/>
+                        <p class="oee_subkepala">Isi kolom di bawah, lalu tekan Simpan</p>
+                    </div>
+                    <button class="oee_tombol_tutup" t-on-click="tutupForm">✕</button>
+                </div>
+                <div class="oee_modal_isi">
+
+                    <fieldset class="oee_fs">
+                        <legend>Informasi Umum</legend>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Tanggal <span class="oee_wajib">*</span></label>
+                                <input type="date" class="oee_form_input" t-model="state.form.tanggal"/>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Shift <span class="oee_wajib">*</span></label>
+                                <select class="oee_form_input" t-model="state.form.shift">
+                                    <option value="1">Shift 1</option>
+                                    <option value="2">Shift 2</option>
+                                    <option value="3">Shift 3</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">No Mesin <span class="oee_wajib">*</span></label>
+                                <input type="text" class="oee_form_input" placeholder="Contoh: 1"
+                                       t-model="state.form.no_mesin"/>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Nama Matras / Mold <span class="oee_wajib">*</span></label>
+                                <input type="text" class="oee_form_input" placeholder="Contoh: Telur MC042 B6"
+                                       t-model="state.form.mold"/>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="oee_fs">
+                        <legend>Waktu &amp; Down Time</legend>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Total Waktu Kerja (Menit)</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.total_menit"/>
+                                <span class="oee_form_bantuan">12 jam = 720 menit</span>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Down Time (Menit)</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.downtime"/>
+                                <span class="oee_form_bantuan">Lama mesin berhenti</span>
+                            </div>
+                        </div>
+                        <div class="oee_form_grup">
+                            <label class="oee_form_label">Penyebab Downtime</label>
+                            <input type="text" class="oee_form_input" list="oee_daftar_penyebab"
+                                   placeholder="Contoh: Ganti warna, matras rusak..."
+                                   t-model="state.form.penyebab"/>
+                            <datalist id="oee_daftar_penyebab">
+                                <t t-foreach="state.reasons" t-as="alasan" t-key="alasan">
+                                    <option t-att-value="alasan"/>
+                                </t>
+                            </datalist>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="oee_fs">
+                        <legend>Hasil Produksi</legend>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Counter Awal</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.counter_awal"
+                                       t-on-input="onCounter"/>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Counter Akhir</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.counter_akhir"
+                                       t-on-input="onCounter"/>
+                            </div>
+                        </div>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Hasil Produksi (Pcs)</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.hpr"/>
+                                <span class="oee_form_bantuan">Terisi otomatis dari counter</span>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Cycle Time Ideal (Detik)</label>
+                                <input type="number" step="0.1" class="oee_form_input" t-model="state.form.ideal_ct"/>
+                                <span class="oee_form_bantuan">Waktu ideal 1 pcs</span>
+                            </div>
+                        </div>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Total Reject (Pcs)</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.reject"/>
+                            </div>
+                            <div class="oee_form_grup"/>
+                        </div>
+                    </fieldset>
+
+                    <!-- Pratinjau hasil hitung -->
+                    <div class="oee_preview">
+                        <div class="oee_preview_item">
+                            <span class="oee_preview_label">Effectiveness</span>
+                            <span class="oee_preview_nilai"><t t-esc="preview.effectiveness"/>%</span>
+                        </div>
+                        <div class="oee_preview_item">
+                            <span class="oee_preview_label">Efficiency</span>
+                            <span class="oee_preview_nilai"><t t-esc="preview.efficiency"/>%</span>
+                        </div>
+                        <div class="oee_preview_item">
+                            <span class="oee_preview_label">FG</span>
+                            <span class="oee_preview_nilai"><t t-esc="preview.fg"/>%</span>
+                        </div>
+                        <div class="oee_preview_item oee_preview_utama">
+                            <span class="oee_preview_label">OEE</span>
+                            <span class="oee_preview_nilai"><t t-esc="preview.oee"/>%</span>
+                        </div>
+                    </div>
+
+                    <div class="oee_modal_footer">
+                        <button class="oee_tombol_sekunder" t-on-click="tutupForm">Batal</button>
+                        <button class="oee_tombol_utama" t-att-disabled="state.form.proses"
+                                t-on-click="simpanForm">
+                            <t t-esc="state.form.proses ? 'Menyimpan...' : '💾 Simpan'"/>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</t>
+
+</templates>

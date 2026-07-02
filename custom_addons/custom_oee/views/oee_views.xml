@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ===== LIST VIEW: input cepat ala tabel Excel ===== -->
+    <record id="view_oee_entry_list" model="ir.ui.view">
+        <field name="name">oee.entry.list</field>
+        <field name="model">oee.entry</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="tanggal"/>
+                <field name="shift"/>
+                <field name="no_mesin"/>
+                <field name="mold"/>
+                <field name="total_menit" string="Total (Min)"/>
+                <field name="downtime_unplanned" string="Down Time (Min)" sum="Total Down Time"/>
+                <field name="downtime_reason_id" optional="show"/>
+                <field name="counter_awal" optional="hide"/>
+                <field name="counter_akhir" optional="hide"/>
+                <field name="hpr_actual"/>
+                <field name="ideal_ct" optional="show"/>
+                <field name="total_reject"/>
+                <field name="effectiveness_pct" widget="progressbar" optional="show"/>
+                <field name="efficiency_pct" widget="progressbar" optional="show"/>
+                <field name="fg_pct" optional="hide"/>
+                <field name="oee_pct" widget="progressbar" decoration-danger="oee_pct &lt; 60" decoration-success="oee_pct &gt;= 80"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ===== FORM VIEW ===== -->
+    <record id="view_oee_entry_form" model="ir.ui.view">
+        <field name="name">oee.entry.form</field>
+        <field name="model">oee.entry</field>
+        <field name="arch" type="xml">
+            <form string="OEE Daily Entry">
+                <sheet>
+                    <group>
+                        <group string="Informasi Umum">
+                            <field name="tanggal"/>
+                            <field name="shift"/>
+                            <field name="no_mesin"/>
+                            <field name="mold"/>
+                        </group>
+                        <group string="Waktu &amp; Down Time">
+                            <field name="total_menit"/>
+                            <field name="downtime_unplanned"/>
+                            <field name="downtime_reason_id" options="{'no_open': True}"/>
+                            <field name="planned_menit" readonly="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Produksi">
+                            <field name="counter_awal"/>
+                            <field name="counter_akhir"/>
+                            <field name="hpr_actual"/>
+                            <field name="ideal_ct"/>
+                            <field name="total_reject"/>
+                            <field name="ok_pcs" readonly="1"/>
+                        </group>
+                        <group string="Hasil Perhitungan">
+                            <field name="effectiveness_pct" readonly="1"/>
+                            <field name="efficiency_pct" readonly="1"/>
+                            <field name="fg_pct" readonly="1"/>
+                            <field name="oee_pct" readonly="1"/>
+                            <field name="avg_ct" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ===== SEARCH VIEW ===== -->
+    <record id="view_oee_entry_search" model="ir.ui.view">
+        <field name="name">oee.entry.search</field>
+        <field name="model">oee.entry</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="mold"/>
+                <field name="no_mesin"/>
+                <field name="tanggal"/>
+                <filter name="filter_bulan_ini" string="Bulan Ini"
+                        domain="[('tanggal', '&gt;=', (context_today() + relativedelta(day=1)).strftime('%Y-%m-%d')),
+                                 ('tanggal', '&lt;', (context_today() + relativedelta(months=1, day=1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_ada_downtime" string="Ada Down Time"
+                        domain="[('downtime_unplanned', '&gt;', 0)]"/>
+                <group>
+                    <filter name="group_tanggal" string="Tanggal" context="{'group_by': 'tanggal'}"/>
+                    <filter name="group_mesin" string="No Mesin" context="{'group_by': 'no_mesin'}"/>
+                    <filter name="group_mold" string="Matras / Mold" context="{'group_by': 'mold'}"/>
+                    <filter name="group_shift" string="Shift" context="{'group_by': 'shift'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ===== ACTION: menu Input (aplikasi OWL) ===== -->
+    <record id="action_oee_input_app" model="ir.actions.client">
+        <field name="name">OEE Input</field>
+        <field name="tag">custom_oee.input_app</field>
+    </record>
+
+    <!-- ===== ACTION: menu Import (aplikasi OWL) ===== -->
+    <record id="action_oee_import_app" model="ir.actions.client">
+        <field name="name">OEE Import</field>
+        <field name="tag">custom_oee.import_app</field>
+    </record>
+
+    <!-- Action tabel standar Odoo — cadangan untuk admin, tidak dipasang di menu -->
+    <record id="action_oee_entry" model="ir.actions.act_window">
+        <field name="name">OEE Data (Tabel)</field>
+        <field name="res_model">oee.entry</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_oee_entry_search"/>
+        <field name="context">{'search_default_filter_bulan_ini': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Belum ada data OEE</p>
+            <p>Input data harian per shift per mesin: down time, hasil produksi, dan reject.</p>
+        </field>
+    </record>
+
+    <!-- ===== ACTION: menu Graph (dashboard OWL) ===== -->
+    <record id="action_oee_graph" model="ir.actions.client">
+        <field name="name">OEE Graph</field>
+        <field name="tag">custom_oee.graph_dashboard</field>
+    </record>
+
+    <!-- ===== MENU TOP-LEVEL ===== -->
+    <menuitem id="menu_oee_root" name="OEE" sequence="60"/>
+    <menuitem id="menu_oee_input" name="Input" parent="menu_oee_root"
+              action="action_oee_input_app" sequence="10"/>
+    <menuitem id="menu_oee_import" name="Import" parent="menu_oee_root"
+              action="action_oee_import_app" sequence="15"/>
+    <menuitem id="menu_oee_graph" name="Graph" parent="menu_oee_root"
+              action="action_oee_graph" sequence="20"/>
+
+</odoo>
