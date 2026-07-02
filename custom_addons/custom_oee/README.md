@@ -21,6 +21,12 @@ Tampilan bertema hijau modern (mengikuti gaya modul NPI), responsive untuk HP da
 - `oee.downtime.reason` — master penyebab downtime (untuk pareto Other Contribution)
 - `oee.import.batch` — riwayat import Excel (hapus batch = hapus data hasil import tersebut)
 
+## Hak akses
+- Grup **"Akses OEE"** (`custom_oee.group_oee_user`) — menu OEE dan semua tabelnya hanya
+  terlihat oleh anggota grup ini (admin otomatis anggota).
+- Akses per user diatur dari menu **Master User** (daftar "OEE" muncul otomatis di
+  pengaturan Akses Modul milik modul custom_master_user).
+
 Tidak menyentuh model/view bawaan Odoo sama sekali.
 
 ## Definisi perhitungan (mengikuti formula Excel sumber)

@@ -21,6 +21,8 @@ MODUL_AKSES = [
     ('custom_work_orders_mold.group_work_orders_mold', 'Work Order Mold'),
     # NPI — satu akses untuk modul NPI.
     ('npi.group_npi_user', 'NPI'),
+    # OEE — satu akses untuk modul OEE (Input, Import, Graph).
+    ('custom_oee.group_oee_user', 'OEE'),
 ]
 
 

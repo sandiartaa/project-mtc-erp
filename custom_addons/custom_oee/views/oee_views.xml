@@ -125,13 +125,17 @@
         <field name="tag">custom_oee.graph_dashboard</field>
     </record>
 
-    <!-- ===== MENU TOP-LEVEL ===== -->
-    <menuitem id="menu_oee_root" name="OEE" sequence="60"/>
+    <!-- ===== MENU TOP-LEVEL (hanya untuk pemilik grup Akses OEE) ===== -->
+    <menuitem id="menu_oee_root" name="OEE" sequence="60"
+              groups="custom_oee.group_oee_user"/>
     <menuitem id="menu_oee_input" name="Input" parent="menu_oee_root"
-              action="action_oee_input_app" sequence="10"/>
+              action="action_oee_input_app" sequence="10"
+              groups="custom_oee.group_oee_user"/>
     <menuitem id="menu_oee_import" name="Import" parent="menu_oee_root"
-              action="action_oee_import_app" sequence="15"/>
+              action="action_oee_import_app" sequence="15"
+              groups="custom_oee.group_oee_user"/>
     <menuitem id="menu_oee_graph" name="Graph" parent="menu_oee_root"
-              action="action_oee_graph" sequence="20"/>
+              action="action_oee_graph" sequence="20"
+              groups="custom_oee.group_oee_user"/>
 
 </odoo>

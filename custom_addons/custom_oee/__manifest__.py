@@ -12,6 +12,7 @@ mesin/matras/penyebab downtime terburuk).
     'author': 'Custom',
     'depends': ['base', 'web'],
     'data': [
+        'security/oee_groups.xml',
         'security/ir.model.access.csv',
         'views/oee_views.xml',
     ],

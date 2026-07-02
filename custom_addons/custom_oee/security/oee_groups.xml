@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Satu grup akses untuk modul OEE. Admin otomatis masuk.
+         Grup ini didaftarkan di Master User (MODUL_AKSES) agar akses
+         per user bisa diatur dari sana. -->
+    <record id="group_oee_user" model="res.groups">
+        <field name="name">Akses OEE</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="user_ids" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+</odoo>
