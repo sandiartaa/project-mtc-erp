@@ -161,6 +161,11 @@
                         <canvas t-ref="chartEffi"/>
                     </div>
                 </div>
+                <div class="oee_catatan">
+                    ℹ️ <strong>Down Time (%)</strong> dihitung dari: menit Down Time ÷ total waktu kerja
+                    tersedia × 100. Contoh: mesin berhenti 36 menit dari 720 menit kerja = 5%.
+                    Angka ini kebalikan dari Effectiveness — keduanya selalu berjumlah 100%.
+                </div>
             </div>
 
             <!-- 3. Pareto: Top 5 Worst No Machine -->

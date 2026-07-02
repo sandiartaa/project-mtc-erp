@@ -44,16 +44,18 @@
                         <group string="Waktu &amp; Down Time">
                             <field name="total_menit"/>
                             <field name="downtime_unplanned"/>
+                            <field name="downtime_jenis"/>
                             <field name="downtime_reason_id" options="{'no_open': True}"/>
                             <field name="planned_menit" readonly="1"/>
                         </group>
                     </group>
                     <group>
-                        <group string="Produksi">
+                        <group string="Hasil Produksi">
+                            <field name="target_produksi"/>
+                            <field name="ideal_ct"/>
                             <field name="counter_awal"/>
                             <field name="counter_akhir"/>
                             <field name="hpr_actual"/>
-                            <field name="ideal_ct"/>
                             <field name="total_reject"/>
                             <field name="ok_pcs" readonly="1"/>
                         </group>

@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_oee_entry_user,oee.entry.user,model_oee_entry,custom_oee.group_oee_user,1,1,1,1
 access_oee_downtime_reason_user,oee.downtime.reason.user,model_oee_downtime_reason,custom_oee.group_oee_user,1,1,1,1
 access_oee_import_batch_user,oee.import.batch.user,model_oee_import_batch,custom_oee.group_oee_user,1,1,1,1
+access_oee_riwayat_user,oee.riwayat.user,model_oee_riwayat,custom_oee.group_oee_user,1,0,0,0

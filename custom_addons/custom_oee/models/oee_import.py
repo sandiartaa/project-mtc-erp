@@ -41,8 +41,12 @@ class OeeImportBatch(models.Model):
         """Hapus satu batch beserta seluruh baris data hasil import-nya."""
         batch = self.browse(int(batch_id)).exists()
         if batch:
-            batch.entry_ids.unlink()
+            info = "Hapus import '%s' (%s baris, %s)" % (
+                batch.name, batch.jumlah_baris, batch.periode or '-')
+            # riwayat cukup 1 baris untuk seluruh batch, bukan per record
+            batch.entry_ids.with_context(skip_oee_riwayat=True).unlink()
             batch.unlink()
+            self.env['oee.riwayat']._catat('hapus_import', info)
         return True
 
     @api.model
@@ -126,9 +130,13 @@ class OeeImportBatch(models.Model):
         for v in vals_list:
             v['import_batch_id'] = batch.id
 
-        # create per potongan agar tidak membebani memori untuk file besar
-        Entry = self.env['oee.entry']
+        # create per potongan agar tidak membebani memori untuk file besar;
+        # riwayat per record dilewati — dicatat 1 baris untuk seluruh import
+        Entry = self.env['oee.entry'].with_context(skip_oee_riwayat=True)
         for i in range(0, len(vals_list), 2000):
             Entry.create(vals_list[i:i + 2000])
 
+        self.env['oee.riwayat']._catat(
+            'import', "Import Excel '%s' (%s baris, %s)" % (
+                filename, len(vals_list), batch.periode))
         return {'id': batch.id, 'jumlah': len(vals_list)}

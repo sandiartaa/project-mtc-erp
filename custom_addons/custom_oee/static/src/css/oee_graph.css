@@ -49,7 +49,57 @@
 .oee_btn_tambah:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
 .oee_btn_tambah:disabled { opacity: 0.6; cursor: wait; transform: none; }
 .oee_btn_tambah_kosong { background: #16a34a; color: #fff; display: inline-block; }
+.oee_btn_alt { background: rgba(255,255,255,0.16); color: #fff; border: 2px solid rgba(255,255,255,0.5); }
+.oee_btn_alt:hover { background: rgba(255,255,255,0.28); }
 .oee_file_hidden { display: none; }
+
+/* ---- DROPDOWN CARI (mold) ---- */
+.oee_dd_wrap { position: relative; }
+.oee_dd_input { padding-right: 52px; }
+.oee_dd_toggle {
+    position: absolute; right: 6px; top: 6px; bottom: 6px; width: 40px;
+    border: none; border-radius: 8px; background: #f0fdf4; color: #16a34a;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.oee_dd_toggle:hover { background: #dcfce7; }
+.oee_dd_panel {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 50;
+    background: #fff; border: 2px solid #16a34a; border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18); overflow: hidden;
+}
+.oee_dd_item {
+    display: block; width: 100%; text-align: left; border: none;
+    background: #fff; padding: 12px 16px; font-size: 15px; color: #1e293b;
+    cursor: pointer; border-bottom: 1px solid #f1f5f9;
+}
+.oee_dd_item:hover { background: #ecfdf3; }
+.oee_dd_kosong { padding: 14px 16px; font-size: 13px; color: #64748b; }
+.oee_dd_footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 10px 12px; background: #f0fdf4;
+    border-top: 2px solid #dcfce7;
+}
+.oee_dd_nav {
+    padding: 9px 16px; border-radius: 8px; border: none;
+    background: #16a34a; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.oee_dd_nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.oee_dd_hal { font-size: 13px; font-weight: 700; color: #166534; }
+
+/* ---- MODAL HISTORY ---- */
+.oee_modal_riwayat { max-width: 900px; }
+.oee_riwayat_wrap {
+    max-height: 55vh; overflow-y: auto;
+    border: 1px solid #e5e7eb; border-radius: 10px;
+}
+.oee_riwayat_waktu { white-space: nowrap; font-weight: 600; }
+
+/* ---- CATATAN kecil (penjelasan rumus) ---- */
+.oee_catatan {
+    margin-top: 12px; padding: 12px 16px;
+    background: #f0fdf4; border: 1px dashed #86efac; border-radius: 10px;
+    font-size: 14px; line-height: 1.6; color: #166534;
+}
 
 /* ---- FILTER BAR ---- */
 .oee_filterbar {
@@ -334,9 +384,12 @@
 
 /* ---- KARTU PER HARI (Graph, hanya HP kecil < 576px) ----
    Tablet/iPad (>= 576px) tetap memakai tabel seperti desktop. */
-.oee_only_hp { display: none; }
+/* PENTING: default disembunyikan di semua ukuran; hanya muncul lewat media
+   query < 576px di bawah. Jangan set display pada .oee_card_list agar tidak
+   menimpa aturan ini (dulu bug: kartu ikut tampil di desktop). */
+.oee_only_hp { display: none !important; }
 
-.oee_card_list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.oee_card_list { flex-direction: column; gap: 10px; width: 100%; }
 .oee_hari_card {
     border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden;
     background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -368,8 +421,8 @@
 
 @media (max-width: 575px) {
     /* HP kecil: tabel Efficiency & Effectiveness diganti kartu per hari */
-    .oee_hide_hp { display: none; }
-    .oee_only_hp { display: flex; }
+    .oee_hide_hp { display: none !important; }
+    .oee_only_hp { display: flex !important; }
 }
 
 /* =============================================

@@ -27,6 +27,48 @@ class OeeDowntimeReason(models.Model):
     )
 
 
+class OeeRiwayat(models.Model):
+    """Riwayat perubahan data OEE (audit log): siapa & kapan menambah,
+    mengedit, menghapus, atau import data. Ditulis secara sudo agar
+    pencatatan tidak gagal karena keterbatasan akses user."""
+    _name = 'oee.riwayat'
+    _description = 'Riwayat Perubahan Data OEE'
+    _order = 'id desc'
+
+    aksi = fields.Selection(
+        [('create', 'Ditambah'), ('edit', 'Diedit'), ('delete', 'Dihapus'),
+         ('import', 'Import Excel'), ('hapus_import', 'Hapus Import')],
+        string='Aksi', required=True)
+    keterangan = fields.Char('Keterangan')
+    user_id = fields.Many2one(
+        'res.users', 'Oleh', default=lambda self: self.env.user, readonly=True)
+    waktu = fields.Datetime('Waktu', default=fields.Datetime.now, readonly=True)
+
+    @api.model
+    def _catat(self, aksi, keterangan):
+        # user_id diisi user nyata; create via sudo agar selalu berhasil
+        self.sudo().create({
+            'aksi': aksi, 'keterangan': keterangan, 'user_id': self.env.user.id,
+        })
+
+    @api.model
+    def oee_riwayat_daftar(self, limit=200):
+        """Daftar riwayat terbaru untuk popup History di menu Input."""
+        label = dict(self._fields['aksi'].selection)
+        hasil = []
+        for r in self.sudo().search([], limit=int(limit)):
+            hasil.append({
+                'id': r.id,
+                'aksi': r.aksi,
+                'label_aksi': label.get(r.aksi, r.aksi),
+                'keterangan': r.keterangan or '',
+                'oleh': r.user_id.name or '-',
+                'waktu': (fields.Datetime.context_timestamp(r, r.waktu)
+                          .strftime('%d/%m/%Y %H:%M') if r.waktu else ''),
+            })
+        return hasil
+
+
 class OeeEntry(models.Model):
     _name = 'oee.entry'
     _description = 'OEE Daily Entry'
@@ -47,18 +89,29 @@ class OeeEntry(models.Model):
     downtime_unplanned = fields.Float(
         string='Down Time (Menit)',
         help='Waktu berhenti tidak terencana (unplanned downtime) dalam menit.')
+    downtime_jenis = fields.Selection(
+        [('dt1', 'DT-1 Mesin'),
+         ('dt2', 'DT-2 Matras'),
+         ('dt3', 'DT-3 Nunggu Bahan/Material'),
+         ('dt4', 'DT-4 Mati Listrik'),
+         ('dt5', 'DT-5 Operasi Absen'),
+         ('dt6', 'DT-6 Other')],
+        string='Jenis Down Time')
     downtime_reason_id = fields.Many2one(
         'oee.downtime.reason', string='Penyebab Downtime',
         help='Penyebab utama downtime — dipakai untuk grafik Top 5 Other Contribution.')
 
-    counter_awal = fields.Integer(string='Counter Awal')
-    counter_akhir = fields.Integer(string='Counter Akhir')
+    target_produksi = fields.Integer(
+        string='Target Produksi (Pcs)',
+        help='Target hasil produksi shift ini (informasi perencanaan).')
+    counter_awal = fields.Integer(string='Shot Awal')
+    counter_akhir = fields.Integer(string='Shot Akhir')
     hpr_actual = fields.Integer(
-        string='HPR Actual (Pcs)', compute='_compute_hpr_actual', store=True, readonly=False,
-        help='Hasil produksi aktual. Terisi otomatis dari selisih counter, tapi bisa diketik manual.')
+        string='Hasil Produksi (Pcs)', compute='_compute_hpr_actual', store=True, readonly=False,
+        help='Hasil produksi aktual. Terisi otomatis dari selisih shot, tapi bisa diketik manual.')
 
     ideal_ct = fields.Float(
-        string='Ideal Cycle Time (Detik/Pcs)',
+        string='Cycle Time (Detik)',
         help='Waktu siklus ideal per pcs dalam detik. Contoh: 19 detik.')
     total_reject = fields.Integer(string='Total Reject (Pcs)')
 
@@ -117,6 +170,48 @@ class OeeEntry(models.Model):
             rec.oee_pct = (
                 rec.effectiveness_pct * rec.efficiency_pct * rec.fg_pct / 10000.0)
 
+    # ==== RIWAYAT (audit log) ====
+    def _oee_identitas(self):
+        """Teks singkat identitas baris untuk keterangan riwayat."""
+        self.ensure_one()
+        return '%s Shift %s — Mesin %s (%s)' % (
+            self.tanggal.strftime('%d/%m/%Y') if self.tanggal else '-',
+            self.shift or '-', self.no_mesin or '-', self.mold or '-')
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        # import Excel mencatat 1 baris riwayat sendiri (skip per record)
+        if not self.env.context.get('skip_oee_riwayat'):
+            R = self.env['oee.riwayat']
+            for rec in records:
+                R._catat('create', 'Tambah data: ' + rec._oee_identitas())
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if not self.env.context.get('skip_oee_riwayat'):
+            magic = ('id', 'create_uid', 'create_date', 'write_uid', 'write_date')
+            labels = []
+            for key in vals:
+                field = self._fields.get(key)
+                if key not in magic and field and not field.compute:
+                    labels.append(field.string or key)
+            R = self.env['oee.riwayat']
+            for rec in self:
+                ket = 'Ubah data: ' + rec._oee_identitas()
+                if labels:
+                    ket += ' — kolom: ' + ', '.join(labels)
+                R._catat('edit', ket)
+        return res
+
+    def unlink(self):
+        if not self.env.context.get('skip_oee_riwayat'):
+            R = self.env['oee.riwayat']
+            for rec in self:
+                R._catat('delete', 'Hapus data: ' + rec._oee_identitas())
+        return super().unlink()
+
     @api.constrains('downtime_unplanned', 'total_menit')
     def _check_downtime(self):
         for rec in self:
@@ -153,7 +248,9 @@ class OeeEntry(models.Model):
                 'mold': rec.mold,
                 'total_menit': rec.total_menit,
                 'downtime': rec.downtime_unplanned,
+                'jenis_dt': rec.downtime_jenis or '',
                 'penyebab': rec.downtime_reason_id.name or '',
+                'target': rec.target_produksi,
                 'counter_awal': rec.counter_awal,
                 'counter_akhir': rec.counter_akhir,
                 'hpr': rec.hpr_actual,
@@ -197,6 +294,23 @@ class OeeEntry(models.Model):
     def oee_hapus(self, rec_id):
         self.browse(int(rec_id)).exists().unlink()
         return True
+
+    @api.model
+    def oee_daftar_mold(self):
+        """Daftar nama mold untuk dropdown form Input.
+
+        Sumber utama: Master Mold milik modul Work Order Mold (wom.master).
+        Jika modul itu tidak terpasang / masternya kosong, fallback ke nama
+        mold yang sudah pernah dipakai di data OEE.
+        """
+        if 'wom.master' in self.env:
+            names = self.env['wom.master'].sudo().search([]).mapped('name')
+            hasil = sorted({(n or '').strip() for n in names if n and n.strip()})
+            if hasil:
+                return hasil
+        return sorted({
+            e['mold'].strip() for e in self.search_read([], ['mold'])
+            if e['mold'] and e['mold'].strip()})
 
     # ==== DATA UNTUK DASHBOARD GRAPH ====
     @api.model

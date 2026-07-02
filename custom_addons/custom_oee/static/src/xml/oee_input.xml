@@ -17,6 +17,7 @@
                     </div>
                 </div>
                 <div class="oee_header_aksi">
+                    <button class="oee_btn_tambah oee_btn_alt" t-on-click="bukaRiwayat">🕘 History</button>
                     <button class="oee_btn_tambah" t-on-click="bukaTambah">+ Tambah Data</button>
                 </div>
             </div>
@@ -129,13 +130,44 @@
                         <div class="oee_form_baris_2">
                             <div class="oee_form_grup">
                                 <label class="oee_form_label">No Mesin <span class="oee_wajib">*</span></label>
-                                <input type="text" class="oee_form_input" placeholder="Contoh: 1"
-                                       t-model="state.form.no_mesin"/>
+                                <select class="oee_form_input" t-model="state.form.no_mesin">
+                                    <option value="">— pilih mesin —</option>
+                                    <t t-if="state.form.no_mesin and !mesinList.includes(state.form.no_mesin)">
+                                        <option t-att-value="state.form.no_mesin" t-esc="state.form.no_mesin"/>
+                                    </t>
+                                    <t t-foreach="mesinList" t-as="m" t-key="m">
+                                        <option t-att-value="m" t-esc="m"/>
+                                    </t>
+                                </select>
                             </div>
                             <div class="oee_form_grup">
                                 <label class="oee_form_label">Nama Matras / Mold <span class="oee_wajib">*</span></label>
-                                <input type="text" class="oee_form_input" placeholder="Contoh: Telur MC042 B6"
-                                       t-model="state.form.mold"/>
+                                <div class="oee_dd_wrap">
+                                    <input type="text" class="oee_form_input oee_dd_input"
+                                           placeholder="Ketik untuk mencari mold..."
+                                           t-model="state.form.mold"
+                                           t-on-input="onMoldInput"
+                                           t-on-focus="() => state.form.moldBuka = true"/>
+                                    <button class="oee_dd_toggle" t-on-click="toggleMoldPanel"
+                                            t-esc="state.form.moldBuka ? '▲' : '▼'"/>
+                                    <div t-if="state.form.moldBuka" class="oee_dd_panel">
+                                        <div t-if="!moldTersaring.length" class="oee_dd_kosong">
+                                            Tidak ada mold yang cocok — nama tetap bisa diketik manual.
+                                        </div>
+                                        <button t-foreach="moldHalaman" t-as="m" t-key="m"
+                                                class="oee_dd_item" t-on-click="() => this.pilihMold(m)"
+                                                t-esc="m"/>
+                                        <div t-if="moldTersaring.length" class="oee_dd_footer">
+                                            <button class="oee_dd_nav" t-att-disabled="state.form.moldHal &lt;= 0"
+                                                    t-on-click="moldPrev">◀ Prev</button>
+                                            <span class="oee_dd_hal">
+                                                Hal <t t-esc="state.form.moldHal + 1"/> / <t t-esc="moldTotalHal"/>
+                                            </span>
+                                            <button class="oee_dd_nav" t-att-disabled="state.form.moldHal &gt;= moldTotalHal - 1"
+                                                    t-on-click="moldNext">Next ▶</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </fieldset>
@@ -154,16 +186,27 @@
                                 <span class="oee_form_bantuan">Lama mesin berhenti</span>
                             </div>
                         </div>
-                        <div class="oee_form_grup">
-                            <label class="oee_form_label">Penyebab Downtime</label>
-                            <input type="text" class="oee_form_input" list="oee_daftar_penyebab"
-                                   placeholder="Contoh: Ganti warna, matras rusak..."
-                                   t-model="state.form.penyebab"/>
-                            <datalist id="oee_daftar_penyebab">
-                                <t t-foreach="state.reasons" t-as="alasan" t-key="alasan">
-                                    <option t-att-value="alasan"/>
-                                </t>
-                            </datalist>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Jenis Down Time</label>
+                                <select class="oee_form_input" t-model="state.form.jenis_dt">
+                                    <option value="">— pilih jenis —</option>
+                                    <t t-foreach="jenisDtList" t-as="j" t-key="j.value">
+                                        <option t-att-value="j.value" t-esc="j.label"/>
+                                    </t>
+                                </select>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Penyebab Downtime</label>
+                                <input type="text" class="oee_form_input" list="oee_daftar_penyebab"
+                                       placeholder="Contoh: Ganti warna, matras rusak..."
+                                       t-model="state.form.penyebab"/>
+                                <datalist id="oee_daftar_penyebab">
+                                    <t t-foreach="state.reasons" t-as="alasan" t-key="alasan">
+                                        <option t-att-value="alasan"/>
+                                    </t>
+                                </datalist>
+                            </div>
                         </div>
                     </fieldset>
 
@@ -171,12 +214,24 @@
                         <legend>Hasil Produksi</legend>
                         <div class="oee_form_baris_2">
                             <div class="oee_form_grup">
-                                <label class="oee_form_label">Counter Awal</label>
+                                <label class="oee_form_label">Target Produksi (Pcs)</label>
+                                <input type="number" class="oee_form_input" t-model="state.form.target"/>
+                                <span class="oee_form_bantuan">Target shift ini</span>
+                            </div>
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Cycle Time (Detik)</label>
+                                <input type="number" step="0.1" class="oee_form_input" t-model="state.form.ideal_ct"/>
+                                <span class="oee_form_bantuan">Waktu ideal 1 pcs</span>
+                            </div>
+                        </div>
+                        <div class="oee_form_baris_2">
+                            <div class="oee_form_grup">
+                                <label class="oee_form_label">Shot Awal</label>
                                 <input type="number" class="oee_form_input" t-model="state.form.counter_awal"
                                        t-on-input="onCounter"/>
                             </div>
                             <div class="oee_form_grup">
-                                <label class="oee_form_label">Counter Akhir</label>
+                                <label class="oee_form_label">Shot Akhir</label>
                                 <input type="number" class="oee_form_input" t-model="state.form.counter_akhir"
                                        t-on-input="onCounter"/>
                             </div>
@@ -185,20 +240,12 @@
                             <div class="oee_form_grup">
                                 <label class="oee_form_label">Hasil Produksi (Pcs)</label>
                                 <input type="number" class="oee_form_input" t-model="state.form.hpr"/>
-                                <span class="oee_form_bantuan">Terisi otomatis dari counter</span>
+                                <span class="oee_form_bantuan">Terisi otomatis dari shot</span>
                             </div>
-                            <div class="oee_form_grup">
-                                <label class="oee_form_label">Cycle Time Ideal (Detik)</label>
-                                <input type="number" step="0.1" class="oee_form_input" t-model="state.form.ideal_ct"/>
-                                <span class="oee_form_bantuan">Waktu ideal 1 pcs</span>
-                            </div>
-                        </div>
-                        <div class="oee_form_baris_2">
                             <div class="oee_form_grup">
                                 <label class="oee_form_label">Total Reject (Pcs)</label>
                                 <input type="number" class="oee_form_input" t-model="state.form.reject"/>
                             </div>
-                            <div class="oee_form_grup"/>
                         </div>
                     </fieldset>
 
@@ -228,6 +275,51 @@
                                 t-on-click="simpanForm">
                             <t t-esc="state.form.proses ? 'Menyimpan...' : '💾 Simpan'"/>
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL HISTORY: siapa & kapan menambah / mengedit / menghapus -->
+        <div t-if="state.riwayat.buka" class="oee_overlay" t-on-click.self="tutupRiwayat">
+            <div class="oee_modal oee_modal_riwayat">
+                <div class="oee_modal_kepala oee_kepala_tambah">
+                    <div class="oee_modal_judul">
+                        <h2>🕘 History OEE</h2>
+                        <p class="oee_subkepala">Catatan siapa dan kapan data ditambah, diedit, atau dihapus</p>
+                    </div>
+                    <button class="oee_tombol_tutup" t-on-click="tutupRiwayat">✕</button>
+                </div>
+                <div class="oee_modal_isi">
+                    <div t-if="state.riwayat.memuat" class="oee_loading">
+                        <div class="oee_spinner"/>
+                        <span>Memuat riwayat...</span>
+                    </div>
+                    <div t-if="!state.riwayat.memuat and !state.riwayat.rows.length" class="oee_empty">
+                        Belum ada riwayat perubahan.
+                    </div>
+                    <div t-if="!state.riwayat.memuat and state.riwayat.rows.length" class="oee_riwayat_wrap">
+                        <table class="oee_table">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Oleh</th>
+                                    <th>Aksi</th>
+                                    <th>Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="state.riwayat.rows" t-as="r" t-key="r.id">
+                                    <td class="oee_riwayat_waktu" t-esc="r.waktu"/>
+                                    <td class="oee_cell_kuat" t-esc="r.oleh"/>
+                                    <td><span t-att-class="kelasAksi(r.aksi)" t-esc="r.label_aksi"/></td>
+                                    <td t-esc="r.keterangan"/>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="oee_modal_footer">
+                        <button class="oee_tombol_sekunder" t-on-click="tutupRiwayat">Tutup</button>
                     </div>
                 </div>
             </div>
